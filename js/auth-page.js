@@ -1,5 +1,5 @@
 /**
- * FidoConnect - Auth Page Controller (Login, Register, Forgot Password)
+ * FidoConnect - Auth Page Controller (Login, Register, Forgot Password, Google Sign-In)
  */
 
 let selectedRegisterRole = "client";
@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAuthTabs();
   setupRoleSelector();
   setupFormSubmissions();
+  setupGoogleAuth();
 
   // Check URL param mode
   const urlParams = new URLSearchParams(window.location.search);
@@ -48,8 +49,8 @@ function setupRoleSelector() {
   const clientCard = document.getElementById("role-card-client");
   const freelancerCard = document.getElementById("role-card-freelancer");
 
-  clientCard.addEventListener("click", () => selectRoleOption("client"));
-  freelancerCard.addEventListener("click", () => selectRoleOption("freelancer"));
+  if (clientCard) clientCard.addEventListener("click", () => selectRoleOption("client"));
+  if (freelancerCard) freelancerCard.addEventListener("click", () => selectRoleOption("freelancer"));
 }
 
 function selectRoleOption(role) {
@@ -60,20 +61,60 @@ function selectRoleOption(role) {
   const freelancerFields = document.getElementById("freelancer-extra-fields");
 
   if (role === "client") {
-    clientCard.classList.add("selected");
-    freelancerCard.classList.remove("selected");
+    if (clientCard) clientCard.classList.add("selected");
+    if (freelancerCard) freelancerCard.classList.remove("selected");
     if (clientFields) clientFields.style.display = "block";
     if (freelancerFields) freelancerFields.style.display = "none";
   } else {
-    freelancerCard.classList.add("selected");
-    clientCard.classList.remove("selected");
+    if (freelancerCard) freelancerCard.classList.add("selected");
+    if (clientCard) clientCard.classList.remove("selected");
     if (clientFields) clientFields.style.display = "none";
     if (freelancerFields) freelancerFields.style.display = "block";
   }
 }
 
+function setupGoogleAuth() {
+  // Google Login
+  const googleLoginBtn = document.getElementById("google-login-btn");
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener("click", async () => {
+      googleLoginBtn.disabled = true;
+      try {
+        await window.FidoAuth.loginWithGoogle("client");
+        showToast("Signed in with Google successfully!", "success");
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get("redirect") || "account.html";
+        setTimeout(() => window.location.href = redirect, 400);
+      } catch (err) {
+        console.error("Google login error:", err);
+        showToast(err.message || "Google sign-in failed.", "error");
+        googleLoginBtn.disabled = false;
+      }
+    });
+  }
+
+  // Google Register
+  const googleRegBtn = document.getElementById("google-register-btn");
+  if (googleRegBtn) {
+    googleRegBtn.addEventListener("click", async () => {
+      googleRegBtn.disabled = true;
+      try {
+        await window.FidoAuth.loginWithGoogle(selectedRegisterRole);
+        showToast("Account created with Google!", "success");
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get("redirect") || "account.html";
+        setTimeout(() => window.location.href = redirect, 400);
+      } catch (err) {
+        console.error("Google register error:", err);
+        showToast(err.message || "Google sign-up failed.", "error");
+        googleRegBtn.disabled = false;
+      }
+    });
+  }
+}
+
 function setupFormSubmissions() {
-  // 1. Login Form
+  // 1. Email/Password Login Form
   const loginForm = document.getElementById("login-form");
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -96,12 +137,12 @@ function setupFormSubmissions() {
       } catch (err) {
         showToast(err.message || "Failed to sign in.", "error");
         submitBtn.disabled = false;
-        submitBtn.textContent = "Sign In";
+        submitBtn.textContent = "Log in";
       }
     });
   }
 
-  // 2. Register Form
+  // 2. Email/Password Register Form
   const registerForm = document.getElementById("register-form");
   if (registerForm) {
     registerForm.addEventListener("submit", async (e) => {

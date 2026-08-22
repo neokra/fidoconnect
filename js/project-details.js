@@ -99,12 +99,12 @@ async function renderApplicationCTA() {
     return;
   }
 
-  if (currentUser.role === "admin") {
+  if (window.FidoAuth.isAdmin()) {
     ctaContainer.innerHTML = `
       <div class="card" style="background-color:var(--color-accent-soft); border-color:var(--color-accent-border);">
         <h4>Admin Management</h4>
         <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 1rem;">Manage proposals, assign freelancers, or modify status.</p>
-        <a href="admin.html?project=${currentProject.projectId}" class="btn btn-primary btn-block">Open in Admin Dashboard</a>
+        <a href="admin.html" class="btn btn-primary btn-block">Open in Admin Dashboard</a>
       </div>
     `;
     return;

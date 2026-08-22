@@ -1,5 +1,7 @@
 /**
  * FidoConnect - Account Management Controller
+ * 
+ * Manages Client, Freelancer, and Administrator account portals.
  */
 
 let currentUser = null;
@@ -46,22 +48,114 @@ async function renderAccountView() {
   const container = document.getElementById("account-layout-container");
   if (!container || !currentUser) return;
 
-  if (currentUser.role === "client") {
-    await renderClientView(container);
+  const isAdmin = window.FidoAuth.isAdmin();
+
+  if (isAdmin) {
+    await renderAdminAccountView(container);
   } else if (currentUser.role === "freelancer") {
     await renderFreelancerView(container);
-  } else if (currentUser.role === "admin") {
-    container.innerHTML = `
-      <div class="card text-center" style="padding: 2.5rem;">
-        <h3>Admin Account</h3>
-        <p class="text-muted" style="margin: 0.5rem 0 1.5rem;">You are logged in as a FidoConnect administrator.</p>
-        <a href="admin.html" class="btn btn-primary">Go to Admin Dashboard</a>
-      </div>
-    `;
+  } else {
+    await renderClientView(container);
   }
 }
 
-// --- Client Account View ---
+// --- 1. Admin Account View (Exclusive to thecard.primary@gmail.com) ---
+async function renderAdminAccountView(container) {
+  const stats = await window.FidoDB.getDashboardStats();
+
+  container.innerHTML = `
+    <div style="margin-bottom: 2rem;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <h2>${currentUser.name || "Administrator"}</h2>
+          <p class="text-muted">${currentUser.email} • Designated FidoConnect Administrator</p>
+        </div>
+        <div>
+          <button id="admin-account-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prominent Admin Panel Card -->
+    <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 2rem; border-radius: var(--border-radius-lg); margin-bottom: 2rem; box-shadow: var(--shadow-md);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem;">
+        <div>
+          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981;"></span>
+            <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:#93c5fd;">System Control</span>
+          </div>
+          <h3 style="color:white; font-size:1.6rem; margin-bottom:0.35rem;">FidoConnect Admin Panel</h3>
+          <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0;">
+            Manage all 11 agency modules: project requests, approvals, freelancer proposals, network members, payments, reviews, and client communication.
+          </p>
+        </div>
+        <div>
+          <a href="admin.html" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            Open Admin Dashboard
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Ribbon -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid rgba(255,255,255,0.12);">
+        <div>
+          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">New Requests</div>
+          <div style="font-size:1.35rem; font-weight:750; color:#60a5fa;">${stats.newRequests}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Active Projects</div>
+          <div style="font-size:1.35rem; font-weight:750; color:#c084fc;">${stats.activeProjects}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Proposals</div>
+          <div style="font-size:1.35rem; font-weight:750; color:#34d399;">${stats.pendingApplications}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Members</div>
+          <div style="font-size:1.35rem; font-weight:750; color:#2dd4bf;">${stats.activeMembers}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Account Settings -->
+    <div class="card" style="max-width: 600px;">
+      <h3 style="margin-bottom: 1.25rem;">Administrator Details</h3>
+      <form id="admin-profile-form">
+        <div class="form-group">
+          <label class="form-label">Administrator Name</label>
+          <input type="text" id="edit-admin-name" class="form-control" value="${currentUser.name || ""}" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" value="${currentUser.email}" disabled style="background:#f1f5f9;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone / WhatsApp</label>
+          <input type="text" id="edit-admin-phone" class="form-control" value="${currentUser.phone || ""}" />
+        </div>
+        <button type="submit" class="btn btn-primary">Save Profile</button>
+      </form>
+    </div>
+  `;
+
+  document.getElementById("admin-account-logout-btn").addEventListener("click", () => window.FidoAuth.logout());
+
+  document.getElementById("admin-profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await window.FidoDB.updateUser(currentUser.uid, {
+        name: document.getElementById("edit-admin-name").value.trim(),
+        phone: document.getElementById("edit-admin-phone").value.trim()
+      });
+      showToast("Administrator profile updated", "success");
+    } catch (err) {
+      showToast("Failed to update profile: " + err.message, "error");
+    }
+  });
+}
+
+// --- 2. Client Account View ---
 async function renderClientView(container) {
   const clientProjects = await window.FidoDB.getProjects({ clientId: currentUser.uid });
 
@@ -72,15 +166,18 @@ async function renderClientView(container) {
           <h2>${currentUser.businessName || currentUser.name}</h2>
           <p class="text-muted">${currentUser.email} • Client Account</p>
         </div>
-        <a href="post-work.html" class="btn btn-primary">
-          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          Post a Work
-        </a>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <a href="post-work.html" class="btn btn-primary">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Post a Work
+          </a>
+          <button id="client-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+        </div>
       </div>
     </div>
 
     <div class="tab-nav">
-      <button class="tab-btn active" data-tab="client-projects-tab">Submitted Projects (${clientProjects.length})</button>
+      <button class="tab-btn active" data-tab="client-projects-tab">My Projects (${clientProjects.length})</button>
       <button class="tab-btn" data-tab="client-profile-tab">Account Details</button>
     </div>
 
@@ -148,7 +245,8 @@ async function renderClientView(container) {
     </div>
   `;
 
-  // Attach profile update handler
+  document.getElementById("client-logout-btn").addEventListener("click", () => window.FidoAuth.logout());
+
   const profForm = document.getElementById("client-profile-form");
   if (profForm) {
     profForm.addEventListener("submit", async (e) => {
@@ -161,15 +259,16 @@ async function renderClientView(container) {
         });
         showToast("Profile updated successfully", "success");
       } catch (err) {
-        showToast("Failed to update profile", "error");
+        showToast("Failed to update profile: " + err.message, "error");
       }
     });
   }
 }
 
-// --- Freelancer Account View ---
+// --- 3. Freelancer Account View ---
 async function renderFreelancerView(container) {
   const applications = await window.FidoDB.getApplications({ freelancerId: currentUser.uid });
+  const activeProjects = await window.FidoDB.getProjects({ assignedFreelancerId: currentUser.uid });
   const isMemberActive = currentUser.membershipStatus === "active";
 
   container.innerHTML = `
@@ -179,16 +278,18 @@ async function renderFreelancerView(container) {
           <h2>${currentUser.name}</h2>
           <p class="text-muted">${currentUser.email} • Freelancer Network</p>
         </div>
-        <div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
           <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}" style="font-size:0.88rem; padding:0.4rem 0.8rem;">
             ● Membership: ${isMemberActive ? "Active Member" : "Not Active"}
           </span>
+          <button id="freelancer-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
         </div>
       </div>
     </div>
 
     <div class="tab-nav">
       <button class="tab-btn active" data-tab="freelancer-apps-tab">My Applications (${applications.length})</button>
+      <button class="tab-btn" data-tab="freelancer-projects-tab">Assigned Projects (${activeProjects.length})</button>
       <button class="tab-btn" data-tab="membership-tab">Membership Plan</button>
       <button class="tab-btn" data-tab="freelancer-profile-tab">Profile & Skills</button>
     </div>
@@ -229,7 +330,43 @@ async function renderFreelancerView(container) {
       `}
     </div>
 
-    <!-- Tab 2: Membership Management -->
+    <!-- Tab 2: Assigned Projects -->
+    <div id="freelancer-projects-tab" class="tab-pane">
+      ${activeProjects.length === 0 ? `
+        <div class="card text-center" style="padding: 3rem 1rem;">
+          <h4>No active assigned projects</h4>
+          <p class="text-muted" style="margin: 0.4rem 0 1.25rem;">When the FidoConnect agency assigns you to a project, it will appear here.</p>
+          <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
+        </div>
+      ` : `
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          ${activeProjects.map(proj => `
+            <div class="card" style="padding: 1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
+                    <span class="project-id-badge">${proj.projectId || proj.id}</span>
+                    <span class="project-category-badge">${proj.category}</span>
+                    ${getStatusBadge(proj.status)}
+                  </div>
+                  <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
+                  <p class="text-muted" style="font-size:0.88rem;">${proj.description}</p>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong>${proj.budget}</strong></div>
+                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
+                </div>
+              </div>
+              <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); font-size:0.82rem; color:var(--text-muted);">
+                Agency Notes: <em style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</em>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `}
+    </div>
+
+    <!-- Tab 3: Membership Management -->
     <div id="membership-tab" class="tab-pane">
       <div class="card" style="max-width: 680px;">
         <h3 style="margin-bottom: 0.5rem;">FidoConnect Membership</h3>
@@ -260,13 +397,13 @@ async function renderFreelancerView(container) {
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           <div>
             <strong>Clear Agency Commitment</strong><br/>
-            Membership provides direct access to project opportunities vetted by our team. Projects are awarded based on suitability and requirements; projects are not guaranteed.
+            Membership provides access to project opportunities. Projects are not guaranteed.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 3: Freelancer Profile & Skills -->
+    <!-- Tab 4: Freelancer Profile & Skills -->
     <div id="freelancer-profile-tab" class="tab-pane">
       <div class="card" style="max-width: 600px;">
         <h3 style="margin-bottom: 1.25rem;">Freelancer Profile</h3>
@@ -297,7 +434,8 @@ async function renderFreelancerView(container) {
     </div>
   `;
 
-  // Membership activate/renew button
+  document.getElementById("freelancer-logout-btn").addEventListener("click", () => window.FidoAuth.logout());
+
   const toggleMemberBtn = document.getElementById("toggle-membership-btn");
   if (toggleMemberBtn) {
     toggleMemberBtn.addEventListener("click", async () => {
@@ -313,7 +451,6 @@ async function renderFreelancerView(container) {
     });
   }
 
-  // Profile update handler
   const profForm = document.getElementById("freelancer-profile-form");
   if (profForm) {
     profForm.addEventListener("submit", async (e) => {
@@ -330,7 +467,7 @@ async function renderFreelancerView(container) {
         });
         showToast("Profile updated successfully", "success");
       } catch (err) {
-        showToast("Failed to update profile", "error");
+        showToast("Failed to update profile: " + err.message, "error");
       }
     });
   }

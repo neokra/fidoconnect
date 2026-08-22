@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // --- Helper Functions ---
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -11,44 +11,44 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email != null && 
+             request.auth.token.email.lower() == 'thecard.primary@gmail.com';
+    }
+
+    function isUserDocument(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
-    }
-
-    function isFreelancer() {
-      return isAuthenticated() && getUserData().role == 'freelancer';
-    }
-
-    function isClient() {
-      return isAuthenticated() && getUserData().role == 'client';
-    }
-
-    function isMemberActive() {
-      return isFreelancer() && getUserData().membershipStatus == 'active';
-    }
-
     // --- Users Collection ---
     match /users/{userId} {
+      // Owner can read their own profile; Admin can read all profiles
       allow read: if isOwner(userId) || isAdmin();
-      // Allow registration, but forbid setting role == 'admin' during normal creation
+      
+      // Allow registration/Google sign-in, but FORBID setting role == 'admin' unless the authenticated email is the administrator email
       allow create: if isAuthenticated() && 
                     request.auth.uid == userId && 
-                    request.resource.data.role != 'admin';
-      // User can update their own profile, but cannot elevate themselves to admin or alter membership status
+                    (request.resource.data.role != 'admin' || isAdmin());
+      
+      // Normal user can update non-privileged fields (cannot elevate role to 'admin' or alter membership status unless admin)
       allow update: if (isOwner(userId) && 
                         request.resource.data.role == resource.data.role &&
                         request.resource.data.membershipStatus == resource.data.membershipStatus) || 
                        isAdmin();
+      
+      // Only admin can delete users
       allow delete: if isAdmin();
     }
 
     // --- Projects Collection ---
     match /projects/{projectId} {
       // Anyone can read published projects with public visibility (sensitive client contact protected in app layer)
+      // Clients can read their own submitted projects; Assigned freelancers and Admins can read
       allow read: if resource.data.status == 'Published' || 
                      (isAuthenticated() && (resource.data.clientId == request.auth.uid || 
                                            resource.data.assignedFreelancerId == request.auth.uid || 
@@ -57,15 +57,17 @@ service cloud.firestore {
       // Allow project creation by clients / submission form
       allow create: if true;
       
-      // Only Admin or project owner can update project
+      // Only Admin or project owner (for non-status fields) can update project
       allow update: if (isAuthenticated() && resource.data.clientId == request.auth.uid && 
-                        request.resource.data.status == resource.data.status) || 
+                        request.resource.data.status == resource.data.status &&
+                        request.resource.data.assignedFreelancerId == resource.data.assignedFreelancerId) || 
                        isAdmin();
       
+      // Only Admin can delete/cancel projects
       allow delete: if isAdmin();
     }
 
-    // --- Counters Collection (For collision-safe sequential Project IDs) ---
+    // --- Counters Collection (Atomic Project ID sequence) ---
     match /counters/{counterId} {
       allow read, write: if true;
     }
@@ -75,12 +77,15 @@ service cloud.firestore {
       // Freelancers can read their own applications; admins can read all
       allow read: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
       
-      // Active members can submit 1 proposal per project
-      allow create: if isMemberActive() && request.resource.data.freelancerId == request.auth.uid;
+      // Freelancer can submit 1 proposal
+      allow create: if isAuthenticated() && request.resource.data.freelancerId == request.auth.uid;
       
-      // Freelancers can update draft; Admins can update status (Shortlisted, Selected, Rejected)
-      allow update: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
+      // Freelancer can update draft notes; Admin can update status (Shortlisted, Selected, Rejected)
+      allow update: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid &&
+                        request.resource.data.status == resource.data.status) || 
+                       isAdmin();
       
+      // Only admin can delete applications
       allow delete: if isAdmin();
     }
 
@@ -100,6 +105,23 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isAuthenticated();
       allow delete: if isAdmin();
+    }
+
+    // --- Messages Collection ---
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.recipientId == request.auth.uid || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // --- Settings Collection ---
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

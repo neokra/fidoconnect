@@ -1,7 +1,7 @@
 /**
  * FidoConnect - Central Firebase Web SDK Initialization
  * 
- * Initializes Firebase App, Firebase Authentication, and Cloud Firestore
+ * Initializes Firebase App, Firebase Authentication (with Google Sign-In), and Cloud Firestore
  * using the Firebase Modular Web SDK v10.
  */
 
@@ -12,7 +12,9 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   sendPasswordResetEmail, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
   getFirestore, 
@@ -46,12 +48,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 
 // Expose on window for unified access across FidoConnect
 window.FidoFirebase = {
   app,
   auth,
   db,
+  googleProvider,
   firestore: {
     doc,
     getDoc,
@@ -73,11 +77,13 @@ window.FidoFirebase = {
     signInWithEmailAndPassword,
     signOut,
     sendPasswordResetEmail,
-    onAuthStateChanged
+    onAuthStateChanged,
+    GoogleAuthProvider,
+    signInWithPopup
   }
 };
 
 // Signal that Firebase SDK is initialized
 window.dispatchEvent(new CustomEvent("firebase-initialized", { detail: { app, auth, db } }));
 
-export { app, auth, db };
+export { app, auth, db, googleProvider };

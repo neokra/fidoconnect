@@ -1,25 +1,34 @@
 /**
- * FidoConnect - Admin Control Dashboard Controller
+ * FidoConnect - Comprehensive Admin Control Dashboard Controller
+ * 
+ * Strict Admin Access: Only for thecard.primary@gmail.com
+ * Handles all 11 modules.
  */
 
 let allAdminProjects = [];
 let allAdminApps = [];
+let allAdminUsers = [];
 let allAdminFreelancers = [];
 let allAdminClients = [];
+let allAdminPayments = [];
+let allAdminReviews = [];
+let allAdminMessages = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Wait for Firebase Auth session to resolve
+  // Strict admin guard: only thecard.primary@gmail.com
   const currentUser = await window.FidoAuth.waitForAuth();
   
-  if (!currentUser || currentUser.role !== "admin") {
-    showToast("Admin access required. Please sign in with an administrator account.", "error");
+  if (!currentUser || !window.FidoAuth.isAdminEmail(currentUser.email)) {
+    showToast("Access restricted to designated administrator.", "error");
     setTimeout(() => {
-      window.location.href = "auth.html?redirect=admin.html";
+      window.location.href = "account.html";
     }, 1000);
     return;
   }
 
   setupAdminTabs();
+  setupFilterListeners();
+  setupModalForms();
   await loadAdminData();
 });
 
@@ -37,36 +46,118 @@ function setupAdminTabs() {
   });
 }
 
+function setupFilterListeners() {
+  const statusFilter = document.getElementById("admin-proj-filter-status");
+  const catFilter = document.getElementById("admin-proj-filter-cat");
+
+  if (statusFilter) {
+    statusFilter.addEventListener("change", () => renderProjectsTable());
+  }
+  if (catFilter) {
+    catFilter.addEventListener("change", () => renderProjectsTable());
+  }
+}
+
+function setupModalForms() {
+  // Record Payment Form
+  const payForm = document.getElementById("record-payment-form");
+  if (payForm) {
+    payForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const projectId = document.getElementById("payProjectId").value.trim();
+        const clientAmount = Number(document.getElementById("payClientAmount").value) || 0;
+        const freelancerAmount = Number(document.getElementById("payFreelancerAmount").value) || 0;
+        const status = document.getElementById("payStatus").value;
+        const agencyMargin = Math.max(0, clientAmount - freelancerAmount);
+
+        await window.FidoDB.addPayment({
+          projectId,
+          clientAmount,
+          freelancerAmount,
+          agencyMargin,
+          status
+        });
+
+        closeModal("add-payment-modal");
+        showToast("Payment record saved!", "success");
+        await loadAdminData();
+      } catch (err) {
+        showToast("Failed to save payment: " + err.message, "error");
+      }
+    });
+  }
+
+  // Agency Settings Form
+  const settingsForm = document.getElementById("admin-settings-form");
+  if (settingsForm) {
+    settingsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await window.FidoDB.updateSettings({
+          agencyName: document.getElementById("setting-agency-name").value.trim(),
+          projectPrefix: document.getElementById("setting-prefix").value.trim(),
+          currency: document.getElementById("setting-currency").value.trim()
+        });
+        showToast("Settings updated successfully", "success");
+      } catch (err) {
+        showToast("Failed to update settings: " + err.message, "error");
+      }
+    });
+  }
+}
+
 async function loadAdminData() {
   try {
-    allAdminProjects = await window.FidoDB.getProjects({});
-    allAdminApps = await window.FidoDB.getApplications({});
-    allAdminFreelancers = await window.FidoDB.getUsers("freelancer");
-    allAdminClients = await window.FidoDB.getUsers("client");
+    const [projects, apps, users, payments, reviews, messages, stats] = await Promise.all([
+      window.FidoDB.getProjects({}),
+      window.FidoDB.getApplications({}),
+      window.FidoDB.getUsers(),
+      window.FidoDB.getPayments(),
+      window.FidoDB.getReviews(),
+      window.FidoDB.getMessages(),
+      window.FidoDB.getDashboardStats()
+    ]);
 
-    renderOverviewStats();
+    allAdminProjects = projects;
+    allAdminApps = apps;
+    allAdminUsers = users;
+    allAdminFreelancers = users.filter(u => u.role === "freelancer");
+    allAdminClients = users.filter(u => u.role === "client");
+    allAdminPayments = payments;
+    allAdminReviews = reviews;
+    allAdminMessages = messages;
+
+    renderOverviewStats(stats);
     renderProjectsTable();
     renderApplicationsTable();
+    renderUsersTable();
     renderFreelancersTable();
     renderClientsTable();
+    renderMembershipsTable();
+    renderPaymentsTable();
+    renderReviewsTable();
+    renderMessagesTable();
+
   } catch (err) {
     console.error("Error loading admin data from Firestore:", err);
-    showToast("Error loading admin data.", "error");
+    showToast("Error loading admin data: " + err.message, "error");
   }
 }
 
 // 1. Overview Section
-function renderOverviewStats() {
-  const newRequests = allAdminProjects.filter(p => p.status === "Submitted" || p.status === "Under Review").length;
-  const activeProjects = allAdminProjects.filter(p => ["Approved", "Published", "In Progress", "Client Review"].includes(p.status)).length;
-  const completedProjects = allAdminProjects.filter(p => p.status === "Completed").length;
-  const activeMembers = allAdminFreelancers.filter(f => f.membershipStatus === "active").length;
-
-  document.getElementById("kpi-new-requests").textContent = newRequests;
-  document.getElementById("kpi-active-projects").textContent = activeProjects;
-  document.getElementById("kpi-completed-projects").textContent = completedProjects;
-  document.getElementById("kpi-total-apps").textContent = allAdminApps.length;
-  document.getElementById("kpi-active-members").textContent = activeMembers;
+function renderOverviewStats(stats) {
+  document.getElementById("kpi-total-projects").textContent = stats.totalProjects;
+  document.getElementById("kpi-new-requests").textContent = stats.newRequests;
+  document.getElementById("kpi-active-projects").textContent = stats.activeProjects;
+  document.getElementById("kpi-completed-projects").textContent = stats.completedProjects;
+  document.getElementById("kpi-total-users").textContent = stats.totalUsers;
+  document.getElementById("kpi-freelancers-count").textContent = stats.freelancersCount;
+  document.getElementById("kpi-clients-count").textContent = stats.clientsCount;
+  document.getElementById("kpi-active-members").textContent = stats.activeMembers;
+  document.getElementById("kpi-total-apps").textContent = stats.pendingApplications;
+  document.getElementById("kpi-total-revenue").textContent = stats.totalRevenue;
+  document.getElementById("kpi-total-margin").textContent = stats.agencyMargin;
 }
 
 // 2. Projects Management
@@ -74,12 +165,21 @@ function renderProjectsTable() {
   const container = document.getElementById("admin-projects-tbody");
   if (!container) return;
 
-  if (allAdminProjects.length === 0) {
-    container.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No projects found in database.</td></tr>`;
+  const statusVal = document.getElementById("admin-proj-filter-status") ? document.getElementById("admin-proj-filter-status").value : "all";
+  const catVal = document.getElementById("admin-proj-filter-cat") ? document.getElementById("admin-proj-filter-cat").value : "all";
+
+  const filtered = allAdminProjects.filter(p => {
+    if (statusVal !== "all" && p.status !== statusVal) return false;
+    if (catVal !== "all" && p.category !== catVal) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No projects matching current filter.</td></tr>`;
     return;
   }
 
-  container.innerHTML = allAdminProjects.map(proj => {
+  container.innerHTML = filtered.map(proj => {
     const assignedFreelancer = allAdminFreelancers.find(f => f.uid === proj.assignedFreelancerId);
 
     return `
@@ -99,9 +199,9 @@ function renderProjectsTable() {
         <td>
           <select class="form-control form-control-sm" style="padding:3px 6px; font-size:0.8rem; width:auto;" onchange="updateProjectStatus('${proj.id}', this.value)">
             ${[
-              "Submitted", "Under Review", "Approved", "Published", 
-              "In Progress", "Submitted for Review", "Client Review", 
-              "Completed", "Cancelled"
+              "Submitted", "Under Review", "Approved", "Published", "Applications Open",
+              "Freelancer Selected", "In Progress", "Submitted for Review", "Client Review", 
+              "Revision Required", "Completed", "Cancelled"
             ].map(st => `<option value="${st}" ${proj.status === st ? "selected" : ""}>${st}</option>`).join("")}
           </select>
         </td>
@@ -111,8 +211,8 @@ function renderProjectsTable() {
           </span>
         </td>
         <td>
-          <div style="display:flex; gap:0.4rem;">
-            ${proj.status === "Submitted" ? `
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            ${proj.status === "Submitted" || proj.status === "Under Review" ? `
               <button class="btn btn-primary btn-sm" onclick="approveAndPublishProject('${proj.id}')" title="Approve & Publish to Find Work">Approve & Publish</button>
             ` : ""}
             <a href="project-details.html?id=${proj.projectId || proj.id}" target="_blank" class="btn btn-secondary btn-sm">View</a>
@@ -123,10 +223,9 @@ function renderProjectsTable() {
   }).join("");
 }
 
-// Fast Status Updater
 window.updateProjectStatus = async function(projId, newStatus) {
   try {
-    const visibility = newStatus === "Published" ? "public" : "admin_only";
+    const visibility = (newStatus === "Published" || newStatus === "Applications Open") ? "public" : "admin_only";
     await window.FidoDB.updateProject(projId, { 
       status: newStatus,
       visibility: visibility
@@ -138,7 +237,6 @@ window.updateProjectStatus = async function(projId, newStatus) {
   }
 };
 
-// Fast Approve & Publish
 window.approveAndPublishProject = async function(projId) {
   try {
     await window.FidoDB.updateProject(projId, {
@@ -188,7 +286,7 @@ function renderApplicationsTable() {
           <span style="font-size:0.8rem; color:var(--text-muted);">${formatDate(app.createdAt)}</span>
         </td>
         <td>
-          <div style="display:flex; gap:0.4rem;">
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
             <button class="btn btn-primary btn-sm" onclick="selectFreelancerForProject('${app.projectId}', '${app.freelancerId}', '${app.id}')">Select & Assign</button>
             <button class="btn btn-secondary btn-sm" onclick="updateAppStatus('${app.id}', 'Shortlisted')">Shortlist</button>
             <button class="btn btn-secondary btn-sm" onclick="updateAppStatus('${app.id}', 'Rejected')">Reject</button>
@@ -224,7 +322,59 @@ window.selectFreelancerForProject = async function(projId, freelancerId, appId) 
   }
 };
 
-// 4. Freelancers Table
+// 4. Users Table (No assign admin button)
+function renderUsersTable() {
+  const container = document.getElementById("admin-users-tbody");
+  if (!container) return;
+
+  if (allAdminUsers.length === 0) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No users found in database.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminUsers.map(u => {
+    const isSuspended = u.status === "suspended";
+    return `
+      <tr>
+        <td>
+          <strong>${u.name || "User"}</strong>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${u.email}</div>
+        </td>
+        <td>
+          <span class="badge ${u.role === "admin" ? "badge-completed" : "badge-inactive"}">${u.role || u.accountType || "client"}</span>
+        </td>
+        <td>
+          <span class="badge ${u.membershipStatus === "active" ? "badge-active" : "badge-inactive"}">${u.membershipStatus || "N/A"}</span>
+        </td>
+        <td>
+          <span style="font-size:0.82rem; color:var(--text-muted);">${formatDate(u.createdAt)}</span>
+        </td>
+        <td>
+          <span class="badge ${isSuspended ? "badge-cancelled" : "badge-active"}">${isSuspended ? "Suspended" : "Active"}</span>
+        </td>
+        <td>
+          ${u.role !== "admin" ? `
+            <button class="btn btn-secondary btn-sm" onclick="toggleUserStatus('${u.uid}', '${isSuspended ? "active" : "suspended"}')">
+              ${isSuspended ? "Reactivate" : "Suspend"}
+            </button>
+          ` : `<span style="font-size:0.75rem; color:var(--text-muted);">Admin</span>`}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+window.toggleUserStatus = async function(uid, targetStatus) {
+  try {
+    await window.FidoDB.updateUser(uid, { status: targetStatus });
+    showToast(`User marked as ${targetStatus}`, "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast("Failed to update user: " + err.message, "error");
+  }
+};
+
+// 5. Freelancers Table
 function renderFreelancersTable() {
   const container = document.getElementById("admin-freelancers-tbody");
   if (!container) return;
@@ -275,7 +425,7 @@ window.toggleFreelancerMembership = async function(uid, targetStatus) {
   }
 };
 
-// 5. Clients Table
+// 6. Clients Table
 function renderClientsTable() {
   const container = document.getElementById("admin-clients-tbody");
   if (!container) return;
@@ -301,9 +451,111 @@ function renderClientsTable() {
           <span class="badge badge-approved">${clientProjects.length} projects</span>
         </td>
         <td>
-          <span style="font-size:0.82rem; color:var(--text-muted);">Joined ${formatDate(c.createdAt)}</span>
+          <span style="font-size:0.82rem; color:var(--text-muted);">${formatDate(c.createdAt)}</span>
         </td>
       </tr>
     `;
   }).join("");
+}
+
+// 7. Memberships Table
+function renderMembershipsTable() {
+  const container = document.getElementById("admin-memberships-tbody");
+  if (!container) return;
+
+  if (allAdminFreelancers.length === 0) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No memberships to display.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminFreelancers.map(f => {
+    const isMember = f.membershipStatus === "active";
+    return `
+      <tr>
+        <td>
+          <strong>${f.name}</strong>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${f.email}</div>
+        </td>
+        <td>${f.membershipPlan || "Standard"}</td>
+        <td>
+          <span class="badge ${isMember ? "badge-active" : "badge-inactive"}">${isMember ? "Active" : "Inactive"}</span>
+        </td>
+        <td>${formatDate(f.membershipStart)}</td>
+        <td>${formatDate(f.membershipExpiry)}</td>
+        <td>
+          <button class="btn ${isMember ? "btn-secondary" : "btn-primary"} btn-sm" onclick="toggleFreelancerMembership('${f.uid}', '${isMember ? "inactive" : "active"}')">
+            ${isMember ? "Revoke" : "Grant Membership"}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// 8. Payments Table
+function renderPaymentsTable() {
+  const container = document.getElementById("admin-payments-tbody");
+  if (!container) return;
+
+  if (allAdminPayments.length === 0) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No payment transactions recorded yet. Click "+ Record Payment" to add.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminPayments.map(p => `
+    <tr>
+      <td><strong style="font-family:var(--font-mono);">${p.projectId}</strong></td>
+      <td class="text-accent fw-bold">$${p.clientAmount}</td>
+      <td>$${p.freelancerAmount}</td>
+      <td style="color:#10b981; font-weight:600;">$${p.agencyMargin}</td>
+      <td><span class="badge ${p.status === "Paid" ? "badge-active" : "badge-review"}">${p.status}</span></td>
+      <td><span style="font-size:0.8rem; color:var(--text-muted);">${formatDate(p.createdAt)}</span></td>
+    </tr>
+  `).join("");
+}
+
+window.openAddPaymentModal = function() {
+  openModal("add-payment-modal");
+};
+
+// 9. Reviews Table
+function renderReviewsTable() {
+  const container = document.getElementById("admin-reviews-tbody");
+  if (!container) return;
+
+  if (allAdminReviews.length === 0) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No reviews submitted yet.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminReviews.map(r => `
+    <tr>
+      <td>${r.projectId}</td>
+      <td>${r.clientName}</td>
+      <td>${r.freelancerName}</td>
+      <td>★ ${r.rating}</td>
+      <td>"${r.reviewText}"</td>
+      <td>${formatDate(r.createdAt)}</td>
+    </tr>
+  `).join("");
+}
+
+// 10. Messages Table
+function renderMessagesTable() {
+  const container = document.getElementById("admin-messages-tbody");
+  if (!container) return;
+
+  if (allAdminMessages.length === 0) {
+    container.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:2rem;">No messages logged yet.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminMessages.map(m => `
+    <tr>
+      <td><strong style="font-family:var(--font-mono);">${m.projectId || "General"}</strong></td>
+      <td>${m.senderName || m.senderId}</td>
+      <td>${m.messageText}</td>
+      <td>${formatDate(m.createdAt)}</td>
+    </tr>
+  `).join("");
 }

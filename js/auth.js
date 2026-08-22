@@ -1,8 +1,11 @@
 /**
  * FidoConnect - Firebase Authentication & Session Service
  * 
- * Direct integration with Firebase Authentication and Firestore User Profiles.
+ * Supports Email/Password, Google Sign-In, and strict Administrator verification for:
+ * thecard.primary@gmail.com
  */
+
+const ADMIN_EMAIL = "thecard.primary@gmail.com";
 
 // Helper to wait until Firebase is initialized
 const getAuthServices = async () => {
@@ -10,6 +13,7 @@ const getAuthServices = async () => {
     return {
       auth: window.FidoFirebase.auth,
       db: window.FidoFirebase.db,
+      googleProvider: window.FidoFirebase.googleProvider,
       authMethods: window.FidoFirebase.authMethods,
       fs: window.FidoFirebase.firestore
     };
@@ -21,6 +25,7 @@ const getAuthServices = async () => {
       resolve({
         auth: e.detail.auth,
         db: e.detail.db,
+        googleProvider: window.FidoFirebase.googleProvider,
         authMethods: window.FidoFirebase.authMethods,
         fs: window.FidoFirebase.firestore
       });
@@ -34,6 +39,16 @@ const FidoAuth = {
   _authInitialized: false,
   _authListeners: [],
 
+  // Check if an email is the designated FidoConnect Administrator
+  isAdminEmail(email) {
+    if (!email) return false;
+    return email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  },
+
+  isAdmin() {
+    return this._cachedUserProfile && this.isAdminEmail(this._cachedUserProfile.email);
+  },
+
   // Initialize Auth State Listener
   async init() {
     const { auth, db, authMethods, fs } = await getAuthServices();
@@ -45,28 +60,54 @@ const FidoAuth = {
           const userDocRef = fs.doc(db, "users", firebaseUser.uid);
           const userSnap = await fs.getDoc(userDocRef);
 
+          const isUserAdmin = this.isAdminEmail(firebaseUser.email);
+
           if (userSnap.exists()) {
+            const data = userSnap.data();
             this._cachedUserProfile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
-              ...userSnap.data()
+              photoURL: firebaseUser.photoURL || data.photoURL || null,
+              ...data,
+              role: isUserAdmin ? "admin" : (data.role || "client"),
+              isAdmin: isUserAdmin
             };
           } else {
-            // Profile fallback
-            this._cachedUserProfile = {
+            // If user signed in (e.g. via Google) and doc does not exist yet, provision profile
+            const newUserData = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email,
+              email: firebaseUser.email.toLowerCase(),
               name: firebaseUser.displayName || firebaseUser.email.split("@")[0],
-              role: "client"
+              photoURL: firebaseUser.photoURL || null,
+              role: isUserAdmin ? "admin" : "client",
+              accountType: isUserAdmin ? "admin" : "client",
+              phone: "",
+              businessName: null,
+              skills: [],
+              portfolio: null,
+              membershipStatus: "inactive",
+              membershipPlan: "None",
+              membershipStart: null,
+              membershipExpiry: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+
+            await fs.setDoc(userDocRef, newUserData);
+            this._cachedUserProfile = {
+              ...newUserData,
+              isAdmin: isUserAdmin
             };
           }
         } catch (err) {
-          console.error("Error fetching user profile from Firestore:", err);
+          console.error("Error syncing user profile from Firestore:", err);
+          const isUserAdmin = this.isAdminEmail(firebaseUser.email);
           this._cachedUserProfile = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName || "User",
-            role: "client"
+            role: isUserAdmin ? "admin" : "client",
+            isAdmin: isUserAdmin
           };
         }
       } else {
@@ -76,7 +117,7 @@ const FidoAuth = {
       this._authInitialized = true;
       this.updateNavUI();
 
-      // Trigger all registered listeners
+      // Notify all registered listeners
       this._authListeners.forEach(listener => {
         try { listener(this._cachedUserProfile); } catch (e) { console.error(e); }
       });
@@ -108,49 +149,110 @@ const FidoAuth = {
     return this._cachedUserProfile;
   },
 
-  // Register New User (Client or Freelancer)
+  // 1. Google Sign-In
+  async loginWithGoogle(intendedRole = "client") {
+    const { auth, db, googleProvider, authMethods, fs } = await getAuthServices();
+
+    const result = await authMethods.signInWithPopup(auth, googleProvider);
+    const firebaseUser = result.user;
+    const isUserAdmin = this.isAdminEmail(firebaseUser.email);
+
+    // Check or create user profile in Firestore
+    const userDocRef = fs.doc(db, "users", firebaseUser.uid);
+    const userSnap = await fs.getDoc(userDocRef);
+
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      this._cachedUserProfile = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        photoURL: firebaseUser.photoURL || data.photoURL || null,
+        ...data,
+        role: isUserAdmin ? "admin" : (data.role || "client"),
+        isAdmin: isUserAdmin
+      };
+    } else {
+      const selectedRole = isUserAdmin ? "admin" : (intendedRole === "freelancer" ? "freelancer" : "client");
+      const newUserData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email.toLowerCase(),
+        name: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+        photoURL: firebaseUser.photoURL || null,
+        role: selectedRole,
+        accountType: selectedRole,
+        phone: "",
+        businessName: selectedRole === "client" ? (firebaseUser.displayName || null) : null,
+        skills: [],
+        portfolio: null,
+        membershipStatus: selectedRole === "freelancer" ? "inactive" : null,
+        membershipPlan: selectedRole === "freelancer" ? "None" : null,
+        membershipStart: null,
+        membershipExpiry: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await fs.setDoc(userDocRef, newUserData);
+      this._cachedUserProfile = {
+        ...newUserData,
+        isAdmin: isUserAdmin
+      };
+    }
+
+    this.updateNavUI();
+    return this._cachedUserProfile;
+  },
+
+  // 2. Email / Password Registration
   async register({ email, password, name, role, phone, businessName, skills, portfolio }) {
     if (!email || !password || !name) {
       throw new Error("Please provide your name, email, and password.");
     }
 
-    // Security: Never allow normal registration as admin
-    if (role !== "client" && role !== "freelancer") {
+    const isUserAdmin = this.isAdminEmail(email);
+
+    // Normal users can only register as client or freelancer
+    if (!isUserAdmin && role !== "client" && role !== "freelancer") {
       throw new Error("Invalid account role selected.");
     }
 
+    const finalRole = isUserAdmin ? "admin" : role;
     const { auth, db, authMethods, fs } = await getAuthServices();
 
-    // Create Firebase Auth user
     const userCredential = await authMethods.createUserWithEmailAndPassword(auth, email.trim(), password);
     const uid = userCredential.user.uid;
 
-    // Create User Document in Firestore
     const newUserData = {
       uid: uid,
       email: email.trim().toLowerCase(),
       name: name.trim(),
+      photoURL: null,
       phone: phone ? phone.trim() : "",
-      role: role,
-      businessName: role === "client" ? (businessName ? businessName.trim() : name.trim()) : null,
-      skills: role === "freelancer" ? (skills || []) : [],
-      portfolio: role === "freelancer" ? (portfolio ? portfolio.trim() : "") : null,
-      membershipStatus: role === "freelancer" ? "inactive" : null,
-      membershipPlan: role === "freelancer" ? "None" : null,
+      role: finalRole,
+      accountType: finalRole,
+      businessName: finalRole === "client" ? (businessName ? businessName.trim() : name.trim()) : null,
+      skills: finalRole === "freelancer" ? (skills || []) : [],
+      portfolio: finalRole === "freelancer" ? (portfolio ? portfolio.trim() : "") : null,
+      membershipStatus: finalRole === "freelancer" ? "inactive" : null,
+      membershipPlan: finalRole === "freelancer" ? "None" : null,
       membershipStart: null,
       membershipExpiry: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     const userDocRef = fs.doc(db, "users", uid);
     await fs.setDoc(userDocRef, newUserData);
 
-    this._cachedUserProfile = newUserData;
+    this._cachedUserProfile = {
+      ...newUserData,
+      isAdmin: isUserAdmin
+    };
     this.updateNavUI();
-    return newUserData;
+    return this._cachedUserProfile;
   },
 
-  // Login with Email & Password
+  // 3. Email / Password Login
   async login(email, password) {
     if (!email || !password) {
       throw new Error("Please enter your email and password.");
@@ -159,22 +261,28 @@ const FidoAuth = {
     const { auth, db, authMethods, fs } = await getAuthServices();
     const userCredential = await authMethods.signInWithEmailAndPassword(auth, email.trim(), password);
     const uid = userCredential.user.uid;
+    const isUserAdmin = this.isAdminEmail(userCredential.user.email);
 
     const userDocRef = fs.doc(db, "users", uid);
     const userSnap = await fs.getDoc(userDocRef);
 
     if (userSnap.exists()) {
+      const data = userSnap.data();
       this._cachedUserProfile = {
         uid: uid,
         email: userCredential.user.email,
-        ...userSnap.data()
+        photoURL: userCredential.user.photoURL || data.photoURL || null,
+        ...data,
+        role: isUserAdmin ? "admin" : (data.role || "client"),
+        isAdmin: isUserAdmin
       };
     } else {
       this._cachedUserProfile = {
         uid: uid,
         email: userCredential.user.email,
         name: userCredential.user.displayName || "User",
-        role: "client"
+        role: isUserAdmin ? "admin" : "client",
+        isAdmin: isUserAdmin
       };
     }
 
@@ -182,7 +290,7 @@ const FidoAuth = {
     return this._cachedUserProfile;
   },
 
-  // Sign Out
+  // 4. Sign Out
   async logout() {
     const { auth, authMethods } = await getAuthServices();
     await authMethods.signOut(auth);
@@ -191,7 +299,7 @@ const FidoAuth = {
     window.location.href = "index.html";
   },
 
-  // Send Password Reset Email
+  // 5. Password Reset
   async resetPassword(email) {
     if (!email) throw new Error("Please enter your email address.");
     const { auth, authMethods } = await getAuthServices();
@@ -199,15 +307,10 @@ const FidoAuth = {
     return true;
   },
 
-  // Dynamic Header Navigation Updater
+  // Header UI Sync (Standard public navigation only - NO public admin buttons)
   updateNavUI() {
     const user = this.getCurrentUser();
     const authActionsContainer = document.getElementById("header-auth-actions");
-    const adminNavLink = document.getElementById("nav-admin-link");
-
-    if (adminNavLink) {
-      adminNavLink.style.display = (user && user.role === "admin") ? "block" : "none";
-    }
 
     if (!authActionsContainer) return;
 
@@ -215,11 +318,13 @@ const FidoAuth = {
       let roleLabel = user.role;
       if (user.role === "freelancer") {
         roleLabel = user.membershipStatus === "active" ? "Member" : "Freelancer";
+      } else if (user.role === "admin") {
+        roleLabel = "Admin";
       }
 
       authActionsContainer.innerHTML = `
         <a href="account.html" class="btn btn-secondary btn-sm" title="My Account">
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          ${user.photoURL ? `<img src="${user.photoURL}" alt="" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />` : `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`}
           <span>${(user.name || "Account").split(" ")[0]}</span>
           <span class="brand-badge">${roleLabel}</span>
         </a>
@@ -247,6 +352,19 @@ const FidoAuth = {
       window.location.href = `auth.html?redirect=${encodeURIComponent(window.location.pathname)}`;
       return false;
     }
+    
+    // Strict admin guard: only thecard.primary@gmail.com
+    if (allowedRoles.includes("admin")) {
+      if (!this.isAdminEmail(user.email)) {
+        if (typeof showToast === "function") {
+          showToast("Access restricted.", "error");
+        }
+        window.location.href = "account.html";
+        return false;
+      }
+      return true;
+    }
+
     if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
       if (typeof showToast === "function") {
         showToast("You do not have permission to view this section.", "error");
@@ -259,8 +377,6 @@ const FidoAuth = {
 };
 
 window.FidoAuth = FidoAuth;
-
-// Initialize on load
 FidoAuth.init();
 
 export default FidoAuth;

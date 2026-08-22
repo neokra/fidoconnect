@@ -6,6 +6,51 @@
   <title>Sign In & Register — FidoConnect</title>
   <meta name="description" content="Sign in or join the FidoConnect network as a business or verified freelancer.">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.25rem 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .auth-divider::before { margin-right: 0.75rem; }
+    .auth-divider::after { margin-left: 0.75rem; }
+
+    .btn-google {
+      background-color: var(--bg-surface);
+      color: var(--color-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      width: 100%;
+      padding: 0.7rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: var(--border-radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-google:hover {
+      background-color: var(--bg-subtle);
+      border-color: #cbd5e1;
+    }
+    .btn-google svg {
+      width: 18px;
+      height: 18px;
+    }
+  </style>
 </head>
 <body>
 
@@ -47,6 +92,20 @@
 
         <!-- 1. Login Pane -->
         <div id="login-form-pane">
+          
+          <!-- Google Sign-In Button -->
+          <button type="button" id="google-login-btn" class="btn-google">
+            <svg viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          <div class="auth-divider">or continue with email</div>
+
           <form id="login-form">
             <div class="form-group">
               <label for="loginEmail" class="form-label form-label-required">Email Address</label>
@@ -63,7 +122,7 @@
 
             <div style="margin-top: 1.75rem;">
               <button type="submit" id="login-submit-btn" class="btn btn-primary btn-block btn-lg">
-                Sign In
+                Log in
               </button>
             </div>
           </form>
@@ -71,6 +130,7 @@
 
         <!-- 2. Register Pane -->
         <div id="register-form-pane" style="display: none;">
+          
           <div style="margin-bottom: 1.25rem;">
             <label class="form-label form-label-required">Select Account Type</label>
             <div class="role-select-grid">
@@ -79,22 +139,35 @@
               <div id="role-card-client" class="role-option-card selected">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                  <div class="role-option-title">I want to post projects</div>
+                  <div class="role-option-title">Client</div>
                 </div>
-                <div class="role-option-desc">For small businesses, organizations, and clients.</div>
+                <div class="role-option-desc">I want to post and coordinate projects.</div>
               </div>
 
               <!-- Role Option 2: Freelancer -->
               <div id="role-card-freelancer" class="role-option-card">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                  <div class="role-option-title">I want to work on projects</div>
+                  <div class="role-option-title">Freelancer</div>
                 </div>
-                <div class="role-option-desc">For freelancers, specialists, and contract workers.</div>
+                <div class="role-option-desc">I want to work on projects with the agency.</div>
               </div>
 
             </div>
           </div>
+
+          <!-- Google Register Button -->
+          <button type="button" id="google-register-btn" class="btn-google">
+            <svg viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Sign up with Google</span>
+          </button>
+
+          <div class="auth-divider">or register with email</div>
 
           <form id="register-form">
             <div class="form-group">
