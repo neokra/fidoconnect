@@ -13,14 +13,12 @@ FidoConnect is a modern digital agency platform that connects local businesses w
    - **Desktop**: Top navigation with logo, direct links, dynamic account state, and CTA button.
    - **Mobile**: Fixed bottom navigation bar (`Home`, `Find Work`, `Post`, `Account`) designed for smartphones with safe-area spacing.
 3. **Role-Based Workflows**:
-   - **Client**: Submit work requests with auto-generated Project IDs (`FC-2026-XXXX`), view live agency updates, and manage project statuses.
+   - **Client**: Submit work requests with collision-safe auto-generated Project IDs (`FC-YYYY-XXXX`), view live agency updates, and manage project statuses.
    - **Freelancer**: Browse published projects, membership status checks, submit single proposals per project, and manage portfolio & skills.
    - **Admin**: Full agency control dashboard (overview KPIs, approve/reject/publish projects, review proposals, assign freelancers, manage memberships, and view client directories).
 4. **Client Privacy Protection**: Sensitive client contact details (email, phone, private address) are never displayed on public or freelancer project cards.
 5. **Membership Gate**: Realistic agency membership terminology (*"Membership gives you access to FidoConnect project opportunities. Projects are not guaranteed."*).
-6. **Dual Mode (Instant Local Preview + Live Firebase SDK)**:
-   - Works immediately out of the box with pre-seeded sample projects and instant role switcher toolbar.
-   - Production-ready for Firebase Auth, Firestore, and Netlify deployment.
+6. **Production Firebase Backend**: Connected directly to the Firebase `fidoconnect` project for Authentication and Cloud Firestore.
 
 ---
 
@@ -39,10 +37,10 @@ d:/fidoconnect/
 │   ├── style.css               # Main design system, typography, responsive rules, mobile bottom nav
 │   └── admin.css               # Admin layout, tables, metric cards
 ├── js/
-│   ├── firebase-config.js      # Firebase SDK config + fallback data seed engine
-│   ├── auth.js                 # Authentication, role session management, nav sync
-│   ├── db.js                   # Firestore data service layer (CRUD)
-│   ├── ui.js                   # Toast alerts, modals, status badges, formatters, preview toolbar
+│   ├── firebase-config.js      # Central Firebase Web SDK v10 initialization
+│   ├── auth.js                 # Firebase Auth & Firestore user profile service
+│   ├── db.js                   # Firestore database service layer (CRUD)
+│   ├── ui.js                   # Toast alerts, modals, status badges, formatters
 │   ├── home.js                 # Homepage category filtering & stats
 │   ├── post-work.js            # Client project submission controller
 │   ├── find-work.js            # Find work search, filters, and membership banner
@@ -69,28 +67,26 @@ Then visit `http://localhost:8080`.
 
 ---
 
-## 🔒 Firebase Configuration (For Production)
+## 🔒 Firebase Configuration
 
-To connect live Firebase:
+The platform is configured with Firebase Authentication and Cloud Firestore in `js/firebase-config.js`:
 
-1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com).
-2. Enable **Email/Password** under **Authentication > Sign-in method**.
-3. Enable **Cloud Firestore** in production mode.
-4. Deploy the security rules from `firestore.rules` using the Firebase CLI:
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
-5. In `js/firebase-config.js`, update the `window.FIREBASE_CONFIG` object with your Firebase app keys:
-   ```javascript
-   window.FIREBASE_CONFIG = {
-     apiKey: "YOUR_ACTUAL_API_KEY",
-     authDomain: "your-project.firebaseapp.com",
-     projectId: "your-project",
-     storageBucket: "your-project.appspot.com",
-     messagingSenderId: "...",
-     appId: "..."
-   };
-   ```
+```javascript
+const firebaseConfig = {
+  apiKey: "AIzaSyB30w_VAz5L1JCAS3gpgqigghk4Z2R3-MA",
+  authDomain: "fidoconnect.firebaseapp.com",
+  projectId: "fidoconnect",
+  storageBucket: "fidoconnect.firebasestorage.app",
+  messagingSenderId: "1055200422697",
+  appId: "1:1055200422697:web:facdf29084c93427612538"
+};
+```
+
+### Deploying Firestore Security Rules
+Deploy the security rules using the Firebase CLI:
+```bash
+firebase deploy --only firestore:rules
+```
 
 ---
 

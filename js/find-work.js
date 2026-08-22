@@ -16,6 +16,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
   await loadProjects();
   renderRoleMembershipState();
+
+  // Listen to auth changes
+  if (window.FidoAuth) {
+    window.FidoAuth.onAuthChange(() => {
+      renderRoleMembershipState();
+      renderProjectsList();
+    });
+  }
 });
 
 function setupEventListeners() {
@@ -57,7 +65,7 @@ async function loadProjects() {
 
     renderProjectsList();
   } catch (err) {
-    console.error("Error fetching projects:", err);
+    console.error("Error fetching projects from Firestore:", err);
     showToast("Failed to load projects.", "error");
   }
 }
@@ -66,7 +74,7 @@ function renderRoleMembershipState() {
   const bannerContainer = document.getElementById("membership-gate-banner");
   if (!bannerContainer) return;
 
-  const currentUser = window.FidoAuth.getCurrentUser();
+  const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
 
   if (!currentUser) {
     // Guest view
@@ -152,7 +160,7 @@ function renderProjectsList() {
     return;
   }
 
-  const currentUser = window.FidoAuth.getCurrentUser();
+  const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
   const canApplyDirectly = currentUser && currentUser.role === "freelancer" && currentUser.membershipStatus === "active";
 
   container.innerHTML = filtered.map(project => `

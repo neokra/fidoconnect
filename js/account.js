@@ -5,11 +5,19 @@
 let currentUser = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  if (!window.FidoAuth.requireAuth()) return;
+  const isAuth = await window.FidoAuth.requireAuth();
+  if (!isAuth) return;
 
   currentUser = window.FidoAuth.getCurrentUser();
-  renderAccountView();
+  await renderAccountView();
   setupEventListeners();
+
+  window.FidoAuth.onAuthChange(async (user) => {
+    if (user) {
+      currentUser = user;
+      await renderAccountView();
+    }
+  });
 });
 
 function setupEventListeners() {
@@ -36,7 +44,7 @@ function setupEventListeners() {
 
 async function renderAccountView() {
   const container = document.getElementById("account-layout-container");
-  if (!container) return;
+  if (!container || !currentUser) return;
 
   if (currentUser.role === "client") {
     await renderClientView(container);
@@ -289,14 +297,19 @@ async function renderFreelancerView(container) {
     </div>
   `;
 
-  // Membership activate/renew simulation button
+  // Membership activate/renew button
   const toggleMemberBtn = document.getElementById("toggle-membership-btn");
   if (toggleMemberBtn) {
     toggleMemberBtn.addEventListener("click", async () => {
-      const newStatus = isMemberActive ? "active" : "active";
-      await window.FidoDB.updateMembership(currentUser.uid, newStatus, "Standard Member");
-      showToast("Membership activated! You can now apply for all open projects.", "success");
-      setTimeout(() => window.location.reload(), 400);
+      try {
+        await window.FidoDB.updateMembership(currentUser.uid, "active", "Standard Member");
+        showToast("Membership activated! You can now apply for all open projects.", "success");
+        currentUser.membershipStatus = "active";
+        currentUser.membershipPlan = "Standard Member";
+        await renderFreelancerView(container);
+      } catch (err) {
+        showToast("Failed to activate membership: " + err.message, "error");
+      }
     });
   }
 

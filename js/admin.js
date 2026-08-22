@@ -8,8 +8,9 @@ let allAdminFreelancers = [];
 let allAdminClients = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Page guard for Admin role
-  const currentUser = window.FidoAuth.getCurrentUser();
+  // Wait for Firebase Auth session to resolve
+  const currentUser = await window.FidoAuth.waitForAuth();
+  
   if (!currentUser || currentUser.role !== "admin") {
     showToast("Admin access required. Please sign in with an administrator account.", "error");
     setTimeout(() => {
@@ -49,7 +50,7 @@ async function loadAdminData() {
     renderFreelancersTable();
     renderClientsTable();
   } catch (err) {
-    console.error("Error loading admin data:", err);
+    console.error("Error loading admin data from Firestore:", err);
     showToast("Error loading admin data.", "error");
   }
 }
@@ -74,7 +75,7 @@ function renderProjectsTable() {
   if (!container) return;
 
   if (allAdminProjects.length === 0) {
-    container.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No projects found.</td></tr>`;
+    container.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No projects found in database.</td></tr>`;
     return;
   }
 
@@ -84,7 +85,7 @@ function renderProjectsTable() {
     return `
       <tr>
         <td>
-          <div style="font-family:var(--font-mono); font-weight:700; font-size:0.82rem;">${proj.projectId}</div>
+          <div style="font-family:var(--font-mono); font-weight:700; font-size:0.82rem;">${proj.projectId || proj.id}</div>
           <span style="font-size:0.75rem; color:var(--text-muted);">${formatDate(proj.createdAt)}</span>
         </td>
         <td>
@@ -93,7 +94,7 @@ function renderProjectsTable() {
         </td>
         <td>
           <div>${proj.clientBusiness || proj.clientName}</div>
-          <div style="font-size:0.78rem; color:var(--text-muted);">${proj.clientEmail} • ${proj.clientPhone}</div>
+          <div style="font-size:0.78rem; color:var(--text-muted);">${proj.clientEmail || ""} • ${proj.clientPhone || ""}</div>
         </td>
         <td>
           <select class="form-control form-control-sm" style="padding:3px 6px; font-size:0.8rem; width:auto;" onchange="updateProjectStatus('${proj.id}', this.value)">
@@ -114,7 +115,7 @@ function renderProjectsTable() {
             ${proj.status === "Submitted" ? `
               <button class="btn btn-primary btn-sm" onclick="approveAndPublishProject('${proj.id}')" title="Approve & Publish to Find Work">Approve & Publish</button>
             ` : ""}
-            <a href="project-details.html?id=${proj.projectId}" target="_blank" class="btn btn-secondary btn-sm">View</a>
+            <a href="project-details.html?id=${proj.projectId || proj.id}" target="_blank" class="btn btn-secondary btn-sm">View</a>
           </div>
         </td>
       </tr>
@@ -133,7 +134,7 @@ window.updateProjectStatus = async function(projId, newStatus) {
     showToast(`Project status updated to ${newStatus}`, "success");
     await loadAdminData();
   } catch (err) {
-    showToast("Failed to update status", "error");
+    showToast("Failed to update status: " + err.message, "error");
   }
 };
 
@@ -148,7 +149,7 @@ window.approveAndPublishProject = async function(projId) {
     showToast("Project approved and published to Find Work!", "success");
     await loadAdminData();
   } catch (err) {
-    showToast("Failed to publish project", "error");
+    showToast("Failed to publish project: " + err.message, "error");
   }
 };
 
@@ -204,7 +205,7 @@ window.updateAppStatus = async function(appId, newStatus) {
     showToast(`Application marked as ${newStatus}`, "success");
     await loadAdminData();
   } catch (err) {
-    showToast("Failed to update application", "error");
+    showToast("Failed to update application: " + err.message, "error");
   }
 };
 
@@ -219,7 +220,7 @@ window.selectFreelancerForProject = async function(projId, freelancerId, appId) 
     showToast("Freelancer selected and assigned to project!", "success");
     await loadAdminData();
   } catch (err) {
-    showToast("Failed to assign freelancer", "error");
+    showToast("Failed to assign freelancer: " + err.message, "error");
   }
 };
 
@@ -227,6 +228,11 @@ window.selectFreelancerForProject = async function(projId, freelancerId, appId) 
 function renderFreelancersTable() {
   const container = document.getElementById("admin-freelancers-tbody");
   if (!container) return;
+
+  if (allAdminFreelancers.length === 0) {
+    container.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding:2rem;">No registered freelancers found.</td></tr>`;
+    return;
+  }
 
   container.innerHTML = allAdminFreelancers.map(f => {
     const isMember = f.membershipStatus === "active";
@@ -265,7 +271,7 @@ window.toggleFreelancerMembership = async function(uid, targetStatus) {
     showToast(`Freelancer membership updated to ${targetStatus}`, "success");
     await loadAdminData();
   } catch (err) {
-    showToast("Failed to update membership", "error");
+    showToast("Failed to update membership: " + err.message, "error");
   }
 };
 
@@ -273,6 +279,11 @@ window.toggleFreelancerMembership = async function(uid, targetStatus) {
 function renderClientsTable() {
   const container = document.getElementById("admin-clients-tbody");
   if (!container) return;
+
+  if (allAdminClients.length === 0) {
+    container.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding:2rem;">No registered clients found.</td></tr>`;
+    return;
+  }
 
   container.innerHTML = allAdminClients.map(c => {
     const clientProjects = allAdminProjects.filter(p => p.clientId === c.uid);

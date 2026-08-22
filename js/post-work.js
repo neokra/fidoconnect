@@ -2,18 +2,32 @@
  * FidoConnect - Post a Work Form Controller
  */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("post-work-form");
   const formContainer = document.getElementById("post-work-form-container");
   const confirmationContainer = document.getElementById("submission-confirmation");
 
-  // Pre-fill fields if user is already logged in as a client
-  const currentUser = window.FidoAuth.getCurrentUser();
-  if (currentUser) {
-    if (currentUser.name) document.getElementById("clientName").value = currentUser.name;
-    if (currentUser.email) document.getElementById("clientEmail").value = currentUser.email;
-    if (currentUser.phone) document.getElementById("clientPhone").value = currentUser.phone;
-    if (currentUser.businessName) document.getElementById("clientBusiness").value = currentUser.businessName;
+  // Pre-fill fields if user is already logged in
+  if (window.FidoAuth) {
+    const fillUser = (user) => {
+      if (user) {
+        if (user.name && !document.getElementById("clientName").value) {
+          document.getElementById("clientName").value = user.name;
+        }
+        if (user.email && !document.getElementById("clientEmail").value) {
+          document.getElementById("clientEmail").value = user.email;
+        }
+        if (user.phone && !document.getElementById("clientPhone").value) {
+          document.getElementById("clientPhone").value = user.phone;
+        }
+        if (user.businessName && !document.getElementById("clientBusiness").value) {
+          document.getElementById("clientBusiness").value = user.businessName;
+        }
+      }
+    };
+
+    fillUser(window.FidoAuth.getCurrentUser());
+    window.FidoAuth.onAuthChange(fillUser);
   }
 
   // Pre-select category if passed via URL parameter
@@ -55,6 +69,8 @@ document.addEventListener("DOMContentLoaded", () => {
           throw new Error("Please fill in all required fields marked with an asterisk (*).");
         }
 
+        const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+
         const projectPayload = {
           title,
           category,
@@ -62,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
           budget: budget || "Flexible",
           deadline: deadline || "Flexible",
           requirements: requirements || "",
-          clientId: currentUser ? currentUser.uid : `guest_${Date.now()}`,
+          clientId: currentUser ? currentUser.uid : "unregistered_client",
           clientName,
           clientBusiness: clientBusiness || clientName,
           clientEmail,

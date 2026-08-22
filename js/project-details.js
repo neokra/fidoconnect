@@ -16,6 +16,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await loadProjectDetails(projectId);
   setupApplicationForm();
+
+  if (window.FidoAuth) {
+    window.FidoAuth.onAuthChange(() => {
+      if (currentProject) {
+        renderApplicationCTA();
+      }
+    });
+  }
 });
 
 async function loadProjectDetails(projectId) {
@@ -52,19 +60,19 @@ async function loadProjectDetails(projectId) {
     }
 
     // Role-dependent Action CTA
-    renderApplicationCTA();
+    await renderApplicationCTA();
 
   } catch (err) {
-    console.error("Error loading project:", err);
+    console.error("Error loading project from Firestore:", err);
     showToast("Error loading project details.", "error");
   }
 }
 
 async function renderApplicationCTA() {
   const ctaContainer = document.getElementById("project-action-cta");
-  if (!ctaContainer) return;
+  if (!ctaContainer || !currentProject) return;
 
-  const currentUser = window.FidoAuth.getCurrentUser();
+  const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
 
   if (!currentUser) {
     ctaContainer.innerHTML = `
@@ -119,7 +127,7 @@ async function renderApplicationCTA() {
     return;
   }
 
-  // Check if freelancer already applied
+  // Check if freelancer already applied in Firestore
   const existingApps = await window.FidoDB.getApplications({
     projectId: currentProject.projectId || currentProject.id,
     freelancerId: currentUser.uid
@@ -155,21 +163,28 @@ async function renderApplicationCTA() {
     </div>
   `;
 
-  document.getElementById("open-apply-modal-btn").addEventListener("click", () => {
-    openModal("apply-modal");
-  });
+  const applyBtn = document.getElementById("open-apply-modal-btn");
+  if (applyBtn) {
+    applyBtn.addEventListener("click", () => {
+      openModal("apply-modal");
+    });
+  }
 }
 
 function setupApplicationForm() {
   const form = document.getElementById("application-form");
   if (!form) return;
 
-  // Auto-fill user's portfolio if on profile
-  const currentUser = window.FidoAuth.getCurrentUser();
-  if (currentUser && currentUser.portfolio) {
-    const portInput = document.getElementById("appPortfolio");
-    if (portInput && !portInput.value) portInput.value = currentUser.portfolio;
-  }
+  const updatePortfolioInput = () => {
+    const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+    if (currentUser && currentUser.portfolio) {
+      const portInput = document.getElementById("appPortfolio");
+      if (portInput && !portInput.value) portInput.value = currentUser.portfolio;
+    }
+  };
+
+  updatePortfolioInput();
+  if (window.FidoAuth) window.FidoAuth.onAuthChange(updatePortfolioInput);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -179,6 +194,11 @@ function setupApplicationForm() {
     submitBtn.textContent = "Submitting Proposal...";
 
     try {
+      const currentUser = window.FidoAuth.getCurrentUser();
+      if (!currentUser) {
+        throw new Error("Please log in to apply.");
+      }
+
       const message = document.getElementById("appMessage").value.trim();
       const portfolio = document.getElementById("appPortfolio").value.trim();
       const deliveryDays = document.getElementById("appDeliveryTime").value.trim();
@@ -190,8 +210,8 @@ function setupApplicationForm() {
       await window.FidoDB.createApplication({
         projectId: currentProject.projectId || currentProject.id,
         freelancerId: currentUser.uid,
-        freelancerName: currentUser.name,
-        freelancerEmail: currentUser.email,
+        freelancerName: currentUser.name || "Freelancer",
+        freelancerEmail: currentUser.email || "",
         skills: currentUser.skills || [currentProject.category],
         portfolio: portfolio || currentUser.portfolio || "",
         message: message,

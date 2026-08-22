@@ -48,14 +48,14 @@ service cloud.firestore {
 
     // --- Projects Collection ---
     match /projects/{projectId} {
-      // Anyone can read published projects with public visibility (sensitive client contact protected)
+      // Anyone can read published projects with public visibility (sensitive client contact protected in app layer)
       allow read: if resource.data.status == 'Published' || 
                      (isAuthenticated() && (resource.data.clientId == request.auth.uid || 
                                            resource.data.assignedFreelancerId == request.auth.uid || 
                                            isAdmin()));
       
-      // Clients can create project requests
-      allow create: if isAuthenticated() && request.resource.data.clientId == request.auth.uid;
+      // Allow project creation by clients / submission form
+      allow create: if true;
       
       // Only Admin or project owner can update project
       allow update: if (isAuthenticated() && resource.data.clientId == request.auth.uid && 
@@ -63,6 +63,11 @@ service cloud.firestore {
                        isAdmin();
       
       allow delete: if isAdmin();
+    }
+
+    // --- Counters Collection (For collision-safe sequential Project IDs) ---
+    match /counters/{counterId} {
+      allow read, write: if true;
     }
 
     // --- Applications Collection ---
