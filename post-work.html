@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post a Work — FidoConnect</title>
+  <meta name="description" content="Submit your digital project to FidoConnect. We review your requirements and coordinate the right professional for the job.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span>FidoConnect</span>
+      </a>
+
+      <nav class="desktop-nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="post-work.html" class="nav-link active">Post a Work</a>
+        <a href="find-work.html" class="nav-link">Find Work</a>
+        <a href="account.html" class="nav-link">Account</a>
+        <a href="admin.html" class="nav-link" id="nav-admin-link" style="display:none; color:#dc2626;">Admin</a>
+      </nav>
+
+      <div class="header-actions">
+        <div id="header-auth-actions">
+          <a href="auth.html" class="btn btn-secondary btn-sm">Log in</a>
+          <a href="auth.html?mode=register" class="btn btn-primary btn-sm">Join</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container container-narrow">
+      
+      <!-- Submission Form Container -->
+      <div id="post-work-form-container">
+        <div style="margin-bottom: 2rem; text-align:center;">
+          <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Post your project</h1>
+          <p class="text-muted">
+            Tell us what you need completed. Our team will review your requirements and match a verified professional.
+          </p>
+        </div>
+
+        <form id="post-work-form" class="card">
+          
+          <!-- Contact Section -->
+          <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
+            1. Your Contact Information
+          </h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="clientName" class="form-label form-label-required">Your Name</label>
+              <input type="text" id="clientName" class="form-control" placeholder="Jane Doe" required />
+            </div>
+            <div class="form-group">
+              <label for="clientBusiness" class="form-label">Business / Organization Name</label>
+              <input type="text" id="clientBusiness" class="form-control" placeholder="Acme Coffee Co." />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="clientEmail" class="form-label form-label-required">Email Address</label>
+              <input type="email" id="clientEmail" class="form-control" placeholder="jane@example.com" required />
+              <span class="form-hint">Used for project updates and notifications.</span>
+            </div>
+            <div class="form-group">
+              <label for="clientPhone" class="form-label form-label-required">WhatsApp / Phone Number</label>
+              <input type="tel" id="clientPhone" class="form-control" placeholder="+1 (555) 000-0000" required />
+              <span class="form-hint">For swift coordination with our team.</span>
+            </div>
+          </div>
+
+          <!-- Project Details Section -->
+          <h3 style="font-size: 1.15rem; margin: 1.75rem 0 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
+            2. Project Details
+          </h3>
+
+          <div class="form-group">
+            <label for="projectTitle" class="form-label form-label-required">Project Title</label>
+            <input type="text" id="projectTitle" class="form-control" placeholder="e.g., Update restaurant website menu and catering form" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="projectCategory" class="form-label form-label-required">Category</label>
+              <select id="projectCategory" class="form-control" required>
+                <option value="Website">Website Development</option>
+                <option value="Data Entry">Data Entry</option>
+                <option value="Design">Design & Graphics</option>
+                <option value="Documents">Documents & Formatting</option>
+                <option value="Digital Marketing">Digital Marketing & Tasks</option>
+                <option value="Other">Other Digital Work</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="projectBudget" class="form-label">Expected Budget</label>
+              <input type="text" id="projectBudget" class="form-control" placeholder="e.g., $250 - $350 or $300" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="projectDeadline" class="form-label">Preferred Deadline</label>
+            <input type="date" id="projectDeadline" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label for="projectDescription" class="form-label form-label-required">Project Description</label>
+            <textarea id="projectDescription" class="form-control" placeholder="Describe what you want done, what files or content you have ready, and any specific preferences." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="projectRequirements" class="form-label">Additional Requirements / Deliverables</label>
+            <textarea id="projectRequirements" class="form-control" style="min-height: 80px;" placeholder="e.g., Mobile responsive, source files required, must be delivered in Google Sheets."></textarea>
+          </div>
+
+          <!-- Privacy & Trust Notice -->
+          <div class="notice-box notice-info" style="margin-top: 1.5rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <div>
+              <strong>Privacy Guaranteed:</strong> Your contact information is kept confidential and is never displayed publicly on project cards. FidoConnect coordinates all communications.
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem;">
+            <button type="submit" id="submit-work-btn" class="btn btn-primary btn-lg btn-block">
+              Submit Work for Review
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Submission Confirmation Screen (Hidden Initially) -->
+      <div id="submission-confirmation" style="display: none;">
+        <div class="card text-center" style="padding: 3rem 1.5rem;">
+          
+          <div style="width: 64px; height: 64px; background-color: #ecfdf5; color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+
+          <h2 style="font-size: 1.85rem; margin-bottom: 0.75rem;">We've received your request.</h2>
+          <p class="text-muted" style="max-width: 500px; margin: 0 auto 2rem; font-size: 1.05rem;">
+            Your project has been submitted for review. Our team will check the requirements and contact you if we need any additional details.
+          </p>
+
+          <!-- Summary Box -->
+          <div class="card" style="background-color: var(--bg-subtle); max-width: 520px; margin: 0 auto 2rem; text-align: left; padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem; margin-bottom: 0.6rem;">
+              <span class="text-muted" style="font-size: 0.85rem;">Project ID:</span>
+              <strong id="conf-project-id" style="font-family: var(--font-mono); color: var(--color-accent); font-size: 0.95rem;">-</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem; margin-bottom: 0.6rem;">
+              <span class="text-muted" style="font-size: 0.85rem;">Title:</span>
+              <strong id="conf-project-title" style="font-size: 0.9rem;">-</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem; margin-bottom: 0.6rem;">
+              <span class="text-muted" style="font-size: 0.85rem;">Category:</span>
+              <span id="conf-project-category" class="project-category-badge">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span class="text-muted" style="font-size: 0.85rem;">Budget:</span>
+              <strong id="conf-project-budget" style="font-size: 0.9rem;">-</strong>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <a href="account.html" class="btn btn-primary">View in Account</a>
+            <button type="button" class="btn btn-secondary" onclick="window.location.reload();">Submit Another Work</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>&copy; 2026 FidoConnect. All rights reserved.</span>
+        <span>Trusted project coordination service.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Fixed Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-nav">
+    <div class="mobile-nav-grid">
+      <a href="index.html" class="mobile-nav-item">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        <span>Home</span>
+      </a>
+      <a href="find-work.html" class="mobile-nav-item">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <span>Find Work</span>
+      </a>
+      <a href="post-work.html" class="mobile-nav-item active">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Post</span>
+      </a>
+      <a href="account.html" class="mobile-nav-item">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        <span>Account</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/post-work.js"></script>
+</body>
+</html>

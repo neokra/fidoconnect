@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — FidoConnect Operations</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span>FidoConnect</span>
+        <span class="brand-badge" style="background:#fee2e2; color:#b91c1c;">Admin Ops</span>
+      </a>
+
+      <nav class="desktop-nav">
+        <a href="index.html" class="nav-link">Main Site</a>
+        <a href="post-work.html" class="nav-link">Post a Work</a>
+        <a href="find-work.html" class="nav-link">Find Work</a>
+        <a href="account.html" class="nav-link">Account</a>
+      </nav>
+
+      <div class="header-actions">
+        <div id="header-auth-actions"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Admin Layout -->
+  <div class="admin-layout">
+    
+    <!-- Admin Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-header">
+        <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); letter-spacing:0.05em;">Management</span>
+      </div>
+
+      <div class="admin-nav-item active" data-section="sec-overview">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        <span>Overview</span>
+      </div>
+
+      <div class="admin-nav-item" data-section="sec-projects">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+        <span>Projects & Pipeline</span>
+      </div>
+
+      <div class="admin-nav-item" data-section="sec-applications">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        <span>Proposals</span>
+      </div>
+
+      <div class="admin-nav-item" data-section="sec-freelancers">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        <span>Freelancer Network</span>
+      </div>
+
+      <div class="admin-nav-item" data-section="sec-clients">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        <span>Client Directory</span>
+      </div>
+    </aside>
+
+    <!-- Admin Main Body -->
+    <main class="admin-main">
+      
+      <!-- Section 1: Overview -->
+      <div id="sec-overview" class="admin-tab-section">
+        <h2 style="margin-bottom: 0.25rem;">Agency Overview</h2>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">Live operational metrics and project pipeline status.</p>
+
+        <div class="admin-metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">New Requests</span>
+            <div id="kpi-new-requests" class="metric-value text-accent">-</div>
+            <span class="metric-sub">Pending review</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Active Projects</span>
+            <div id="kpi-active-projects" class="metric-value" style="color:#8b5cf6;">-</div>
+            <span class="metric-sub">In coordination / progress</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Completed</span>
+            <div id="kpi-completed-projects" class="metric-value" style="color:#10b981;">-</div>
+            <span class="metric-sub">Delivered to clients</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Applications</span>
+            <div id="kpi-total-apps" class="metric-value">-</div>
+            <span class="metric-sub">Freelancer proposals</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Active Members</span>
+            <div id="kpi-active-members" class="metric-value" style="color:#0d9488;">-</div>
+            <span class="metric-sub">Verified network freelancers</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+          <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem;">FidoConnect 12-Step Agency Workflow</h3>
+          <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 1.25rem;">
+            Our standard operational pipeline ensuring high quality and seamless coordination.
+          </p>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem; font-size:0.82rem;">
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">1. Client submits project</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">2. Agency reviews scope & budget</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">3. Admin approves & publishes</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">4. Verified members submit proposals</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">5. Admin selects & assigns freelancer</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">6. Agency coordinates briefing</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">7. Freelancer delivers draft</div>
+            <div style="padding:0.6rem 0.8rem; background:var(--bg-subtle); border-radius:6px;">8. Agency QA & Client handover</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Projects Management -->
+      <div id="sec-projects" class="admin-tab-section" style="display: none;">
+        <div class="admin-toolbar">
+          <div>
+            <h2 style="margin-bottom: 0.2rem;">Projects Management</h2>
+            <p class="text-muted" style="font-size: 0.88rem;">Review submissions, approve to Find Work, assign freelancers, and update statuses.</p>
+          </div>
+          <a href="post-work.html" target="_blank" class="btn btn-primary btn-sm">+ New Request</a>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Project ID</th>
+                <th>Title & Category</th>
+                <th>Client / Contact</th>
+                <th>Workflow Status</th>
+                <th>Assigned Freelancer</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-projects-tbody">
+              <!-- Rendered via js/admin.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 3: Applications Review -->
+      <div id="sec-applications" class="admin-tab-section" style="display: none;">
+        <div class="admin-toolbar">
+          <div>
+            <h2 style="margin-bottom: 0.2rem;">Freelancer Proposals</h2>
+            <p class="text-muted" style="font-size: 0.88rem;">Review proposals submitted by network members and assign suitable professionals.</p>
+          </div>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Freelancer</th>
+                <th>Proposal Note & Timeframe</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-apps-tbody">
+              <!-- Rendered via js/admin.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 4: Freelancers -->
+      <div id="sec-freelancers" class="admin-tab-section" style="display: none;">
+        <div class="admin-toolbar">
+          <div>
+            <h2 style="margin-bottom: 0.2rem;">Freelancer Network</h2>
+            <p class="text-muted" style="font-size: 0.88rem;">Manage vetted freelancers, skills, and membership statuses.</p>
+          </div>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Freelancer</th>
+                <th>Skills & Portfolio</th>
+                <th>Membership</th>
+                <th>Rating</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-freelancers-tbody">
+              <!-- Rendered via js/admin.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 5: Clients Directory -->
+      <div id="sec-clients" class="admin-tab-section" style="display: none;">
+        <div class="admin-toolbar">
+          <div>
+            <h2 style="margin-bottom: 0.2rem;">Client Directory</h2>
+            <p class="text-muted" style="font-size: 0.88rem;">Businesses and organizations using FidoConnect coordination services.</p>
+          </div>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Business / Organization</th>
+                <th>Contact Details</th>
+                <th>Submitted Projects</th>
+                <th>Registered</th>
+              </tr>
+            </thead>
+            <tbody id="admin-clients-tbody">
+              <!-- Rendered via js/admin.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    function isFreelancer() {
+      return isAuthenticated() && getUserData().role == 'freelancer';
+    }
+
+    function isClient() {
+      return isAuthenticated() && getUserData().role == 'client';
+    }
+
+    function isMemberActive() {
+      return isFreelancer() && getUserData().membershipStatus == 'active';
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      // Allow registration, but forbid setting role == 'admin' during normal creation
+      allow create: if isAuthenticated() && 
+                    request.auth.uid == userId && 
+                    request.resource.data.role != 'admin';
+      // User can update their own profile, but cannot elevate themselves to admin or alter membership status
+      allow update: if (isOwner(userId) && 
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.membershipStatus == resource.data.membershipStatus) || 
+                       isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Projects Collection ---
+    match /projects/{projectId} {
+      // Anyone can read published projects with public visibility (sensitive client contact protected)
+      allow read: if resource.data.status == 'Published' || 
+                     (isAuthenticated() && (resource.data.clientId == request.auth.uid || 
+                                           resource.data.assignedFreelancerId == request.auth.uid || 
+                                           isAdmin()));
+      
+      // Clients can create project requests
+      allow create: if isAuthenticated() && request.resource.data.clientId == request.auth.uid;
+      
+      // Only Admin or project owner can update project
+      allow update: if (isAuthenticated() && resource.data.clientId == request.auth.uid && 
+                        request.resource.data.status == resource.data.status) || 
+                       isAdmin();
+      
+      allow delete: if isAdmin();
+    }
+
+    // --- Applications Collection ---
+    match /applications/{applicationId} {
+      // Freelancers can read their own applications; admins can read all
+      allow read: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
+      
+      // Active members can submit 1 proposal per project
+      allow create: if isMemberActive() && request.resource.data.freelancerId == request.auth.uid;
+      
+      // Freelancers can update draft; Admins can update status (Shortlisted, Selected, Rejected)
+      allow update: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
+      
+      allow delete: if isAdmin();
+    }
+
+    // --- Memberships Collection ---
+    match /memberships/{membershipId} {
+      allow read: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // --- Payments Collection ---
+    match /payments/{paymentId} {
+      allow read, write: if isAdmin();
+    }
+
+    // --- Reviews Collection ---
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+  }
+}

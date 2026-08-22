@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Work — FidoConnect</title>
+  <meta name="description" content="Browse verified small business projects curated by FidoConnect. Apply directly as an active member.">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .category-pills-wrap {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .category-pill {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      padding: 0.45rem 0.9rem;
+      border-radius: var(--border-radius-full);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--color-primary-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .category-pill:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+    .category-pill.active {
+      background-color: var(--color-primary);
+      border-color: var(--color-primary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span>FidoConnect</span>
+      </a>
+
+      <nav class="desktop-nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="post-work.html" class="nav-link">Post a Work</a>
+        <a href="find-work.html" class="nav-link active">Find Work</a>
+        <a href="account.html" class="nav-link">Account</a>
+        <a href="admin.html" class="nav-link" id="nav-admin-link" style="display:none; color:#dc2626;">Admin</a>
+      </nav>
+
+      <div class="header-actions">
+        <div id="header-auth-actions">
+          <a href="auth.html" class="btn btn-secondary btn-sm">Log in</a>
+          <a href="auth.html?mode=register" class="btn btn-primary btn-sm">Join</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Page Header -->
+      <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2.2rem; margin-bottom: 0.4rem;">Find projects that match your skills</h1>
+        <p class="text-muted" style="max-width: 680px; font-size: 1.05rem;">
+          Browse projects shared by FidoConnect and apply for the ones that fit your experience. All client communication and delivery are coordinated by our agency.
+        </p>
+      </div>
+
+      <!-- Role & Membership Gate Notice (Rendered dynamically) -->
+      <div id="membership-gate-banner" style="display:none; margin-bottom: 2rem;"></div>
+
+      <!-- Search & Filters Toolbar -->
+      <div style="display: flex; gap: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <div style="flex: 1; min-width: 260px; max-width: 480px;">
+          <input type="text" id="project-search-input" class="form-control" placeholder="Search projects by keyword, title, or ID..." />
+        </div>
+        <div id="results-count" style="font-size: 0.88rem; color: var(--text-muted); font-weight: 500;">
+          Loading projects...
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="category-pills-wrap">
+        <button class="category-pill active" data-category="all">All Categories</button>
+        <button class="category-pill" data-category="Website">Website</button>
+        <button class="category-pill" data-category="Data Entry">Data Entry</button>
+        <button class="category-pill" data-category="Design">Design</button>
+        <button class="category-pill" data-category="Documents">Documents</button>
+        <button class="category-pill" data-category="Digital Marketing">Digital Marketing</button>
+        <button class="category-pill" data-category="Other">Other</button>
+      </div>
+
+      <!-- Projects Grid -->
+      <div id="projects-grid" class="grid-2">
+        <!-- Rendered via find-work.js -->
+      </div>
+
+      <!-- Agency Transparency Section -->
+      <div class="notice-box notice-info" style="margin-top: 3.5rem;">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>
+          <strong>About FidoConnect Projects:</strong> All listed projects are vetted directly by our team. FidoConnect manages client requirements, milestones, and deliverables to ensure fair compensation and smooth execution.
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>&copy; 2026 FidoConnect. All rights reserved.</span>
+        <span>Trusted project coordination service.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Fixed Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-nav">
+    <div class="mobile-nav-grid">
+      <a href="index.html" class="mobile-nav-item">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        <span>Home</span>
+      </a>
+      <a href="find-work.html" class="mobile-nav-item active">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <span>Find Work</span>
+      </a>
+      <a href="post-work.html" class="mobile-nav-item">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Post</span>
+      </a>
+      <a href="account.html" class="mobile-nav-item">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        <span>Account</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/find-work.js"></script>
+</body>
+</html>
