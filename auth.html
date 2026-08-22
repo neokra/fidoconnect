@@ -86,14 +86,12 @@
         
         <!-- Toggle Tabs -->
         <div class="tab-nav" style="justify-content: center; margin-bottom: 2rem;">
-          <button id="btn-tab-login" class="tab-btn active" style="font-size: 1.05rem; padding: 0.6rem 1.5rem;">Sign In</button>
+          <button id="btn-tab-login" class="tab-btn active" style="font-size: 1.05rem; padding: 0.6rem 1.5rem;">Log In</button>
           <button id="btn-tab-register" class="tab-btn" style="font-size: 1.05rem; padding: 0.6rem 1.5rem;">Create Account</button>
         </div>
 
         <!-- 1. Login Pane -->
         <div id="login-form-pane">
-          
-          <!-- Google Sign-In Button -->
           <button type="button" id="google-login-btn" class="btn-google">
             <svg viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -122,7 +120,7 @@
 
             <div style="margin-top: 1.75rem;">
               <button type="submit" id="login-submit-btn" class="btn btn-primary btn-block btn-lg">
-                Log in
+                Log In
               </button>
             </div>
           </form>
@@ -130,9 +128,8 @@
 
         <!-- 2. Register Pane -->
         <div id="register-form-pane" style="display: none;">
-          
           <div style="margin-bottom: 1.25rem;">
-            <label class="form-label form-label-required">Select Account Type</label>
+            <label class="form-label form-label-required">Account Type</label>
             <div class="role-select-grid">
               
               <!-- Role Option 1: Client -->
@@ -141,7 +138,7 @@
                   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
                   <div class="role-option-title">Client</div>
                 </div>
-                <div class="role-option-desc">I want to post and coordinate projects.</div>
+                <div class="role-option-desc">I want to post project requests.</div>
               </div>
 
               <!-- Role Option 2: Freelancer -->
@@ -150,13 +147,12 @@
                   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                   <div class="role-option-title">Freelancer</div>
                 </div>
-                <div class="role-option-desc">I want to work on projects with the agency.</div>
+                <div class="role-option-desc">I want to apply for digital work.</div>
               </div>
 
             </div>
           </div>
 
-          <!-- Google Register Button -->
           <button type="button" id="google-register-btn" class="btn-google">
             <svg viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -164,7 +160,7 @@
               <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
-            <span>Sign up with Google</span>
+            <span>Continue with Google</span>
           </button>
 
           <div class="auth-divider">or register with email</div>
@@ -229,7 +225,7 @@
       <button class="modal-close-btn" onclick="closeModal('forgot-password-modal')">&times;</button>
       <h3 style="margin-bottom: 0.5rem;">Reset Password</h3>
       <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 1.25rem;">
-        Enter your registered email address and we'll send you a password reset link.
+        Enter your registered email address and we will send you a password reset link.
       </p>
       <form id="forgot-password-form">
         <div class="form-group">
@@ -276,11 +272,182 @@
     </div>
   </nav>
 
-  <!-- Scripts -->
-  <script type="module" src="js/firebase-config.js"></script>
-  <script src="js/db.js"></script>
-  <script src="js/auth.js"></script>
+  <!-- UI utilities -->
   <script src="js/ui.js"></script>
-  <script src="js/auth-page.js"></script>
+
+  <!-- Direct Module Scripts -->
+  <script type="module">
+    import { FidoAuth } from "./js/auth.js";
+
+    let selectedRole = "client";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. Tab switching
+      const loginTabBtn = document.getElementById("btn-tab-login");
+      const registerTabBtn = document.getElementById("btn-tab-register");
+      const loginPane = document.getElementById("login-form-pane");
+      const registerPane = document.getElementById("register-form-pane");
+
+      loginTabBtn.addEventListener("click", () => {
+        loginTabBtn.classList.add("active");
+        registerTabBtn.classList.remove("active");
+        loginPane.style.display = "block";
+        registerPane.style.display = "none";
+      });
+
+      registerTabBtn.addEventListener("click", () => {
+        registerTabBtn.classList.add("active");
+        loginTabBtn.classList.remove("active");
+        registerPane.style.display = "block";
+        loginPane.style.display = "none";
+      });
+
+      // 2. Role Selector
+      const clientCard = document.getElementById("role-card-client");
+      const freelancerCard = document.getElementById("role-card-freelancer");
+      const clientFields = document.getElementById("client-extra-fields");
+      const freelancerFields = document.getElementById("freelancer-extra-fields");
+
+      function setRole(role) {
+        selectedRole = role;
+        if (role === "client") {
+          clientCard.classList.add("selected");
+          freelancerCard.classList.remove("selected");
+          clientFields.style.display = "block";
+          freelancerFields.style.display = "none";
+        } else {
+          freelancerCard.classList.add("selected");
+          clientCard.classList.remove("selected");
+          clientFields.style.display = "none";
+          freelancerFields.style.display = "block";
+        }
+      }
+
+      clientCard.addEventListener("click", () => setRole("client"));
+      freelancerCard.addEventListener("click", () => setRole("freelancer"));
+
+      // Check URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("mode") === "register") {
+        registerTabBtn.click();
+      }
+      if (urlParams.get("role") === "freelancer") {
+        setRole("freelancer");
+      }
+
+      const getRedirectUrl = () => urlParams.get("redirect") || "account.html";
+
+      // 3. Google Sign-In Handlers
+      const googleLoginBtn = document.getElementById("google-login-btn");
+      if (googleLoginBtn) {
+        googleLoginBtn.addEventListener("click", async () => {
+          googleLoginBtn.disabled = true;
+          try {
+            await FidoAuth.loginWithGoogle("client");
+            showToast("Signed in with Google!", "success");
+            setTimeout(() => window.location.href = getRedirectUrl(), 350);
+          } catch (err) {
+            showToast(err.message || "Google login failed", "error");
+            googleLoginBtn.disabled = false;
+          }
+        });
+      }
+
+      const googleRegBtn = document.getElementById("google-register-btn");
+      if (googleRegBtn) {
+        googleRegBtn.addEventListener("click", async () => {
+          googleRegBtn.disabled = true;
+          try {
+            await FidoAuth.loginWithGoogle(selectedRole);
+            showToast("Account created with Google!", "success");
+            setTimeout(() => window.location.href = getRedirectUrl(), 350);
+          } catch (err) {
+            showToast(err.message || "Google sign-up failed", "error");
+            googleRegBtn.disabled = false;
+          }
+        });
+      }
+
+      // 4. Email/Password Login
+      const loginForm = document.getElementById("login-form");
+      if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("loginEmail").value.trim();
+          const password = document.getElementById("loginPassword").value;
+          const submitBtn = document.getElementById("login-submit-btn");
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Signing In...";
+
+          try {
+            await FidoAuth.login(email, password);
+            showToast("Signed in successfully!", "success");
+            setTimeout(() => window.location.href = getRedirectUrl(), 350);
+          } catch (err) {
+            showToast(err.message || "Failed to sign in.", "error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Log In";
+          }
+        });
+      }
+
+      // 5. Email/Password Register
+      const registerForm = document.getElementById("register-form");
+      if (registerForm) {
+        registerForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const name = document.getElementById("regName").value.trim();
+          const email = document.getElementById("regEmail").value.trim();
+          const password = document.getElementById("regPassword").value;
+          const phone = document.getElementById("regPhone").value.trim();
+          const businessName = document.getElementById("regBusiness") ? document.getElementById("regBusiness").value.trim() : "";
+          const portfolio = document.getElementById("regPortfolio") ? document.getElementById("regPortfolio").value.trim() : "";
+          const skillsRaw = document.getElementById("regSkills") ? document.getElementById("regSkills").value.trim() : "";
+          const skills = skillsRaw ? skillsRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+          const submitBtn = document.getElementById("register-submit-btn");
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Creating Account...";
+
+          try {
+            await FidoAuth.register({
+              name,
+              email,
+              password,
+              role: selectedRole,
+              phone,
+              businessName,
+              portfolio,
+              skills
+            });
+
+            showToast("Account created successfully!", "success");
+            setTimeout(() => window.location.href = "account.html", 350);
+          } catch (err) {
+            showToast(err.message || "Registration failed.", "error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Create Account";
+          }
+        });
+      }
+
+      // 6. Forgot Password
+      const forgotForm = document.getElementById("forgot-password-form");
+      if (forgotForm) {
+        forgotForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("resetEmail").value.trim();
+          try {
+            await FidoAuth.resetPassword(email);
+            closeModal("forgot-password-modal");
+            showToast("Password reset instructions sent to your email.", "success");
+          } catch (err) {
+            showToast(err.message || "Error sending reset link.", "error");
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>

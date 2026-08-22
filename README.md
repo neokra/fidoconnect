@@ -12,17 +12,30 @@ FidoConnect is a modern digital agency platform that connects local businesses w
 2. **Fully Responsive Layout**:
    - **Desktop**: Top navigation with logo, direct links, dynamic account state, and CTA button.
    - **Mobile**: Fixed bottom navigation bar (`Home`, `Find Work`, `Post`, `Account`) designed for smartphones with safe-area spacing.
-3. **Role-Based Workflows**:
-   - **Client**: Submit work requests with collision-safe auto-generated Project IDs (`FC-YYYY-XXXX`), view live agency updates, and manage project statuses.
-   - **Freelancer**: Browse published projects, membership status checks, submit single proposals per project, and manage portfolio & skills.
-   - **Admin**: Full agency control dashboard (overview KPIs, approve/reject/publish projects, review proposals, assign freelancers, manage memberships, and view client directories).
-4. **Client Privacy Protection**: Sensitive client contact details (email, phone, private address) are never displayed on public or freelancer project cards.
-5. **Membership Gate**: Realistic agency membership terminology (*"Membership gives you access to FidoConnect project opportunities. Projects are not guaranteed."*).
-6. **Production Firebase Backend**: Connected directly to the Firebase `fidoconnect` project for Authentication and Cloud Firestore.
+3. **Unified Single-Page Authentication (`auth.html`)**:
+   - **Methods**: Google Sign-In (`signInWithPopup`) and Email/Password.
+   - **Roles**: Client or Freelancer (Admin is never shown as a registration option).
+   - **Password Reset**: Direct Firebase reset links.
+   - **Zero Storage Hacks**: Uses real Firebase Authentication sessions exclusively without `localStorage` or `sessionStorage`.
+4. **Automatic Admin Detection**:
+   - Authenticated user with email `thecard.primary@gmail.com` is automatically recognized as the FidoConnect Administrator.
+   - Shows the **Admin Panel** card inside `account.html` and grants access to `admin.html`.
+5. **Comprehensive 11-Module Admin Dashboard (`admin.html`)**:
+   - Overview KPIs, Projects Pipeline, Freelancer Proposals, User Directory, Freelancer Network, Client Directory, Memberships, Payments, Reviews, Messages, Settings.
+6. **Client Privacy Protection**: Sensitive client contact details (email, phone, private address) are never displayed on public or freelancer project cards.
+7. **Production Firebase Backend**: Connected directly to the Firebase `fidoconnect` project for Authentication and Cloud Firestore.
 
 ---
 
-## 📁 Project Structure
+## 📁 Streamlined Project Architecture
+
+```
+firebase-config.js
+      ↓
+   auth.js
+      ↓
+auth.html / account.html / admin.html / other pages
+```
 
 ```
 d:/fidoconnect/
@@ -31,14 +44,14 @@ d:/fidoconnect/
 ├── find-work.html              # Public/Member project browsing with membership gate
 ├── project-details.html        # Detailed project view & freelancer proposal modal
 ├── account.html                # Dynamic Client / Freelancer / Admin portal
-├── auth.html                   # Sign In, Role Registration (Client / Freelancer), Reset Password
-├── admin.html                  # Admin Dashboard (KPIs, Project Pipeline, Applications, Members)
+├── auth.html                   # Unified Sign In, Registration, Google Auth & Reset
+├── admin.html                  # 11-Module Admin Dashboard (Exclusive to thecard.primary@gmail.com)
 ├── css/
 │   ├── style.css               # Main design system, typography, responsive rules, mobile bottom nav
 │   └── admin.css               # Admin layout, tables, metric cards
 ├── js/
 │   ├── firebase-config.js      # Central Firebase Web SDK v10 initialization
-│   ├── auth.js                 # Firebase Auth & Firestore user profile service
+│   ├── auth.js                 # Unified Firebase Auth service (Google + Email/Password)
 │   ├── db.js                   # Firestore database service layer (CRUD)
 │   ├── ui.js                   # Toast alerts, modals, status badges, formatters
 │   ├── home.js                 # Homepage category filtering & stats
@@ -46,8 +59,7 @@ d:/fidoconnect/
 │   ├── find-work.js            # Find work search, filters, and membership banner
 │   ├── project-details.js      # Single project view & proposal submission
 │   ├── account.js              # Freelancer/Client profile & membership manager
-│   ├── auth-page.js            # Auth page tabs, role card selector, and form submit
-│   └── admin.js                # Admin approval pipeline, assignment, and membership toggles
+│   └── admin.js                # 11-Module Admin Dashboard controller
 ├── firestore.rules             # Comprehensive Firebase Security Rules
 ├── netlify.toml                # Netlify deployment and security headers
 └── README.md                   # Documentation and setup guide
@@ -81,23 +93,6 @@ const firebaseConfig = {
   appId: "1:1055200422697:web:facdf29084c93427612538"
 };
 ```
-
-### Deploying Firestore Security Rules
-Deploy the security rules using the Firebase CLI:
-```bash
-firebase deploy --only firestore:rules
-```
-
----
-
-## 🌐 Netlify Deployment
-
-This repository is ready for zero-configuration Netlify deployment:
-
-1. Drag and drop the `fidoconnect` folder into the [Netlify Dashboard](https://app.netlify.com/drop), OR
-2. Link your Git repository in Netlify with:
-   - **Publish directory**: `.` (root directory)
-   - The included `netlify.toml` file will configure all security headers and cache policies automatically.
 
 ---
 

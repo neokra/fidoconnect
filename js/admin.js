@@ -5,6 +5,9 @@
  * Handles all 11 modules.
  */
 
+import { FidoAuth } from "./auth.js";
+import { FidoDB } from "./db.js";
+
 let allAdminProjects = [];
 let allAdminApps = [];
 let allAdminUsers = [];
@@ -16,9 +19,9 @@ let allAdminMessages = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Strict admin guard: only thecard.primary@gmail.com
-  const currentUser = await window.FidoAuth.waitForAuth();
+  const currentUser = await FidoAuth.waitForAuth();
   
-  if (!currentUser || !window.FidoAuth.isAdminEmail(currentUser.email)) {
+  if (!currentUser || !FidoAuth.isAdminEmail(currentUser.email)) {
     showToast("Access restricted to designated administrator.", "error");
     setTimeout(() => {
       window.location.href = "account.html";
@@ -71,7 +74,7 @@ function setupModalForms() {
         const status = document.getElementById("payStatus").value;
         const agencyMargin = Math.max(0, clientAmount - freelancerAmount);
 
-        await window.FidoDB.addPayment({
+        await FidoDB.addPayment({
           projectId,
           clientAmount,
           freelancerAmount,
@@ -94,7 +97,7 @@ function setupModalForms() {
     settingsForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
-        await window.FidoDB.updateSettings({
+        await FidoDB.updateSettings({
           agencyName: document.getElementById("setting-agency-name").value.trim(),
           projectPrefix: document.getElementById("setting-prefix").value.trim(),
           currency: document.getElementById("setting-currency").value.trim()
@@ -110,13 +113,13 @@ function setupModalForms() {
 async function loadAdminData() {
   try {
     const [projects, apps, users, payments, reviews, messages, stats] = await Promise.all([
-      window.FidoDB.getProjects({}),
-      window.FidoDB.getApplications({}),
-      window.FidoDB.getUsers(),
-      window.FidoDB.getPayments(),
-      window.FidoDB.getReviews(),
-      window.FidoDB.getMessages(),
-      window.FidoDB.getDashboardStats()
+      FidoDB.getProjects({}),
+      FidoDB.getApplications({}),
+      FidoDB.getUsers(),
+      FidoDB.getPayments(),
+      FidoDB.getReviews(),
+      FidoDB.getMessages(),
+      FidoDB.getDashboardStats()
     ]);
 
     allAdminProjects = projects;
@@ -226,7 +229,7 @@ function renderProjectsTable() {
 window.updateProjectStatus = async function(projId, newStatus) {
   try {
     const visibility = (newStatus === "Published" || newStatus === "Applications Open") ? "public" : "admin_only";
-    await window.FidoDB.updateProject(projId, { 
+    await FidoDB.updateProject(projId, { 
       status: newStatus,
       visibility: visibility
     });
@@ -239,7 +242,7 @@ window.updateProjectStatus = async function(projId, newStatus) {
 
 window.approveAndPublishProject = async function(projId) {
   try {
-    await window.FidoDB.updateProject(projId, {
+    await FidoDB.updateProject(projId, {
       status: "Published",
       visibility: "public",
       agencyNotes: "Approved by FidoConnect operations. Open for freelancer applications."
@@ -299,7 +302,7 @@ function renderApplicationsTable() {
 
 window.updateAppStatus = async function(appId, newStatus) {
   try {
-    await window.FidoDB.updateApplication(appId, { status: newStatus });
+    await FidoDB.updateApplication(appId, { status: newStatus });
     showToast(`Application marked as ${newStatus}`, "success");
     await loadAdminData();
   } catch (err) {
@@ -309,12 +312,12 @@ window.updateAppStatus = async function(appId, newStatus) {
 
 window.selectFreelancerForProject = async function(projId, freelancerId, appId) {
   try {
-    await window.FidoDB.updateProject(projId, {
+    await FidoDB.updateProject(projId, {
       assignedFreelancerId: freelancerId,
       status: "In Progress",
       agencyNotes: `Freelancer selected and assigned by agency on ${formatDate(new Date())}. Work is in progress.`
     });
-    await window.FidoDB.updateApplication(appId, { status: "Selected" });
+    await FidoDB.updateApplication(appId, { status: "Selected" });
     showToast("Freelancer selected and assigned to project!", "success");
     await loadAdminData();
   } catch (err) {
@@ -366,7 +369,7 @@ function renderUsersTable() {
 
 window.toggleUserStatus = async function(uid, targetStatus) {
   try {
-    await window.FidoDB.updateUser(uid, { status: targetStatus });
+    await FidoDB.updateUser(uid, { status: targetStatus });
     showToast(`User marked as ${targetStatus}`, "success");
     await loadAdminData();
   } catch (err) {
@@ -417,7 +420,7 @@ function renderFreelancersTable() {
 
 window.toggleFreelancerMembership = async function(uid, targetStatus) {
   try {
-    await window.FidoDB.updateMembership(uid, targetStatus);
+    await FidoDB.updateMembership(uid, targetStatus);
     showToast(`Freelancer membership updated to ${targetStatus}`, "success");
     await loadAdminData();
   } catch (err) {
@@ -451,7 +454,7 @@ function renderClientsTable() {
           <span class="badge badge-approved">${clientProjects.length} projects</span>
         </td>
         <td>
-          <span style="font-size:0.82rem; color:var(--text-muted);">${formatDate(c.createdAt)}</span>
+          <span style="font-size:0.82rem; color:var(--text-muted);">Joined ${formatDate(c.createdAt)}</span>
         </td>
       </tr>
     `;

@@ -2,10 +2,12 @@
  * FidoConnect - Homepage Controller
  */
 
+import { FidoDB } from "./db.js";
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Category quick filter clicks
   document.querySelectorAll(".category-card").forEach(card => {
-    card.addEventListener("click", (e) => {
+    card.addEventListener("click", () => {
       const category = card.getAttribute("data-category");
       if (category) {
         window.location.href = `find-work.html?category=${encodeURIComponent(category)}`;
@@ -13,9 +15,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Load live open project counts
+  // Load live open project count
   try {
-    const publishedProjects = await window.FidoDB.getProjects({ status: "Published" });
+    const publishedProjects = await FidoDB.getProjects({ status: "Published" });
     const countEl = document.getElementById("hero-open-projects-count");
     if (countEl) {
       countEl.textContent = publishedProjects.length;

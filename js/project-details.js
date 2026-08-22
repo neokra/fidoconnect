@@ -2,6 +2,9 @@
  * FidoConnect - Project Details & Application Controller
  */
 
+import { FidoAuth } from "./auth.js";
+import { FidoDB } from "./db.js";
+
 let currentProject = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -17,18 +20,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadProjectDetails(projectId);
   setupApplicationForm();
 
-  if (window.FidoAuth) {
-    window.FidoAuth.onAuthChange(() => {
-      if (currentProject) {
-        renderApplicationCTA();
-      }
-    });
-  }
+  FidoAuth.onAuthChange(() => {
+    if (currentProject) {
+      renderApplicationCTA();
+    }
+  });
 });
 
 async function loadProjectDetails(projectId) {
   try {
-    currentProject = await window.FidoDB.getProjectById(projectId);
+    currentProject = await FidoDB.getProjectById(projectId);
 
     if (!currentProject) {
       document.getElementById("project-content-container").innerHTML = `
@@ -41,7 +42,6 @@ async function loadProjectDetails(projectId) {
       return;
     }
 
-    // Populate data
     document.getElementById("proj-id").textContent = currentProject.projectId || currentProject.id;
     document.getElementById("proj-title").textContent = currentProject.title;
     document.getElementById("proj-category").textContent = currentProject.category;
@@ -52,34 +52,32 @@ async function loadProjectDetails(projectId) {
     document.getElementById("proj-deadline").textContent = formatDate(currentProject.deadline);
     document.getElementById("proj-posted").textContent = formatDate(currentProject.createdAt);
 
-    // Skills
     const skillsContainer = document.getElementById("proj-skills");
     if (skillsContainer) {
       const skills = currentProject.requiredSkills || [currentProject.category];
       skillsContainer.innerHTML = skills.map(s => `<span class="badge badge-inactive">${s}</span>`).join(" ");
     }
 
-    // Role-dependent Action CTA
     await renderApplicationCTA();
 
   } catch (err) {
-    console.error("Error loading project from Firestore:", err);
-    showToast("Error loading project details.", "error");
+    console.error("Error loading project:", err);
+    showToast("Failed to load project details.", "error");
   }
 }
 
 async function renderApplicationCTA() {
-  const ctaContainer = document.getElementById("project-action-cta");
+  const ctaContainer = document.getElementById("application-cta-container");
   if (!ctaContainer || !currentProject) return;
 
-  const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+  const currentUser = FidoAuth.getCurrentUser();
 
   if (!currentUser) {
     ctaContainer.innerHTML = `
-      <div class="card" style="background-color:var(--bg-subtle);">
+      <div class="card text-center" style="padding: 1.5rem;">
         <h4>Want to work on this project?</h4>
         <p class="text-muted" style="font-size:0.9rem; margin:0.4rem 0 1rem;">Join FidoConnect or log in to submit your proposal.</p>
-        <a href="auth.html?redirect=${encodeURIComponent(window.location.href)}" class="btn btn-primary btn-block">Log in to Apply</a>
+        <a href="auth.html?redirect=${encodeURIComponent(window.location.href)}" class="btn btn-primary btn-block">Log In to Apply</a>
       </div>
     `;
     return;
@@ -99,7 +97,7 @@ async function renderApplicationCTA() {
     return;
   }
 
-  if (window.FidoAuth.isAdmin()) {
+  if (FidoAuth.isAdmin()) {
     ctaContainer.innerHTML = `
       <div class="card" style="background-color:var(--color-accent-soft); border-color:var(--color-accent-border);">
         <h4>Admin Management</h4>
@@ -127,105 +125,99 @@ async function renderApplicationCTA() {
     return;
   }
 
-  // Check if freelancer already applied in Firestore
-  const existingApps = await window.FidoDB.getApplications({
-    projectId: currentProject.projectId || currentProject.id,
-    freelancerId: currentUser.uid
-  });
+  // Check if freelancer already applied
+  try {
+    const userApps = await FidoDB.getApplications({
+      projectId: currentProject.projectId || currentProject.id,
+      freelancerId: currentUser.uid
+    });
 
-  if (existingApps.length > 0) {
-    const myApp = existingApps[0];
-    ctaContainer.innerHTML = `
-      <div class="card" style="background-color:#ecfdf5; border-color:#a7f3d0;">
-        <div style="display:flex; align-items:center; gap:0.5rem; color:#065f46; margin-bottom:0.5rem;">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-          <h4 style="color:#065f46; margin:0;">Application Submitted</h4>
+    if (userApps.length > 0) {
+      const myApp = userApps[0];
+      ctaContainer.innerHTML = `
+        <div class="card" style="background-color:var(--bg-subtle);">
+          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+            <svg width="20" height="20" style="color:var(--color-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h4 style="margin:0;">Proposal Submitted</h4>
+          </div>
+          <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 0.8rem;">
+            Status: ${getStatusBadge(myApp.status)}
+          </p>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+            Our team is reviewing candidate suitability and will update your account.
+          </p>
+          <a href="account.html" class="btn btn-secondary btn-block">View in My Applications</a>
         </div>
-        <p style="font-size:0.88rem; color:#047857; margin-bottom:0.75rem;">
-          Our agency team has received your proposal and is reviewing your profile.
-        </p>
-        <div style="font-size:0.8rem; color:#065f46;">
-          Status: <strong>${myApp.status}</strong> (${formatDate(myApp.createdAt)})
-        </div>
-      </div>
-    `;
-    return;
+      `;
+      return;
+    }
+  } catch (err) {
+    console.error("Error checking existing application:", err);
   }
 
   // Eligible to apply
   ctaContainer.innerHTML = `
-    <div class="card">
-      <h4>Ready to work on this?</h4>
+    <div class="card" style="background-color:var(--bg-surface); border: 2px solid var(--color-primary);">
+      <h4>Apply for This Project</h4>
       <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 1.25rem;">
-        Submit a concise proposal to the FidoConnect team for review.
+        Submit your proposal, delivery timeframe, and relevant experience to the FidoConnect agency team.
       </p>
-      <button id="open-apply-modal-btn" class="btn btn-primary btn-block">Apply for Project</button>
+      <button class="btn btn-primary btn-block btn-lg" onclick="openModal('apply-modal')">
+        Submit Proposal
+      </button>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.75rem; text-align:center;">
+        FidoConnect manages all client communication and payment milestones.
+      </div>
     </div>
   `;
-
-  const applyBtn = document.getElementById("open-apply-modal-btn");
-  if (applyBtn) {
-    applyBtn.addEventListener("click", () => {
-      openModal("apply-modal");
-    });
-  }
 }
 
 function setupApplicationForm() {
-  const form = document.getElementById("application-form");
+  const form = document.getElementById("apply-project-form");
   if (!form) return;
-
-  const updatePortfolioInput = () => {
-    const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
-    if (currentUser && currentUser.portfolio) {
-      const portInput = document.getElementById("appPortfolio");
-      if (portInput && !portInput.value) portInput.value = currentUser.portfolio;
-    }
-  };
-
-  updatePortfolioInput();
-  if (window.FidoAuth) window.FidoAuth.onAuthChange(updatePortfolioInput);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const currentUser = FidoAuth.getCurrentUser();
 
-    const submitBtn = document.getElementById("submit-app-btn");
+    if (!currentUser) {
+      showToast("Please log in to apply.", "error");
+      return;
+    }
+
+    const message = document.getElementById("app-message").value.trim();
+    const deliveryDays = document.getElementById("app-delivery").value.trim();
+    const portfolio = document.getElementById("app-portfolio").value.trim();
+    const submitBtn = document.getElementById("app-submit-btn");
+
+    if (!message) {
+      showToast("Please describe your suitability for this project.", "error");
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = "Submitting Proposal...";
 
     try {
-      const currentUser = window.FidoAuth.getCurrentUser();
-      if (!currentUser) {
-        throw new Error("Please log in to apply.");
-      }
-
-      const message = document.getElementById("appMessage").value.trim();
-      const portfolio = document.getElementById("appPortfolio").value.trim();
-      const deliveryDays = document.getElementById("appDeliveryTime").value.trim();
-
-      if (!message) {
-        throw new Error("Please write a short proposal or message explaining your suitability.");
-      }
-
-      await window.FidoDB.createApplication({
+      await FidoDB.createApplication({
         projectId: currentProject.projectId || currentProject.id,
         freelancerId: currentUser.uid,
-        freelancerName: currentUser.name || "Freelancer",
-        freelancerEmail: currentUser.email || "",
-        skills: currentUser.skills || [currentProject.category],
+        freelancerName: currentUser.name,
+        freelancerEmail: currentUser.email,
+        skills: currentUser.skills || [],
         portfolio: portfolio || currentUser.portfolio || "",
         message: message,
         deliveryDays: deliveryDays || "Flexible"
       });
 
       closeModal("apply-modal");
-      showToast("Application submitted to FidoConnect team for review!", "success");
+      showToast("Proposal submitted successfully!", "success");
       await renderApplicationCTA();
 
     } catch (err) {
-      showToast(err.message || "Failed to submit application.", "error");
+      showToast(err.message || "Failed to submit proposal.", "error");
       submitBtn.disabled = false;
-      submitBtn.textContent = "Submit Application";
+      submitBtn.textContent = "Submit Proposal";
     }
   });
 }

@@ -4,17 +4,20 @@
  * Manages Client, Freelancer, and Administrator account portals.
  */
 
+import { FidoAuth } from "./auth.js";
+import { FidoDB } from "./db.js";
+
 let currentUser = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const isAuth = await window.FidoAuth.requireAuth();
+  const isAuth = await FidoAuth.requireAuth();
   if (!isAuth) return;
 
-  currentUser = window.FidoAuth.getCurrentUser();
+  currentUser = FidoAuth.getCurrentUser();
   await renderAccountView();
   setupEventListeners();
 
-  window.FidoAuth.onAuthChange(async (user) => {
+  FidoAuth.onAuthChange(async (user) => {
     if (user) {
       currentUser = user;
       await renderAccountView();
@@ -23,7 +26,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function setupEventListeners() {
-  // Tab switching
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -36,7 +38,6 @@ function setupEventListeners() {
     });
   });
 
-  // Check URL hash for direct tab
   if (window.location.hash) {
     const tabName = window.location.hash.replace("#", "") + "-tab";
     const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
@@ -48,7 +49,7 @@ async function renderAccountView() {
   const container = document.getElementById("account-layout-container");
   if (!container || !currentUser) return;
 
-  const isAdmin = window.FidoAuth.isAdmin();
+  const isAdmin = FidoAuth.isAdmin();
 
   if (isAdmin) {
     await renderAdminAccountView(container);
@@ -59,9 +60,9 @@ async function renderAccountView() {
   }
 }
 
-// --- 1. Admin Account View (Exclusive to thecard.primary@gmail.com) ---
+// 1. Administrator Account Portal
 async function renderAdminAccountView(container) {
-  const stats = await window.FidoDB.getDashboardStats();
+  const stats = await FidoDB.getDashboardStats();
 
   container.innerHTML = `
     <div style="margin-bottom: 2rem;">
@@ -76,7 +77,7 @@ async function renderAdminAccountView(container) {
       </div>
     </div>
 
-    <!-- Prominent Admin Panel Card -->
+    <!-- Admin Panel Card -->
     <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 2rem; border-radius: var(--border-radius-lg); margin-bottom: 2rem; box-shadow: var(--shadow-md);">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem;">
         <div>
@@ -86,7 +87,7 @@ async function renderAdminAccountView(container) {
           </div>
           <h3 style="color:white; font-size:1.6rem; margin-bottom:0.35rem;">FidoConnect Admin Panel</h3>
           <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0;">
-            Manage all 11 agency modules: project requests, approvals, freelancer proposals, network members, payments, reviews, and client communication.
+            Manage all 11 agency modules: project requests, approvals, proposals, network members, payments, reviews, and client communication.
           </p>
         </div>
         <div>
@@ -97,7 +98,6 @@ async function renderAdminAccountView(container) {
         </div>
       </div>
 
-      <!-- Quick Metrics Ribbon -->
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid rgba(255,255,255,0.12);">
         <div>
           <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">New Requests</div>
@@ -120,10 +120,10 @@ async function renderAdminAccountView(container) {
 
     <!-- Admin Account Settings -->
     <div class="card" style="max-width: 600px;">
-      <h3 style="margin-bottom: 1.25rem;">Administrator Details</h3>
+      <h3 style="margin-bottom: 1.25rem;">Administrator Profile</h3>
       <form id="admin-profile-form">
         <div class="form-group">
-          <label class="form-label">Administrator Name</label>
+          <label class="form-label">Name</label>
           <input type="text" id="edit-admin-name" class="form-control" value="${currentUser.name || ""}" required />
         </div>
         <div class="form-group">
@@ -131,7 +131,7 @@ async function renderAdminAccountView(container) {
           <input type="email" class="form-control" value="${currentUser.email}" disabled style="background:#f1f5f9;" />
         </div>
         <div class="form-group">
-          <label class="form-label">Phone / WhatsApp</label>
+          <label class="form-label">WhatsApp / Phone</label>
           <input type="text" id="edit-admin-phone" class="form-control" value="${currentUser.phone || ""}" />
         </div>
         <button type="submit" class="btn btn-primary">Save Profile</button>
@@ -139,12 +139,12 @@ async function renderAdminAccountView(container) {
     </div>
   `;
 
-  document.getElementById("admin-account-logout-btn").addEventListener("click", () => window.FidoAuth.logout());
+  document.getElementById("admin-account-logout-btn").addEventListener("click", () => FidoAuth.logout());
 
   document.getElementById("admin-profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
-      await window.FidoDB.updateUser(currentUser.uid, {
+      await FidoDB.updateUser(currentUser.uid, {
         name: document.getElementById("edit-admin-name").value.trim(),
         phone: document.getElementById("edit-admin-phone").value.trim()
       });
@@ -155,9 +155,9 @@ async function renderAdminAccountView(container) {
   });
 }
 
-// --- 2. Client Account View ---
+// 2. Client Account Portal
 async function renderClientView(container) {
-  const clientProjects = await window.FidoDB.getProjects({ clientId: currentUser.uid });
+  const clientProjects = await FidoDB.getProjects({ clientId: currentUser.uid });
 
   container.innerHTML = `
     <div style="margin-bottom: 2rem;">
@@ -181,7 +181,6 @@ async function renderClientView(container) {
       <button class="tab-btn" data-tab="client-profile-tab">Account Details</button>
     </div>
 
-    <!-- Tab 1: Client Projects -->
     <div id="client-projects-tab" class="tab-pane active">
       ${clientProjects.length === 0 ? `
         <div class="card text-center" style="padding: 3rem 1rem;">
@@ -218,7 +217,6 @@ async function renderClientView(container) {
       `}
     </div>
 
-    <!-- Tab 2: Profile Settings -->
     <div id="client-profile-tab" class="tab-pane">
       <div class="card" style="max-width: 600px;">
         <h3 style="margin-bottom: 1.25rem;">Business & Contact Information</h3>
@@ -245,14 +243,14 @@ async function renderClientView(container) {
     </div>
   `;
 
-  document.getElementById("client-logout-btn").addEventListener("click", () => window.FidoAuth.logout());
+  document.getElementById("client-logout-btn").addEventListener("click", () => FidoAuth.logout());
 
   const profForm = document.getElementById("client-profile-form");
   if (profForm) {
     profForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
-        await window.FidoDB.updateUser(currentUser.uid, {
+        await FidoDB.updateUser(currentUser.uid, {
           name: document.getElementById("edit-client-name").value.trim(),
           businessName: document.getElementById("edit-client-business").value.trim(),
           phone: document.getElementById("edit-client-phone").value.trim()
@@ -265,10 +263,10 @@ async function renderClientView(container) {
   }
 }
 
-// --- 3. Freelancer Account View ---
+// 3. Freelancer Account Portal
 async function renderFreelancerView(container) {
-  const applications = await window.FidoDB.getApplications({ freelancerId: currentUser.uid });
-  const activeProjects = await window.FidoDB.getProjects({ assignedFreelancerId: currentUser.uid });
+  const applications = await FidoDB.getApplications({ freelancerId: currentUser.uid });
+  const activeProjects = await FidoDB.getProjects({ assignedFreelancerId: currentUser.uid });
   const isMemberActive = currentUser.membershipStatus === "active";
 
   container.innerHTML = `
@@ -294,7 +292,6 @@ async function renderFreelancerView(container) {
       <button class="tab-btn" data-tab="freelancer-profile-tab">Profile & Skills</button>
     </div>
 
-    <!-- Tab 1: Applications -->
     <div id="freelancer-apps-tab" class="tab-pane active">
       ${applications.length === 0 ? `
         <div class="card text-center" style="padding: 3rem 1rem;">
@@ -330,7 +327,6 @@ async function renderFreelancerView(container) {
       `}
     </div>
 
-    <!-- Tab 2: Assigned Projects -->
     <div id="freelancer-projects-tab" class="tab-pane">
       ${activeProjects.length === 0 ? `
         <div class="card text-center" style="padding: 3rem 1rem;">
@@ -366,7 +362,6 @@ async function renderFreelancerView(container) {
       `}
     </div>
 
-    <!-- Tab 3: Membership Management -->
     <div id="membership-tab" class="tab-pane">
       <div class="card" style="max-width: 680px;">
         <h3 style="margin-bottom: 0.5rem;">FidoConnect Membership</h3>
@@ -403,7 +398,6 @@ async function renderFreelancerView(container) {
       </div>
     </div>
 
-    <!-- Tab 4: Freelancer Profile & Skills -->
     <div id="freelancer-profile-tab" class="tab-pane">
       <div class="card" style="max-width: 600px;">
         <h3 style="margin-bottom: 1.25rem;">Freelancer Profile</h3>
@@ -434,13 +428,13 @@ async function renderFreelancerView(container) {
     </div>
   `;
 
-  document.getElementById("freelancer-logout-btn").addEventListener("click", () => window.FidoAuth.logout());
+  document.getElementById("freelancer-logout-btn").addEventListener("click", () => FidoAuth.logout());
 
   const toggleMemberBtn = document.getElementById("toggle-membership-btn");
   if (toggleMemberBtn) {
     toggleMemberBtn.addEventListener("click", async () => {
       try {
-        await window.FidoDB.updateMembership(currentUser.uid, "active", "Standard Member");
+        await FidoDB.updateMembership(currentUser.uid, "active", "Standard Member");
         showToast("Membership activated! You can now apply for all open projects.", "success");
         currentUser.membershipStatus = "active";
         currentUser.membershipPlan = "Standard Member";
@@ -459,7 +453,7 @@ async function renderFreelancerView(container) {
         const skillsRaw = document.getElementById("edit-free-skills").value;
         const skillsArr = skillsRaw.split(",").map(s => s.trim()).filter(Boolean);
 
-        await window.FidoDB.updateUser(currentUser.uid, {
+        await FidoDB.updateUser(currentUser.uid, {
           name: document.getElementById("edit-free-name").value.trim(),
           phone: document.getElementById("edit-free-phone").value.trim(),
           portfolio: document.getElementById("edit-free-portfolio").value.trim(),

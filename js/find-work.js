@@ -2,6 +2,9 @@
  * FidoConnect - Find Work Controller
  */
 
+import { FidoAuth } from "./auth.js";
+import { FidoDB } from "./db.js";
+
 let allProjects = [];
 let currentCategoryFilter = "all";
 let currentSearchQuery = "";
@@ -17,19 +20,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadProjects();
   renderRoleMembershipState();
 
-  // Listen to auth changes
-  if (window.FidoAuth) {
-    window.FidoAuth.onAuthChange(() => {
-      renderRoleMembershipState();
-      renderProjectsList();
-    });
-  }
+  FidoAuth.onAuthChange(() => {
+    renderRoleMembershipState();
+    renderProjectsList();
+  });
 });
 
 function setupEventListeners() {
-  // Category tab clicks
   document.querySelectorAll(".category-pill").forEach(pill => {
-    pill.addEventListener("click", (e) => {
+    pill.addEventListener("click", () => {
       document.querySelectorAll(".category-pill").forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       currentCategoryFilter = pill.getAttribute("data-category");
@@ -37,7 +36,6 @@ function setupEventListeners() {
     });
   });
 
-  // Search input
   const searchInput = document.getElementById("project-search-input");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
@@ -49,10 +47,8 @@ function setupEventListeners() {
 
 async function loadProjects() {
   try {
-    // Only published projects are visible on Find Work
-    allProjects = await window.FidoDB.getProjects({ status: "Published" });
+    allProjects = await FidoDB.getProjects({ status: "Published" });
     
-    // Set active category pill if filtered via URL
     if (currentCategoryFilter !== "all") {
       document.querySelectorAll(".category-pill").forEach(pill => {
         if (pill.getAttribute("data-category").toLowerCase() === currentCategoryFilter.toLowerCase()) {
@@ -74,17 +70,16 @@ function renderRoleMembershipState() {
   const bannerContainer = document.getElementById("membership-gate-banner");
   if (!bannerContainer) return;
 
-  const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+  const currentUser = FidoAuth.getCurrentUser();
 
   if (!currentUser) {
-    // Guest view
     bannerContainer.innerHTML = `
       <div class="notice-box notice-info">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <div style="flex:1;">
           <strong>Browsing public preview</strong> — Log in or join the FidoConnect network to view complete project details and apply.
           <div style="margin-top: 0.5rem;">
-            <a href="auth.html" class="btn btn-secondary btn-sm">Log in</a>
+            <a href="auth.html" class="btn btn-secondary btn-sm">Log In</a>
             <a href="auth.html?mode=register&role=freelancer" class="btn btn-primary btn-sm">Join as Freelancer</a>
           </div>
         </div>
@@ -92,7 +87,6 @@ function renderRoleMembershipState() {
     `;
     bannerContainer.style.display = "block";
   } else if (currentUser.role === "freelancer" && currentUser.membershipStatus !== "active") {
-    // Freelancer without active membership
     bannerContainer.innerHTML = `
       <div class="notice-box notice-warning" style="flex-direction:column; gap:0.6rem;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -112,7 +106,6 @@ function renderRoleMembershipState() {
     `;
     bannerContainer.style.display = "block";
   } else if (currentUser.role === "freelancer" && currentUser.membershipStatus === "active") {
-    // Active member
     bannerContainer.innerHTML = `
       <div class="notice-box notice-success" style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -160,7 +153,7 @@ function renderProjectsList() {
     return;
   }
 
-  const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+  const currentUser = FidoAuth.getCurrentUser();
   const canApplyDirectly = currentUser && currentUser.role === "freelancer" && currentUser.membershipStatus === "active";
 
   container.innerHTML = filtered.map(project => `

@@ -2,33 +2,34 @@
  * FidoConnect - Post a Work Form Controller
  */
 
+import { FidoAuth } from "./auth.js";
+import { FidoDB } from "./db.js";
+
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("post-work-form");
   const formContainer = document.getElementById("post-work-form-container");
   const confirmationContainer = document.getElementById("submission-confirmation");
 
   // Pre-fill fields if user is already logged in
-  if (window.FidoAuth) {
-    const fillUser = (user) => {
-      if (user) {
-        if (user.name && !document.getElementById("clientName").value) {
-          document.getElementById("clientName").value = user.name;
-        }
-        if (user.email && !document.getElementById("clientEmail").value) {
-          document.getElementById("clientEmail").value = user.email;
-        }
-        if (user.phone && !document.getElementById("clientPhone").value) {
-          document.getElementById("clientPhone").value = user.phone;
-        }
-        if (user.businessName && !document.getElementById("clientBusiness").value) {
-          document.getElementById("clientBusiness").value = user.businessName;
-        }
+  const fillUser = (user) => {
+    if (user) {
+      if (user.name && !document.getElementById("clientName").value) {
+        document.getElementById("clientName").value = user.name;
       }
-    };
+      if (user.email && !document.getElementById("clientEmail").value) {
+        document.getElementById("clientEmail").value = user.email;
+      }
+      if (user.phone && !document.getElementById("clientPhone").value) {
+        document.getElementById("clientPhone").value = user.phone;
+      }
+      if (user.businessName && !document.getElementById("clientBusiness").value) {
+        document.getElementById("clientBusiness").value = user.businessName;
+      }
+    }
+  };
 
-    fillUser(window.FidoAuth.getCurrentUser());
-    window.FidoAuth.onAuthChange(fillUser);
-  }
+  fillUser(FidoAuth.getCurrentUser());
+  FidoAuth.onAuthChange(fillUser);
 
   // Pre-select category if passed via URL parameter
   const urlParams = new URLSearchParams(window.location.search);
@@ -69,7 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           throw new Error("Please fill in all required fields marked with an asterisk (*).");
         }
 
-        const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+        const currentUser = FidoAuth.getCurrentUser();
 
         const projectPayload = {
           title,
@@ -86,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           requiredSkills: [category]
         };
 
-        const createdProject = await window.FidoDB.createProject(projectPayload);
+        const createdProject = await FidoDB.createProject(projectPayload);
 
         // Display Confirmation View
         formContainer.style.display = "none";
@@ -98,8 +99,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("conf-project-budget").textContent = createdProject.budget;
 
         showToast("Project request submitted successfully!", "success");
-
-        // Scroll to top of confirmation
         window.scrollTo({ top: 0, behavior: "smooth" });
 
       } catch (err) {

@@ -1,59 +1,47 @@
 /**
  * FidoConnect - Firestore Database Service
  * 
- * Real Cloud Firestore operations for projects, applications, users,
- * memberships, payments, reviews, messages, settings, and dashboard stats.
+ * Direct Cloud Firestore operations for projects, applications, users,
+ * memberships, payments, reviews, messages, settings, and metrics.
  */
 
-// Helper to wait until Firebase is initialized
-const getFirebaseServices = async () => {
-  if (window.FidoFirebase && window.FidoFirebase.db) {
-    return {
-      db: window.FidoFirebase.db,
-      auth: window.FidoFirebase.auth,
-      fs: window.FidoFirebase.firestore
-    };
-  }
-
-  return new Promise((resolve) => {
-    const handler = (e) => {
-      window.removeEventListener("firebase-initialized", handler);
-      resolve({
-        db: e.detail.db,
-        auth: e.detail.auth,
-        fs: window.FidoFirebase.firestore
-      });
-    };
-    window.addEventListener("firebase-initialized", handler);
-  });
-};
+import { db } from "./firebase-config.js";
+import { 
+  collection, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  limit, 
+  getDocs, 
+  addDoc, 
+  runTransaction 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const FidoDB = {
-  // --- 1. Project Operations ---
+  // --- 1. Projects ---
   async getProjects(filter = {}) {
-    const { db, fs } = await getFirebaseServices();
-    const projectsRef = fs.collection(db, "projects");
-    
+    const projectsRef = collection(db, "projects");
     let constraints = [];
 
     if (filter.status && filter.status !== "all") {
-      constraints.push(fs.where("status", "==", filter.status));
+      constraints.push(where("status", "==", filter.status));
     }
     if (filter.clientId) {
-      constraints.push(fs.where("clientId", "==", filter.clientId));
+      constraints.push(where("clientId", "==", filter.clientId));
     }
     if (filter.assignedFreelancerId) {
-      constraints.push(fs.where("assignedFreelancerId", "==", filter.assignedFreelancerId));
+      constraints.push(where("assignedFreelancerId", "==", filter.assignedFreelancerId));
     }
     if (filter.visibility) {
-      constraints.push(fs.where("visibility", "==", filter.visibility));
+      constraints.push(where("visibility", "==", filter.visibility));
     }
 
-    const q = constraints.length > 0 
-      ? fs.query(projectsRef, ...constraints)
-      : fs.query(projectsRef);
-
-    const snapshot = await fs.getDocs(q);
+    const q = constraints.length > 0 ? query(projectsRef, ...constraints) : query(projectsRef);
+    const snapshot = await getDocs(q);
     let projects = [];
 
     const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
@@ -63,12 +51,10 @@ const FidoDB = {
       const data = docSnap.data();
       const proj = { id: docSnap.id, ...data };
 
-      // Client-side category filter
       if (filter.category && filter.category !== "all" && proj.category !== filter.category) {
         return;
       }
 
-      // Search filter
       if (filter.search) {
         const queryStr = filter.search.toLowerCase();
         const matchesTitle = (proj.title || "").toLowerCase().includes(queryStr);
@@ -78,8 +64,7 @@ const FidoDB = {
         if (!matchesTitle && !matchesDesc && !matchesCat && !matchesId) return;
       }
 
-      // PRIVACY SAFEGUARD:
-      // Never expose private client contact info to freelancers or public viewers
+      // Client Privacy Safeguard
       const isOwner = currentUser && proj.clientId === currentUser.uid;
       if (!isAdmin && !isOwner) {
         delete proj.clientEmail;
@@ -91,24 +76,20 @@ const FidoDB = {
       projects.push(proj);
     });
 
-    // Sort by createdAt descending
     projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     return projects;
   },
 
   async getProjectById(projectId) {
-    const { db, fs } = await getFirebaseServices();
-    
-    // Check direct doc ID
-    const docRef = fs.doc(db, "projects", projectId);
-    const docSnap = await fs.getDoc(docRef);
+    const docRef = doc(db, "projects", projectId);
+    const docSnap = await getDoc(docRef);
 
     let proj = null;
     if (docSnap.exists()) {
       proj = { id: docSnap.id, ...docSnap.data() };
     } else {
-      const q = fs.query(fs.collection(db, "projects"), fs.where("projectId", "==", projectId), fs.limit(1));
-      const qSnap = await fs.getDocs(q);
+      const q = query(collection(db, "projects"), where("projectId", "==", projectId), limit(1));
+      const qSnap = await getDocs(q);
       if (!qSnap.empty) {
         const firstDoc = qSnap.docs[0];
         proj = { id: firstDoc.id, ...firstDoc.data() };
@@ -117,7 +98,6 @@ const FidoDB = {
 
     if (!proj) return null;
 
-    // Apply Privacy Safeguard
     const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
     const isAdmin = window.FidoAuth ? window.FidoAuth.isAdmin() : false;
     const isOwner = currentUser && proj.clientId === currentUser.uid;
@@ -132,16 +112,13 @@ const FidoDB = {
     return proj;
   },
 
-  // Generates unique, collision-safe Project IDs (FC-YYYY-XXXX) using an atomic Firestore transaction
   async createProject(projectData) {
-    const { db, fs } = await getFirebaseServices();
     const currentYear = new Date().getFullYear();
-    const counterRef = fs.doc(db, "counters", "project_counter");
-
+    const counterRef = doc(db, "counters", "project_counter");
     let uniqueProjectId = "";
 
     try {
-      await fs.runTransaction(db, async (transaction) => {
+      await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
         let nextNumber = 1;
 
@@ -182,50 +159,38 @@ const FidoDB = {
       updatedAt: new Date().toISOString()
     };
 
-    const projectDocRef = fs.doc(db, "projects", uniqueProjectId);
-    await fs.setDoc(projectDocRef, newProject);
+    const projectDocRef = doc(db, "projects", uniqueProjectId);
+    await setDoc(projectDocRef, newProject);
 
     return { id: uniqueProjectId, ...newProject };
   },
 
   async updateProject(projectId, updates) {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "projects", projectId);
-    
+    const docRef = doc(db, "projects", projectId);
     const cleanUpdates = {
       ...updates,
       updatedAt: new Date().toISOString()
     };
-
-    await fs.updateDoc(docRef, cleanUpdates);
+    await updateDoc(docRef, cleanUpdates);
     return { id: projectId, ...cleanUpdates };
   },
 
   async deleteProject(projectId) {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "projects", projectId);
-    await fs.deleteDoc(docRef);
+    const docRef = doc(db, "projects", projectId);
+    await deleteDoc(docRef);
     return true;
   },
 
-  // --- 2. Application Operations ---
+  // --- 2. Applications ---
   async getApplications(filter = {}) {
-    const { db, fs } = await getFirebaseServices();
-    const appsRef = fs.collection(db, "applications");
-    
+    const appsRef = collection(db, "applications");
     let constraints = [];
-    if (filter.projectId) {
-      constraints.push(fs.where("projectId", "==", filter.projectId));
-    }
-    if (filter.freelancerId) {
-      constraints.push(fs.where("freelancerId", "==", filter.freelancerId));
-    }
-    if (filter.status) {
-      constraints.push(fs.where("status", "==", filter.status));
-    }
+    if (filter.projectId) constraints.push(where("projectId", "==", filter.projectId));
+    if (filter.freelancerId) constraints.push(where("freelancerId", "==", filter.freelancerId));
+    if (filter.status) constraints.push(where("status", "==", filter.status));
 
-    const q = constraints.length > 0 ? fs.query(appsRef, ...constraints) : fs.query(appsRef);
-    const snapshot = await fs.getDocs(q);
+    const q = constraints.length > 0 ? query(appsRef, ...constraints) : query(appsRef);
+    const snapshot = await getDocs(q);
 
     let applications = [];
     snapshot.forEach(docSnap => {
@@ -237,17 +202,15 @@ const FidoDB = {
   },
 
   async createApplication(appData) {
-    const { db, fs } = await getFirebaseServices();
-    const appsRef = fs.collection(db, "applications");
+    const appsRef = collection(db, "applications");
 
-    // Prevent duplicate applications
-    const checkQuery = fs.query(
+    const checkQuery = query(
       appsRef,
-      fs.where("projectId", "==", appData.projectId),
-      fs.where("freelancerId", "==", appData.freelancerId),
-      fs.limit(1)
+      where("projectId", "==", appData.projectId),
+      where("freelancerId", "==", appData.freelancerId),
+      limit(1)
     );
-    const existingSnap = await fs.getDocs(checkQuery);
+    const existingSnap = await getDocs(checkQuery);
 
     if (!existingSnap.empty) {
       throw new Error("You have already submitted an application for this project.");
@@ -266,24 +229,21 @@ const FidoDB = {
       createdAt: new Date().toISOString()
     };
 
-    const docRef = await fs.addDoc(appsRef, newApp);
+    const docRef = await addDoc(appsRef, newApp);
     return { id: docRef.id, ...newApp };
   },
 
   async updateApplication(appId, updates) {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "applications", appId);
-    await fs.updateDoc(docRef, updates);
+    const docRef = doc(db, "applications", appId);
+    await updateDoc(docRef, updates);
     return { id: appId, ...updates };
   },
 
-  // --- 3. User Operations ---
+  // --- 3. Users ---
   async getUsers(role = null) {
-    const { db, fs } = await getFirebaseServices();
-    const usersRef = fs.collection(db, "users");
-
-    const q = role ? fs.query(usersRef, fs.where("role", "==", role)) : fs.query(usersRef);
-    const snapshot = await fs.getDocs(q);
+    const usersRef = collection(db, "users");
+    const q = role ? query(usersRef, where("role", "==", role)) : query(usersRef);
+    const snapshot = await getDocs(q);
 
     let users = [];
     snapshot.forEach(docSnap => {
@@ -296,10 +256,8 @@ const FidoDB = {
 
   async getUserById(uid) {
     if (!uid) return null;
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "users", uid);
-    const docSnap = await fs.getDoc(docRef);
-
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { uid: docSnap.id, ...docSnap.data() };
     }
@@ -307,10 +265,7 @@ const FidoDB = {
   },
 
   async updateUser(uid, updates) {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "users", uid);
-
-    // Never allow non-admins to change role to admin
+    const docRef = doc(db, "users", uid);
     const isAdmin = window.FidoAuth ? window.FidoAuth.isAdmin() : false;
     if (updates.role === "admin" && !isAdmin) {
       delete updates.role;
@@ -321,12 +276,11 @@ const FidoDB = {
       updatedAt: new Date().toISOString()
     };
 
-    await fs.updateDoc(docRef, cleanUpdates);
-    
-    // Sync active cached profile if updating current user
+    await updateDoc(docRef, cleanUpdates);
+
     const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
     if (currentUser && currentUser.uid === uid) {
-      window.FidoAuth._cachedUserProfile = {
+      window.FidoAuth._currentUser = {
         ...currentUser,
         ...cleanUpdates
       };
@@ -348,100 +302,77 @@ const FidoDB = {
     });
   },
 
-  // --- 4. Payments Collection Operations ---
+  // --- 4. Payments ---
   async getPayments() {
-    const { db, fs } = await getFirebaseServices();
-    const paymentsRef = fs.collection(db, "payments");
-    const snapshot = await fs.getDocs(paymentsRef);
-
+    const paymentsRef = collection(db, "payments");
+    const snapshot = await getDocs(paymentsRef);
     let payments = [];
     snapshot.forEach(docSnap => {
       payments.push({ id: docSnap.id, ...docSnap.data() });
     });
-
     payments.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     return payments;
   },
 
   async addPayment(paymentData) {
-    const { db, fs } = await getFirebaseServices();
-    const paymentsRef = fs.collection(db, "payments");
+    const paymentsRef = collection(db, "payments");
     const newPayment = {
       ...paymentData,
       createdAt: new Date().toISOString()
     };
-    const docRef = await fs.addDoc(paymentsRef, newPayment);
+    const docRef = await addDoc(paymentsRef, newPayment);
     return { id: docRef.id, ...newPayment };
   },
 
-  async updatePayment(paymentId, updates) {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "payments", paymentId);
-    await fs.updateDoc(docRef, updates);
-    return { id: paymentId, ...updates };
-  },
-
-  // --- 5. Reviews Collection Operations ---
+  // --- 5. Reviews ---
   async getReviews() {
-    const { db, fs } = await getFirebaseServices();
-    const reviewsRef = fs.collection(db, "reviews");
-    const snapshot = await fs.getDocs(reviewsRef);
-
+    const reviewsRef = collection(db, "reviews");
+    const snapshot = await getDocs(reviewsRef);
     let reviews = [];
     snapshot.forEach(docSnap => {
       reviews.push({ id: docSnap.id, ...docSnap.data() });
     });
-
     reviews.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     return reviews;
   },
 
   async addReview(reviewData) {
-    const { db, fs } = await getFirebaseServices();
-    const reviewsRef = fs.collection(db, "reviews");
+    const reviewsRef = collection(db, "reviews");
     const newReview = {
       ...reviewData,
       createdAt: new Date().toISOString()
     };
-    const docRef = await fs.addDoc(reviewsRef, newReview);
+    const docRef = await addDoc(reviewsRef, newReview);
     return { id: docRef.id, ...newReview };
   },
 
-  // --- 6. Messages Collection Operations ---
+  // --- 6. Messages ---
   async getMessages(projectId = null) {
-    const { db, fs } = await getFirebaseServices();
-    const messagesRef = fs.collection(db, "messages");
-    
-    const q = projectId 
-      ? fs.query(messagesRef, fs.where("projectId", "==", projectId))
-      : fs.query(messagesRef);
-
-    const snapshot = await fs.getDocs(q);
+    const messagesRef = collection(db, "messages");
+    const q = projectId ? query(messagesRef, where("projectId", "==", projectId)) : query(messagesRef);
+    const snapshot = await getDocs(q);
     let messages = [];
     snapshot.forEach(docSnap => {
       messages.push({ id: docSnap.id, ...docSnap.data() });
     });
-
     messages.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     return messages;
   },
 
   async addMessage(msgData) {
-    const { db, fs } = await getFirebaseServices();
-    const messagesRef = fs.collection(db, "messages");
+    const messagesRef = collection(db, "messages");
     const newMsg = {
       ...msgData,
       createdAt: new Date().toISOString()
     };
-    const docRef = await fs.addDoc(messagesRef, newMsg);
+    const docRef = await addDoc(messagesRef, newMsg);
     return { id: docRef.id, ...newMsg };
   },
 
-  // --- 7. Settings Collection Operations ---
+  // --- 7. Settings ---
   async getSettings() {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "settings", "general");
-    const docSnap = await fs.getDoc(docRef);
+    const docRef = doc(db, "settings", "general");
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data();
     }
@@ -449,27 +380,23 @@ const FidoDB = {
       agencyName: "FidoConnect",
       supportEmail: "thecard.primary@gmail.com",
       currency: "USD",
-      projectPrefix: "FC",
-      membershipAnnualFee: "$120"
+      projectPrefix: "FC"
     };
   },
 
   async updateSettings(settingsData) {
-    const { db, fs } = await getFirebaseServices();
-    const docRef = fs.doc(db, "settings", "general");
-    await fs.setDoc(docRef, settingsData, { merge: true });
+    const docRef = doc(db, "settings", "general");
+    await setDoc(docRef, settingsData, { merge: true });
     return settingsData;
   },
 
-  // --- 8. Comprehensive Dashboard Metrics ---
+  // --- 8. Dashboard Metrics ---
   async getDashboardStats() {
-    const { db, fs } = await getFirebaseServices();
-
     const [projectsSnap, appsSnap, usersSnap, paymentsSnap] = await Promise.all([
-      fs.getDocs(fs.collection(db, "projects")),
-      fs.getDocs(fs.collection(db, "applications")),
-      fs.getDocs(fs.collection(db, "users")),
-      fs.getDocs(fs.collection(db, "payments"))
+      getDocs(collection(db, "projects")),
+      getDocs(collection(db, "applications")),
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "payments"))
     ]);
 
     let newRequests = 0;
@@ -522,5 +449,6 @@ const FidoDB = {
   }
 };
 
+export const dbService = FidoDB;
 window.FidoDB = FidoDB;
 export default FidoDB;
