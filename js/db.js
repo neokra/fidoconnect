@@ -581,7 +581,6 @@ export const FidoDB = {
   }
 };
 
-export { FidoDB };
 export const dbService = FidoDB;
 window.FidoDB = FidoDB;
 export default FidoDB;
