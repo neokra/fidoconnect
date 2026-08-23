@@ -48,14 +48,16 @@ class AuthService {
     return this._currentUser;
   }
 
-  // Required profile fields: Full Name, Email, Phone, Business / Organization Name
+  // Required profile fields: Full Name, Email, Phone, Business / Organization Name, and Role
   isProfileComplete(user) {
     if (!user) return false;
+    if (this.isAdminEmail(user.email)) return true;
     const hasName = Boolean(user.name && user.name.trim().length > 0);
     const hasEmail = Boolean(user.email && user.email.trim().length > 0);
     const hasPhone = Boolean(user.phone && user.phone.trim().length > 0);
     const hasBusiness = Boolean(user.businessName && user.businessName.trim().length > 0);
-    return hasName && hasEmail && hasPhone && hasBusiness;
+    const hasValidRole = Boolean(user.role && (user.role === "client" || (user.role === "freelancer" && user.inviteVerified === true)));
+    return hasName && hasEmail && hasPhone && hasBusiness && hasValidRole;
   }
 
   // Check if freelancer has verified invite access
@@ -107,7 +109,7 @@ class AuthService {
               inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
               inviteCodeId: data.inviteCodeId || null,
               ...data,
-              role: isUserAdmin ? "admin" : (data.role || "client"),
+              role: isUserAdmin ? "admin" : (data.role || null),
               isAdmin: isUserAdmin
             };
           } else {
@@ -117,16 +119,16 @@ class AuthService {
               email: firebaseUser.email.toLowerCase(),
               name: firebaseUser.displayName || "",
               photoURL: firebaseUser.photoURL || null,
-              role: isUserAdmin ? "admin" : "client",
-              accountType: isUserAdmin ? "admin" : "client",
+              role: isUserAdmin ? "admin" : null,
+              accountType: isUserAdmin ? "admin" : null,
               phone: "",
               businessName: "",
               inviteVerified: isUserAdmin ? true : false,
               inviteCodeId: null,
               skills: [],
               portfolio: null,
-              membershipStatus: "inactive",
-              membershipPlan: "None",
+              membershipStatus: null,
+              membershipPlan: null,
               membershipStart: null,
               membershipExpiry: null,
               createdAt: new Date().toISOString(),
@@ -144,7 +146,7 @@ class AuthService {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName || "",
-            role: isUserAdmin ? "admin" : "client",
+            role: isUserAdmin ? "admin" : null,
             inviteVerified: isUserAdmin ? true : false,
             inviteCodeId: null,
             isAdmin: isUserAdmin
@@ -206,7 +208,7 @@ class AuthService {
   }
 
   // 1. Google Sign-In
-  async loginWithGoogle(intendedRole = "client") {
+  async loginWithGoogle() {
     const result = await signInWithPopup(auth, googleProvider);
     const firebaseUser = result.user;
     const isUserAdmin = this.isAdminEmail(firebaseUser.email);
@@ -223,26 +225,25 @@ class AuthService {
         inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
         inviteCodeId: data.inviteCodeId || null,
         ...data,
-        role: isUserAdmin ? "admin" : (data.role || "client"),
+        role: isUserAdmin ? "admin" : (data.role || null),
         isAdmin: isUserAdmin
       };
     } else {
-      const selectedRole = isUserAdmin ? "admin" : (intendedRole === "freelancer" ? "freelancer" : "client");
       const newUserData = {
         uid: firebaseUser.uid,
         email: firebaseUser.email.toLowerCase(),
         name: firebaseUser.displayName || "",
         photoURL: firebaseUser.photoURL || null,
-        role: selectedRole,
-        accountType: selectedRole,
+        role: isUserAdmin ? "admin" : null,
+        accountType: isUserAdmin ? "admin" : null,
         phone: "",
         businessName: "",
         inviteVerified: isUserAdmin ? true : false,
         inviteCodeId: null,
         skills: [],
         portfolio: null,
-        membershipStatus: selectedRole === "freelancer" ? "inactive" : null,
-        membershipPlan: selectedRole === "freelancer" ? "None" : null,
+        membershipStatus: null,
+        membershipPlan: null,
         membershipStart: null,
         membershipExpiry: null,
         createdAt: new Date().toISOString(),
@@ -261,7 +262,7 @@ class AuthService {
   }
 
   // 2. Email / Password Registration
-  async register({ email, password, name, role = "client", phone = "", businessName = "", inviteCode = "", skills = [], portfolio = "" }) {
+  async register({ email, password, name, phone = "", businessName = "" }) {
     if (!email || !password || !name) {
       throw new Error("Please enter your name, email, and password.");
     }
@@ -270,43 +271,8 @@ class AuthService {
     }
 
     const isUserAdmin = this.isAdminEmail(email);
-
-    if (!isUserAdmin && role !== "client" && role !== "freelancer") {
-      throw new Error("Invalid account type selected.");
-    }
-
-    // Business / Organization Name
-    let finalBusinessName = businessName ? businessName.trim() : "";
-    if (role === "freelancer" && !finalBusinessName) {
-      finalBusinessName = "Independent Freelancer";
-    }
-    if (!finalBusinessName) {
-      throw new Error("Please enter your business or organization name.");
-    }
-
-    // Optional Freelancer Invite Code Validation
-    let validCodeDoc = null;
-    if (role === "freelancer" && !isUserAdmin && inviteCode && inviteCode.trim()) {
-      validCodeDoc = await FidoDB.validateInviteCode(inviteCode.trim());
-    }
-
-    const finalRole = isUserAdmin ? "admin" : role;
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
     const uid = cred.user.uid;
-
-    let inviteVerified = false;
-    let inviteCodeId = null;
-
-    // Associate and claim invite code if valid code was provided
-    if (validCodeDoc) {
-      try {
-        await FidoDB.claimInviteCode(validCodeDoc.code, uid, email.trim().toLowerCase());
-        inviteVerified = true;
-        inviteCodeId = validCodeDoc.id;
-      } catch (e) {
-        console.warn("Claim invite code warning:", e);
-      }
-    }
 
     const newUserData = {
       uid: uid,
@@ -314,15 +280,15 @@ class AuthService {
       name: name.trim(),
       photoURL: null,
       phone: phone.trim(),
-      role: finalRole,
-      accountType: finalRole,
-      businessName: finalBusinessName,
-      inviteVerified: isUserAdmin ? true : inviteVerified,
-      inviteCodeId: isUserAdmin ? null : inviteCodeId,
-      skills: finalRole === "freelancer" ? skills : [],
-      portfolio: finalRole === "freelancer" ? portfolio.trim() : null,
-      membershipStatus: finalRole === "freelancer" ? "inactive" : null,
-      membershipPlan: finalRole === "freelancer" ? "None" : null,
+      role: isUserAdmin ? "admin" : null,
+      accountType: isUserAdmin ? "admin" : null,
+      businessName: businessName ? businessName.trim() : "",
+      inviteVerified: isUserAdmin ? true : false,
+      inviteCodeId: null,
+      skills: [],
+      portfolio: null,
+      membershipStatus: null,
+      membershipPlan: null,
       membershipStart: null,
       membershipExpiry: null,
       createdAt: new Date().toISOString(),

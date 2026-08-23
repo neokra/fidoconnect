@@ -1,118 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In & Register — FidoConnect</title>
-  <meta name="description" content="Sign in or join the FidoConnect network as a business or verified freelancer.">
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Account Access — FidoConnect</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css" />
   <style>
-    .auth-divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 1.25rem 0;
+    /* Auth Form Responsive Styles */
+    .auth-page-container {
+      width: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+    
+    .auth-card {
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .auth-tab-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      background: var(--bg-subtle);
+      padding: 4px;
+      border-radius: var(--radius-md);
+    }
+
+    .auth-tab-btn {
+      padding: 0.65rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
       color: var(--text-muted);
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      width: 100%;
     }
-    .auth-divider::before,
-    .auth-divider::after {
-      content: "";
-      flex: 1;
-      border-bottom: 1px solid var(--border-color);
+
+    .auth-tab-btn.active {
+      background: #ffffff;
+      color: var(--color-primary);
+      box-shadow: var(--shadow-sm);
     }
-    .auth-divider::before { margin-right: 0.75rem; }
-    .auth-divider::after { margin-left: 0.75rem; }
+
+    .role-select-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.4rem;
+    }
+
+    .role-option-card {
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      background: #ffffff;
+    }
+
+    .role-option-card:hover {
+      border-color: var(--color-primary-light);
+    }
+
+    .role-option-card.selected {
+      border-color: var(--color-primary);
+      background-color: var(--bg-subtle);
+    }
+
+    .role-option-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--color-primary);
+      margin-bottom: 2px;
+    }
+
+    .role-option-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
 
     .btn-google {
-      background-color: var(--bg-surface);
-      color: var(--color-primary);
-      border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.65rem;
+      gap: 10px;
       width: 100%;
-      padding: 0.7rem 1rem;
-      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      color: var(--text-color);
       font-weight: 600;
-      border-radius: var(--border-radius-md);
+      font-size: 0.92rem;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
       box-sizing: border-box;
     }
+
     .btn-google:hover {
-      background-color: var(--bg-subtle);
+      background: #f8fafc;
       border-color: #cbd5e1;
     }
+
     .btn-google svg {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
     }
 
-    .auth-card {
-      padding: 2rem;
-      width: 100%;
-      box-sizing: border-box;
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.25rem 0;
+      color: var(--text-light);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    .auth-tabs {
-      display: flex;
-      width: 100%;
-      margin-bottom: 1.75rem;
-    }
-    .auth-tabs .tab-btn {
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
       flex: 1;
-      text-align: center;
-      padding: 0.65rem 0.5rem;
-      font-size: 1rem;
-      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .auth-divider::before {
+      margin-right: 0.75em;
+    }
+
+    .auth-divider::after {
+      margin-left: 0.75em;
+    }
+
+    @media (max-width: 480px) {
+      .auth-card {
+        padding: 1.25rem 1rem !important;
+      }
+      .role-select-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Site Header -->
+  <!-- Site Navigation Header -->
   <header class="site-header">
-    <div class="container header-inner">
-      <a href="index.html" class="brand-logo">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <div class="logo-mark">F</div>
         <span>FidoConnect</span>
       </a>
 
       <nav class="desktop-nav">
         <a href="index.html" class="nav-link">Home</a>
-        <a href="post-work.html" class="nav-link">Post a Work</a>
         <a href="find-work.html" class="nav-link">Find Work</a>
-        <a href="account.html" class="nav-link">Account</a>
+        <a href="post-work.html" class="nav-link">Post a Work</a>
       </nav>
 
-      <div class="header-actions">
-        <a href="post-work.html" class="btn btn-primary btn-sm btn-post-desktop">Post a Work</a>
+      <div class="header-actions" id="header-auth-actions">
+        <a href="auth.html" class="btn btn-secondary btn-sm">Log in</a>
+        <a href="auth.html?mode=register" class="btn btn-primary btn-sm">Join</a>
       </div>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="main-content">
-    <div class="container container-narrow" style="max-width: 490px;">
+  <!-- Main Auth Page Content -->
+  <main class="page-body">
+    <div class="container auth-page-container">
       
-      <!-- Card with Tabs -->
-      <div class="card auth-card">
+      <div class="card auth-card" style="padding: 2rem;">
         
-        <!-- Toggle Tabs -->
-        <div class="tab-nav auth-tabs">
-          <button id="btn-tab-login" class="tab-btn active">Log In</button>
-          <button id="btn-tab-register" class="tab-btn">Create Account</button>
+        <!-- Header text -->
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <h2 id="auth-main-title" style="margin-bottom: 0.35rem;">Welcome to FidoConnect</h2>
+          <p id="auth-main-subtitle" class="text-muted" style="font-size: 0.9rem;">
+            Sign in to your account or create a new profile.
+          </p>
+        </div>
+
+        <!-- Login / Register Tab Switcher -->
+        <div class="auth-tab-group">
+          <button type="button" id="btn-tab-login" class="auth-tab-btn active">Sign In</button>
+          <button type="button" id="btn-tab-register" class="auth-tab-btn">Create Account</button>
         </div>
 
         <!-- 1. Login Pane -->
         <div id="login-form-pane">
+          
           <button type="button" id="google-login-btn" class="btn-google">
             <svg viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -123,20 +215,20 @@
             <span>Continue with Google</span>
           </button>
 
-          <div class="auth-divider">or continue with email</div>
+          <div class="auth-divider">or sign in with email</div>
 
           <form id="login-form">
             <div class="form-group">
               <label for="loginEmail" class="form-label form-label-required">Email Address</label>
-              <input type="email" id="loginEmail" class="form-control" placeholder="name@example.com" required autocomplete="email" />
+              <input type="email" id="loginEmail" class="form-control" placeholder="you@example.com" required autocomplete="email" />
             </div>
 
             <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                <label for="loginPassword" class="form-label form-label-required" style="margin-bottom: 0;">Password</label>
-                <a href="javascript:void(0)" onclick="openModal('forgot-password-modal')" style="font-size: 0.8rem; color: var(--color-accent);">Forgot password?</a>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                <label for="loginPassword" class="form-label form-label-required" style="margin-bottom:0;">Password</label>
+                <a href="#" id="forgot-password-link" onclick="openModal('forgot-password-modal'); return false;" style="font-size:0.8rem; color:var(--color-primary);">Forgot?</a>
               </div>
-              <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password" />
+              <input type="password" id="loginPassword" class="form-control" placeholder="Your password" required autocomplete="current-password" />
             </div>
 
             <div style="margin-top: 1.5rem;">
@@ -149,31 +241,7 @@
 
         <!-- 2. Register Pane -->
         <div id="register-form-pane" style="display: none;">
-          <div style="margin-bottom: 1.25rem;">
-            <label class="form-label form-label-required">Account Type</label>
-            <div class="role-select-grid">
-              
-              <!-- Role Option 1: Client -->
-              <div id="role-card-client" class="role-option-card selected">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                  <div class="role-option-title">Client</div>
-                </div>
-                <div class="role-option-desc">I want to post project requests.</div>
-              </div>
-
-              <!-- Role Option 2: Freelancer -->
-              <div id="role-card-freelancer" class="role-option-card">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                  <div class="role-option-title">Freelancer</div>
-                </div>
-                <div class="role-option-desc">I want to apply for digital work.</div>
-              </div>
-
-            </div>
-          </div>
-
+          
           <button type="button" id="google-register-btn" class="btn-google">
             <svg viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -210,27 +278,6 @@
             <div class="form-group">
               <label for="regBusiness" class="form-label form-label-required" id="label-reg-business">Business / Organization Name</label>
               <input type="text" id="regBusiness" class="form-control" placeholder="Business Name or Organization" required />
-            </div>
-
-            <!-- Freelancer Optional Invite Code -->
-            <div class="form-group" id="freelancer-invite-group" style="display: none;">
-              <label for="regInviteCode" class="form-label">Freelancer Invite Code <span class="text-muted" style="font-weight: normal; font-size: 0.8rem;">(Optional)</span></label>
-              <input type="text" id="regInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026 (Optional)" style="text-transform:uppercase;" />
-              <small class="text-muted" style="font-size:0.78rem; display:block; margin-top:3px;">
-                Freelancer access is invite-only. Enter your FidoConnect invite code to get verified access.
-              </small>
-            </div>
-
-            <!-- Extra fields for Freelancer -->
-            <div id="freelancer-extra-fields" style="display: none;">
-              <div class="form-group">
-                <label for="regPortfolio" class="form-label">Portfolio / GitHub / Link</label>
-                <input type="url" id="regPortfolio" class="form-control" placeholder="https://yourportfolio.com" />
-              </div>
-              <div class="form-group">
-                <label for="regSkills" class="form-label">Primary Skills (comma separated)</label>
-                <input type="text" id="regSkills" class="form-control" placeholder="Website, HTML, Design, Data Entry" />
-              </div>
             </div>
 
             <div style="margin-top: 1.5rem;">
@@ -276,30 +323,30 @@
 
         <div class="form-group">
           <label for="completeBusiness" class="form-label form-label-required" id="completeBusinessLabel">Business / Organization Name</label>
-          <input type="text" id="completeBusiness" class="form-control" placeholder="Business Name or 'Independent Freelancer'" required />
+          <input type="text" id="completeBusiness" class="form-control" placeholder="Business Name or Organization" required />
         </div>
 
-        <!-- Account type choice if user has no role yet -->
-        <div id="complete-role-selection" style="display:none; margin-bottom: 1.25rem;">
+        <!-- Account Type (Always shown) -->
+        <div id="complete-role-selection" style="margin-bottom: 1.25rem;">
           <label class="form-label form-label-required">Account Type</label>
           <div class="role-select-grid">
             <div id="complete-card-client" class="role-option-card selected">
               <div class="role-option-title">Client</div>
-              <div class="role-option-desc">Post projects</div>
+              <div class="role-option-desc">Post project requests</div>
             </div>
             <div id="complete-card-freelancer" class="role-option-card">
               <div class="role-option-title">Freelancer</div>
-              <div class="role-option-desc">Apply for work</div>
+              <div class="role-option-desc">Apply for digital work</div>
             </div>
           </div>
         </div>
 
-        <!-- Optional Invite code if completing as Freelancer -->
+        <!-- Required Invite code if completing as Freelancer -->
         <div class="form-group" id="complete-invite-group" style="display:none;">
-          <label for="completeInviteCode" class="form-label">Freelancer Invite Code <span class="text-muted" style="font-weight: normal; font-size: 0.8rem;">(Optional)</span></label>
-          <input type="text" id="completeInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026 (Optional)" style="text-transform:uppercase;" />
+          <label for="completeInviteCode" class="form-label form-label-required">Freelancer Invite Code</label>
+          <input type="text" id="completeInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026" style="text-transform:uppercase;" />
           <small class="text-muted" style="font-size:0.78rem; display:block; margin-top:3px;">
-            Freelancer access is invite-only. Enter your FidoConnect invite code to get verified access.
+            Freelancer access is invite-only.
           </small>
         </div>
 
@@ -373,7 +420,6 @@
     import { FidoAuth } from "./js/auth.js";
     import { FidoDB } from "./js/db.js";
 
-    let selectedRole = "client";
     let completeModalRole = "client";
     let pendingUser = null;
 
@@ -398,46 +444,10 @@
         loginPane.style.display = "none";
       });
 
-      // 2. Role Selector (Registration Form)
-      const clientCard = document.getElementById("role-card-client");
-      const freelancerCard = document.getElementById("role-card-freelancer");
-      const freelancerFields = document.getElementById("freelancer-extra-fields");
-      const freelancerInviteGroup = document.getElementById("freelancer-invite-group");
-      const regBusinessInput = document.getElementById("regBusiness");
-
-      function setRole(role) {
-        selectedRole = role;
-        if (role === "client") {
-          clientCard.classList.add("selected");
-          freelancerCard.classList.remove("selected");
-          freelancerFields.style.display = "none";
-          freelancerInviteGroup.style.display = "none";
-          regBusinessInput.placeholder = "Business Name or Organization";
-          if (regBusinessInput.value === "Independent Freelancer") {
-            regBusinessInput.value = "";
-          }
-        } else {
-          freelancerCard.classList.add("selected");
-          clientCard.classList.remove("selected");
-          freelancerFields.style.display = "block";
-          freelancerInviteGroup.style.display = "block";
-          regBusinessInput.placeholder = "Independent Freelancer or Studio Name";
-          if (!regBusinessInput.value.trim()) {
-            regBusinessInput.value = "Independent Freelancer";
-          }
-        }
-      }
-
-      clientCard.addEventListener("click", () => setRole("client"));
-      freelancerCard.addEventListener("click", () => setRole("freelancer"));
-
       // Check URL parameters and redirect
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("mode") === "register") {
         registerTabBtn.click();
-      }
-      if (urlParams.get("role") === "freelancer") {
-        setRole("freelancer");
       }
 
       if (urlParams.has("redirect")) {
@@ -467,31 +477,38 @@
         document.getElementById("completeName").value = user.name || "";
         document.getElementById("completeEmail").value = user.email || "";
         document.getElementById("completePhone").value = user.phone || "";
-        document.getElementById("completeBusiness").value = user.businessName || (user.role === "freelancer" ? "Independent Freelancer" : "");
-
-        const roleSelection = document.getElementById("complete-role-selection");
-        const inviteGroup = document.getElementById("complete-invite-group");
+        document.getElementById("completeBusiness").value = user.businessName || "";
 
         completeModalRole = user.role || "client";
+        const compCardClient = document.getElementById("complete-card-client");
+        const compCardFree = document.getElementById("complete-card-freelancer");
+        const compInviteGroup = document.getElementById("complete-invite-group");
+        const compInviteInput = document.getElementById("completeInviteCode");
 
-        if (!user.role || user.role === "client") {
-          if (!user.role) {
-            roleSelection.style.display = "block";
-          } else {
-            roleSelection.style.display = "none";
+        if (compInviteInput) compInviteInput.value = "";
+
+        if (completeModalRole === "freelancer") {
+          compCardFree.classList.add("selected");
+          compCardClient.classList.remove("selected");
+          compInviteGroup.style.display = "block";
+          document.getElementById("completeBusinessLabel").textContent = "Business / Studio Name";
+          document.getElementById("completeBusiness").placeholder = "Business Name or 'Independent Freelancer'";
+          if (!document.getElementById("completeBusiness").value.trim()) {
+            document.getElementById("completeBusiness").value = "Independent Freelancer";
           }
-          inviteGroup.style.display = "none";
-        } else if (user.role === "freelancer") {
-          roleSelection.style.display = "none";
-          // If freelancer hasn't validated an invite code yet
-          inviteGroup.style.display = user.usedInviteCode ? "none" : "block";
+        } else {
+          compCardClient.classList.add("selected");
+          compCardFree.classList.remove("selected");
+          compInviteGroup.style.display = "none";
+          document.getElementById("completeBusinessLabel").textContent = "Business / Organization Name";
+          document.getElementById("completeBusiness").placeholder = "Business Name or Organization";
         }
 
         modal.classList.add("active");
         document.body.style.overflow = "hidden";
       }
 
-      // Role toggle inside Profile Completion Modal (for new Google users)
+      // Role toggle inside Profile Completion Modal
       const compCardClient = document.getElementById("complete-card-client");
       const compCardFree = document.getElementById("complete-card-freelancer");
       const compInviteGroup = document.getElementById("complete-invite-group");
@@ -503,6 +520,8 @@
           compCardClient.classList.add("selected");
           compCardFree.classList.remove("selected");
           compInviteGroup.style.display = "none";
+          document.getElementById("completeBusinessLabel").textContent = "Business / Organization Name";
+          compBusiness.placeholder = "Business Name or Organization";
           if (compBusiness.value === "Independent Freelancer") compBusiness.value = "";
         });
 
@@ -511,6 +530,8 @@
           compCardFree.classList.add("selected");
           compCardClient.classList.remove("selected");
           compInviteGroup.style.display = "block";
+          document.getElementById("completeBusinessLabel").textContent = "Business / Studio Name";
+          compBusiness.placeholder = "Business Name or 'Independent Freelancer'";
           if (!compBusiness.value.trim()) compBusiness.value = "Independent Freelancer";
         });
       }
@@ -545,35 +566,68 @@
               throw new Error("Please enter your business or organization name.");
             }
 
-            let inviteVerified = pendingUser.inviteVerified === true;
-            let inviteCodeId = pendingUser.inviteCodeId || null;
+            const isUserAdmin = FidoAuth.isAdminEmail(pendingUser.email);
 
-            // If freelancer and entered an invite code
-            if (completeModalRole === "freelancer" && !FidoAuth.isAdminEmail(pendingUser.email) && inviteCode) {
-              const validCodeDoc = await FidoDB.validateInviteCode(inviteCode);
-              await FidoDB.claimInviteCode(validCodeDoc.code, pendingUser.uid, pendingUser.email);
-              inviteVerified = true;
-              inviteCodeId = validCodeDoc.id;
+            if (completeModalRole === "client") {
+              const updateData = {
+                name,
+                phone,
+                businessName,
+                role: isUserAdmin ? "admin" : "client",
+                accountType: isUserAdmin ? "admin" : "client",
+                inviteVerified: isUserAdmin ? true : false,
+                inviteCodeId: null
+              };
+
+              await FidoAuth.updateUserProfile(pendingUser.uid, updateData);
+
+              document.getElementById("profile-completion-modal").classList.remove("active");
+              document.body.style.overflow = "";
+
+              showToast("Profile completed successfully!", "success");
+              const target = getRedirectUrl();
+              setTimeout(() => window.location.href = target, 350);
+
+            } else if (completeModalRole === "freelancer") {
+              if (!isUserAdmin) {
+                if (!inviteCode) {
+                  throw new Error("A valid Freelancer Invite Code is required for freelancer registration.");
+                }
+                const validCodeDoc = await FidoDB.validateInviteCode(inviteCode);
+                await FidoDB.claimInviteCode(validCodeDoc.code, pendingUser.uid, pendingUser.email);
+
+                const updateData = {
+                  name,
+                  phone,
+                  businessName,
+                  role: "freelancer",
+                  accountType: "freelancer",
+                  inviteVerified: true,
+                  inviteCodeId: validCodeDoc.id,
+                  membershipStatus: "inactive",
+                  membershipPlan: "None"
+                };
+
+                await FidoAuth.updateUserProfile(pendingUser.uid, updateData);
+              } else {
+                await FidoAuth.updateUserProfile(pendingUser.uid, {
+                  name,
+                  phone,
+                  businessName,
+                  role: "admin",
+                  accountType: "admin",
+                  inviteVerified: true,
+                  inviteCodeId: null
+                });
+              }
+
+              document.getElementById("profile-completion-modal").classList.remove("active");
+              document.body.style.overflow = "";
+
+              showToast("Freelancer profile verified and saved successfully!", "success");
+              const target = getRedirectUrl();
+              setTimeout(() => window.location.href = target, 350);
             }
-
-            const updateData = {
-              name,
-              phone,
-              businessName,
-              role: pendingUser.role || completeModalRole,
-              accountType: pendingUser.accountType || completeModalRole,
-              inviteVerified: FidoAuth.isAdminEmail(pendingUser.email) ? true : inviteVerified,
-              inviteCodeId: FidoAuth.isAdminEmail(pendingUser.email) ? null : inviteCodeId
-            };
-
-            await FidoAuth.updateUserProfile(pendingUser.uid, updateData);
-
-            document.getElementById("profile-completion-modal").classList.remove("active");
-            document.body.style.overflow = "";
-
-            showToast("Profile completed successfully!", "success");
-            const target = getRedirectUrl();
-            setTimeout(() => window.location.href = target, 350);
 
           } catch (err) {
             showToast(err.message || "Failed to update profile.", "error");
@@ -584,48 +638,32 @@
       }
 
       // 3. Google Sign-In Handlers
+      const handleGoogleAuth = async (btn) => {
+        btn.disabled = true;
+        try {
+          const user = await FidoAuth.loginWithGoogle();
+          if (!FidoAuth.isProfileComplete(user)) {
+            promptProfileCompletion(user);
+            btn.disabled = false;
+          } else {
+            showToast("Signed in with Google!", "success");
+            const target = getRedirectUrl();
+            setTimeout(() => window.location.href = target, 350);
+          }
+        } catch (err) {
+          showToast(err.message || "Google authentication failed.", "error");
+          btn.disabled = false;
+        }
+      };
+
       const googleLoginBtn = document.getElementById("google-login-btn");
       if (googleLoginBtn) {
-        googleLoginBtn.addEventListener("click", async () => {
-          googleLoginBtn.disabled = true;
-          try {
-            const user = await FidoAuth.loginWithGoogle("client");
-            if (!FidoAuth.isProfileComplete(user)) {
-              showToast("Please complete your profile details to continue.", "info");
-              promptProfileCompletion(user);
-              googleLoginBtn.disabled = false;
-            } else {
-              showToast("Signed in with Google!", "success");
-              const target = getRedirectUrl();
-              setTimeout(() => window.location.href = target, 350);
-            }
-          } catch (err) {
-            showToast(err.message || "Google login failed", "error");
-            googleLoginBtn.disabled = false;
-          }
-        });
+        googleLoginBtn.addEventListener("click", () => handleGoogleAuth(googleLoginBtn));
       }
 
       const googleRegBtn = document.getElementById("google-register-btn");
       if (googleRegBtn) {
-        googleRegBtn.addEventListener("click", async () => {
-          googleRegBtn.disabled = true;
-          try {
-            const user = await FidoAuth.loginWithGoogle(selectedRole);
-            if (!FidoAuth.isProfileComplete(user)) {
-              showToast("Please complete your profile details to continue.", "info");
-              promptProfileCompletion(user);
-              googleRegBtn.disabled = false;
-            } else {
-              showToast("Account created with Google!", "success");
-              const target = getRedirectUrl();
-              setTimeout(() => window.location.href = target, 350);
-            }
-          } catch (err) {
-            showToast(err.message || "Google sign-up failed", "error");
-            googleRegBtn.disabled = false;
-          }
-        });
+        googleRegBtn.addEventListener("click", () => handleGoogleAuth(googleRegBtn));
       }
 
       // 4. Email/Password Login
@@ -643,7 +681,6 @@
           try {
             const user = await FidoAuth.login(email, password);
             if (!FidoAuth.isProfileComplete(user)) {
-              showToast("Please complete your profile to continue.", "info");
               promptProfileCompletion(user);
               submitBtn.disabled = false;
               submitBtn.textContent = "Log In";
@@ -670,31 +707,26 @@
           const password = document.getElementById("regPassword").value;
           const phone = document.getElementById("regPhone").value.trim();
           const businessName = document.getElementById("regBusiness").value.trim();
-          const inviteCode = document.getElementById("regInviteCode") ? document.getElementById("regInviteCode").value.trim() : "";
-          const portfolio = document.getElementById("regPortfolio") ? document.getElementById("regPortfolio").value.trim() : "";
-          const skillsRaw = document.getElementById("regSkills") ? document.getElementById("regSkills").value.trim() : "";
-          const skills = skillsRaw ? skillsRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
 
           const submitBtn = document.getElementById("register-submit-btn");
           submitBtn.disabled = true;
           submitBtn.textContent = "Creating Account...";
 
           try {
-            await FidoAuth.register({
+            const user = await FidoAuth.register({
               name,
               email,
               password,
-              role: selectedRole,
               phone,
-              businessName,
-              inviteCode,
-              portfolio,
-              skills
+              businessName
             });
 
-            showToast("Account created successfully!", "success");
-            const target = getRedirectUrl();
-            setTimeout(() => window.location.href = target, 350);
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Create Account";
+
+            // Show Profile Completion Modal to select Account Type (Client/Freelancer)
+            promptProfileCompletion(user);
+
           } catch (err) {
             showToast(err.message || "Registration failed.", "error");
             submitBtn.disabled = false;
