@@ -528,7 +528,7 @@
                   throw new Error("A valid Freelancer Invite Code is required for freelancer registration.");
                 }
                 const validCodeDoc = await FidoDB.validateInviteCode(inviteCode);
-                await FidoDB.claimInviteCode(validCodeDoc.code, pendingUser.uid, pendingUser.email);
+                await FidoDB.claimInviteCode(validCodeDoc.id, pendingUser.uid, pendingUser.email);
 
                 const updateData = {
                   name,

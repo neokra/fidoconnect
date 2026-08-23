@@ -21,11 +21,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const currentUser = FidoAuth.getCurrentUser();
-  const isUnverifiedFreelancer = currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser);
+  const hasDetailAccess = FidoAuth.isAdmin() || (currentUser
+    && currentUser.role === "freelancer"
+    && FidoAuth.isFreelancerVerified(currentUser));
 
   setupInviteModal(projectId);
 
-  if (isUnverifiedFreelancer) {
+  if (!hasDetailAccess) {
     openModal("invite-code-modal");
   } else {
     await loadProjectDetails(projectId);

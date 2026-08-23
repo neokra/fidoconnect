@@ -196,8 +196,10 @@ function renderProjectsList() {
   }
 
   const currentUser = FidoAuth.getCurrentUser();
-  const isVerifiedFreelancer = currentUser && currentUser.role === "freelancer" && FidoAuth.isFreelancerVerified(currentUser);
-  const isUnverifiedFreelancer = currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser);
+  const isVerifiedFreelancer = currentUser
+    && currentUser.role === "freelancer"
+    && FidoAuth.isFreelancerVerified(currentUser);
+  const hasDetailAccess = FidoAuth.isAdmin() || isVerifiedFreelancer;
 
   container.innerHTML = filtered.map(project => `
     <div class="project-card">
@@ -230,14 +232,14 @@ function renderProjectsList() {
         <span style="font-size:0.8rem; color:var(--text-muted);">
           Agency Coordinated
         </span>
-        ${isUnverifiedFreelancer ? `
-          <button type="button" class="btn btn-secondary btn-sm" onclick="openInviteModalForProject('${project.projectId || project.id}')">
-            View Details
-          </button>
-        ` : `
+        ${hasDetailAccess ? `
           <a href="project-details.html?id=${project.projectId || project.id}" class="btn ${isVerifiedFreelancer ? "btn-primary" : "btn-secondary"} btn-sm">
             ${isVerifiedFreelancer ? "Apply for Project" : "View Details"}
           </a>
+        ` : `
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openInviteModalForProject('${project.projectId || project.id}')">
+            Unlock Details
+          </button>
         `}
       </div>
     </div>

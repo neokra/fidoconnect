@@ -23,21 +23,70 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('inviteVerified', false) == true;
     }
 
+    function hasValidInviteClaim(inviteCodeId) {
+      return inviteCodeId != null
+        && exists(/databases/$(database)/documents/inviteCodes/$(inviteCodeId))
+        && get(/databases/$(database)/documents/inviteCodes/$(inviteCodeId)).data.get('status', '') == 'used'
+        && get(/databases/$(database)/documents/inviteCodes/$(inviteCodeId)).data.get('usedBy', '') == request.auth.uid;
+    }
+
     // --- 1. Users Collection ---
     match /users/{userId} {
       // Owner can read their own profile; Admin can read all profiles
       allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
       
-      // Allow registration / initial user profile creation
-      allow create: if (request.auth != null && request.auth.uid == userId)
+      // A new profile must belong to the authenticated account. Non-admin users
+      // begin unverified and cannot create themselves as an administrator.
+      allow create: if isOwner(userId)
+                    && request.resource.data.get('uid', '') == userId
+                    && request.resource.data.get('email', '') == request.auth.token.email
                     && (request.resource.data.get('role', null) != 'admin' || isAdmin())
-                    && (request.resource.data.get('inviteVerified', false) == false || (request.resource.data.get('inviteVerified', false) == true && request.resource.data.get('inviteCodeId', null) != null) || isAdmin());
-      
-      // Normal users can update non-privileged profile fields; cannot make themselves admin
-      allow update: if ((request.auth != null && request.auth.uid == userId)
-                        && (request.resource.data.get('role', null) != 'admin' || isAdmin())
-                        && (request.resource.data.get('inviteVerified', false) == resource.data.get('inviteVerified', false) || (request.resource.data.get('inviteVerified', false) == true && request.resource.data.get('inviteCodeId', null) != null) || isAdmin())
-                       ) || isAdmin();
+                    && (request.resource.data.get('role', null) != 'freelancer'
+                        || (request.resource.data.get('inviteVerified', false) == true
+                            && hasValidInviteClaim(request.resource.data.get('inviteCodeId', null))))
+                    && (request.resource.data.get('inviteVerified', false) == false
+                        || hasValidInviteClaim(request.resource.data.get('inviteCodeId', null)));
+
+      // Owners may edit ordinary profile fields. Privileged fields may only be
+      // set once while completing a profile, and freelancer access requires a
+      // previously claimed invite code that belongs to that account.
+      allow update: if isAdmin() || (
+                      isOwner(userId)
+                      && request.resource.data.get('uid', '') == resource.data.get('uid', '')
+                      && request.resource.data.get('email', '') == resource.data.get('email', '')
+                      && request.resource.data.get('createdAt', '') == resource.data.get('createdAt', '')
+                      && request.resource.data.get('role', null) != 'admin'
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           'name', 'photoURL', 'phone', 'businessName', 'skills',
+                           'portfolio', 'role', 'accountType', 'inviteVerified',
+                           'inviteCodeId', 'membershipStatus', 'membershipPlan', 'updatedAt'
+                         ])
+                      && (
+                        // Routine profile edits cannot alter access or membership.
+                        (request.resource.data.get('role', null) == resource.data.get('role', null)
+                         && request.resource.data.get('accountType', null) == resource.data.get('accountType', null)
+                         && request.resource.data.get('inviteVerified', false) == resource.data.get('inviteVerified', false)
+                         && request.resource.data.get('inviteCodeId', null) == resource.data.get('inviteCodeId', null)
+                         && request.resource.data.get('membershipStatus', null) == resource.data.get('membershipStatus', null)
+                         && request.resource.data.get('membershipPlan', null) == resource.data.get('membershipPlan', null))
+                        // Initial completion as a client.
+                        || (resource.data.get('role', null) == null
+                            && request.resource.data.get('role', null) == 'client'
+                            && request.resource.data.get('accountType', null) == 'client'
+                            && request.resource.data.get('inviteVerified', false) == false
+                            && request.resource.data.get('inviteCodeId', null) == null
+                            && request.resource.data.get('membershipStatus', null) == resource.data.get('membershipStatus', null)
+                            && request.resource.data.get('membershipPlan', null) == resource.data.get('membershipPlan', null))
+                        // Initial completion as a freelancer after claiming an invite.
+                        || ((resource.data.get('role', null) == null || resource.data.get('role', null) == 'client')
+                            && request.resource.data.get('role', null) == 'freelancer'
+                            && request.resource.data.get('accountType', null) == 'freelancer'
+                            && request.resource.data.get('inviteVerified', false) == true
+                            && hasValidInviteClaim(request.resource.data.get('inviteCodeId', null))
+                            && request.resource.data.get('membershipStatus', null) == 'inactive'
+                            && request.resource.data.get('membershipPlan', null) == 'None')
+                      )
+                    );
       
       // Only admin can delete users
       allow delete: if isAdmin();
@@ -56,7 +105,12 @@ service cloud.firestore {
                         && resource.data.get('status', '') == 'active'
                         && request.resource.data.get('status', '') == 'used'
                         && request.resource.data.get('usedBy', '') == request.auth.uid
-                        && request.resource.data.get('code', '') == resource.data.get('code', ''))
+                        && request.resource.data.get('usedByEmail', '') == request.auth.token.email
+                        && request.resource.data.get('usedAt', '') is string
+                        && request.resource.data.get('code', '') == resource.data.get('code', '')
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                             'status', 'usedBy', 'usedByEmail', 'usedAt'
+                           ]))
                        || isAdmin();
     }
 

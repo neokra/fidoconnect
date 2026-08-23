@@ -570,16 +570,41 @@ export const FidoDB = {
     return { id: codeId, ...data };
   },
 
-  async claimInviteCode(codeStr, freelancerUid, freelancerEmail) {
-    const validCode = await this.validateInviteCode(codeStr);
-    const docRef = doc(db, "inviteCodes", validCode.id);
-    await updateDoc(docRef, {
-      status: "used",
-      usedBy: freelancerUid,
-      usedByEmail: freelancerEmail,
-      usedAt: new Date().toISOString()
+  async claimInviteCode(inviteCodeId, freelancerUid, freelancerEmail) {
+    const docRef = doc(db, "inviteCodes", inviteCodeId);
+    const usedAt = new Date().toISOString();
+
+    // Re-check and claim in one transaction. If two users submit the same
+    // code, Firestore retries one transaction and only the first can succeed.
+    return runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(docRef);
+      if (!snap.exists()) {
+        throw new Error("Invalid invite code. Please check your code and try again.");
+      }
+
+      const data = snap.data();
+      if (data.status !== "active") {
+        throw new Error(data.status === "used"
+          ? "This invite code has already been used by another account."
+          : "This invite code is no longer active.");
+      }
+
+      transaction.update(docRef, {
+        status: "used",
+        usedBy: freelancerUid,
+        usedByEmail: freelancerEmail,
+        usedAt
+      });
+
+      return {
+        id: snap.id,
+        ...data,
+        status: "used",
+        usedBy: freelancerUid,
+        usedByEmail: freelancerEmail,
+        usedAt
+      };
     });
-    return { ...validCode, status: "used", usedBy: freelancerUid, usedByEmail: freelancerEmail };
   },
 
   async createInviteCode({ 

@@ -374,17 +374,25 @@ class AuthService {
     }
 
     const validCodeDoc = await FidoDB.validateInviteCode(cleanCode);
-    await FidoDB.claimInviteCode(validCodeDoc.code, this._currentUser.uid, this._currentUser.email);
+    await FidoDB.claimInviteCode(validCodeDoc.id, this._currentUser.uid, this._currentUser.email);
 
     const userDocRef = doc(db, "users", this._currentUser.uid);
     await updateDoc(userDocRef, {
+      role: "freelancer",
+      accountType: "freelancer",
       inviteVerified: true,
       inviteCodeId: validCodeDoc.id,
+      membershipStatus: "inactive",
+      membershipPlan: "None",
       updatedAt: new Date().toISOString()
     });
 
+    this._currentUser.role = "freelancer";
+    this._currentUser.accountType = "freelancer";
     this._currentUser.inviteVerified = true;
     this._currentUser.inviteCodeId = validCodeDoc.id;
+    this._currentUser.membershipStatus = "inactive";
+    this._currentUser.membershipPlan = "None";
 
     this.updateNavUI();
     this._listeners.forEach(cb => {
