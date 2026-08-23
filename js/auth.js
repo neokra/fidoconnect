@@ -113,30 +113,17 @@ class AuthService {
               isAdmin: isUserAdmin
             };
           } else {
-            // First time sign-in, initialize user profile document
-            const newUserData = {
+            // Registration and Google sign-in own first-time profile creation.
+            // Do not write here: this listener can run concurrently with those
+            // flows and turn an initial create into a conflicting update.
+            this._currentUser = {
               uid: firebaseUser.uid,
-              email: firebaseUser.email.toLowerCase(),
+              email: firebaseUser.email,
               name: firebaseUser.displayName || "",
               photoURL: firebaseUser.photoURL || null,
               role: isUserAdmin ? "admin" : null,
-              accountType: isUserAdmin ? "admin" : null,
-              phone: "",
-              businessName: "",
-              inviteVerified: isUserAdmin ? true : false,
+              inviteVerified: isUserAdmin,
               inviteCodeId: null,
-              skills: [],
-              portfolio: null,
-              membershipStatus: null,
-              membershipPlan: null,
-              membershipStart: null,
-              membershipExpiry: null,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
-            await setDoc(userDocRef, newUserData);
-            this._currentUser = {
-              ...newUserData,
               isAdmin: isUserAdmin
             };
           }
@@ -211,6 +198,7 @@ class AuthService {
   async loginWithGoogle() {
     const result = await signInWithPopup(auth, googleProvider);
     const firebaseUser = result.user;
+    await firebaseUser.getIdToken();
     const isUserAdmin = this.isAdminEmail(firebaseUser.email);
 
     const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -272,6 +260,7 @@ class AuthService {
 
     const isUserAdmin = this.isAdminEmail(email);
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    await cred.user.getIdToken();
     const uid = cred.user.uid;
 
     const newUserData = {
