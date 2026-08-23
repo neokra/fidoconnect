@@ -8,14 +8,14 @@ import { FidoDB } from "./db.js";
 document.addEventListener("DOMContentLoaded", async () => {
   // Category quick filter clicks
   document.querySelectorAll(".category-card").forEach(card => {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", async () => {
       const category = card.getAttribute("data-category");
       if (!category) return;
 
       const target = `find-work.html?category=${encodeURIComponent(category)}`;
-      const user = FidoAuth.getCurrentUser();
+      const user = await FidoAuth.waitForAuth();
 
-      if (FidoAuth._authReady && !user) {
+      if (!user) {
         if (typeof showToast === "function") {
           showToast("Please log in first", "info");
         }

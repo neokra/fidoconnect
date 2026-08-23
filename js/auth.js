@@ -138,27 +138,34 @@ class AuthService {
 
   // Intercept clicks on protected links for logged-out visitors
   _setupProtectedNavigation() {
-    document.addEventListener("click", (e) => {
-      const link = e.target.closest("a");
+    document.addEventListener("click", async (e) => {
+      const link = e.target.closest("a, button[data-href]");
       if (!link) return;
 
-      const href = link.getAttribute("href");
+      const href = link.getAttribute("href") || link.getAttribute("data-href");
       if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
 
       const protectedPages = ["post-work.html", "find-work.html", "project-details.html", "account.html", "admin.html"];
       const isProtected = protectedPages.some(page => href.split("?")[0].endsWith(page) || href.startsWith(page));
 
       if (isProtected) {
-        const user = this.getCurrentUser();
-        if (this._authReady && !user) {
-          e.preventDefault();
-          e.stopPropagation();
+        if (this._authReady && this._currentUser) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const user = await this.waitForAuth();
+        if (!user) {
           if (typeof showToast === "function") {
             showToast("Please log in first", "info");
           }
           setTimeout(() => {
             window.location.href = `auth.html?redirect=${encodeURIComponent(href)}`;
           }, 300);
+        } else {
+          window.location.href = href;
         }
       }
     }, true);
