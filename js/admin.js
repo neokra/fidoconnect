@@ -2,7 +2,7 @@
  * FidoConnect - Comprehensive Admin Control Dashboard Controller
  * 
  * Strict Admin Access: Only for thecard.primary@gmail.com
- * Handles all 11 modules.
+ * Handles all 12 modules including Invite Codes management.
  */
 
 import { FidoAuth } from "./auth.js";
@@ -16,6 +16,7 @@ let allAdminClients = [];
 let allAdminPayments = [];
 let allAdminReviews = [];
 let allAdminMessages = [];
+let allAdminInviteCodes = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth(["admin"]);
@@ -100,18 +101,63 @@ function setupModalForms() {
       }
     });
   }
+
+  // Create Invite Code Form
+  const inviteForm = document.getElementById("create-invite-code-form");
+  if (inviteForm) {
+    inviteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const code = document.getElementById("newInviteCode").value.trim().toUpperCase();
+        const note = document.getElementById("newInviteNote").value.trim();
+
+        if (!code) {
+          showToast("Please enter an invite code.", "error");
+          return;
+        }
+
+        const currentUser = FidoAuth.getCurrentUser();
+        await FidoDB.createInviteCode({
+          code,
+          note,
+          createdBy: currentUser ? currentUser.email : "admin"
+        });
+
+        closeModal("create-invite-code-modal");
+        document.getElementById("newInviteCode").value = "";
+        document.getElementById("newInviteNote").value = "";
+        showToast(`Invite code ${code} created successfully!`, "success");
+        await loadAdminData();
+      } catch (err) {
+        showToast(err.message || "Failed to create invite code.", "error");
+      }
+    });
+  }
+
+  // Generate Random Code Button
+  const genBtn = document.getElementById("btn-generate-random-code");
+  if (genBtn) {
+    genBtn.addEventListener("click", () => {
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const codeInput = document.getElementById("newInviteCode");
+      if (codeInput) {
+        codeInput.value = `FIDO-${randomSuffix}`;
+      }
+    });
+  }
 }
 
 async function loadAdminData() {
   try {
-    const [projects, apps, users, payments, reviews, messages, stats] = await Promise.all([
+    const [projects, apps, users, payments, reviews, messages, stats, inviteCodes] = await Promise.all([
       FidoDB.getProjects({}),
       FidoDB.getApplications({}),
       FidoDB.getUsers(),
       FidoDB.getPayments(),
       FidoDB.getReviews(),
       FidoDB.getMessages(),
-      FidoDB.getDashboardStats()
+      FidoDB.getDashboardStats(),
+      FidoDB.getInviteCodes()
     ]);
 
     allAdminProjects = projects;
@@ -122,6 +168,7 @@ async function loadAdminData() {
     allAdminPayments = payments;
     allAdminReviews = reviews;
     allAdminMessages = messages;
+    allAdminInviteCodes = inviteCodes;
 
     renderOverviewStats(stats);
     renderProjectsTable();
@@ -133,6 +180,7 @@ async function loadAdminData() {
     renderPaymentsTable();
     renderReviewsTable();
     renderMessagesTable();
+    renderInviteCodesTable();
 
   } catch (err) {
     console.error("Error loading admin data from Firestore:", err);
@@ -317,7 +365,7 @@ window.selectFreelancerForProject = async function(projId, freelancerId, appId) 
   }
 };
 
-// 4. Users Table (No assign admin button)
+// 4. Users Table
 function renderUsersTable() {
   const container = document.getElementById("admin-users-tbody");
   if (!container) return;
@@ -386,6 +434,7 @@ function renderFreelancersTable() {
         <td>
           <strong>${f.name}</strong>
           <div style="font-size:0.8rem; color:var(--text-muted);">${f.email} • ${f.phone || "No phone"}</div>
+          ${f.usedInviteCode ? `<div style="font-size:0.75rem; color:var(--color-accent); font-family:var(--font-mono);">Code: ${f.usedInviteCode}</div>` : ""}
         </td>
         <td>
           <div>${(f.skills || []).map(s => `<span class="badge badge-inactive">${s}</span>`).join(" ")}</div>
@@ -554,3 +603,62 @@ function renderMessagesTable() {
     </tr>
   `).join("");
 }
+
+// 11. Invite Codes Table (Module 12)
+function renderInviteCodesTable() {
+  const container = document.getElementById("admin-invite-codes-tbody");
+  if (!container) return;
+
+  if (allAdminInviteCodes.length === 0) {
+    container.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No invite codes created yet. Click "+ Create Invite Code" to generate one.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminInviteCodes.map(code => {
+    let statusBadge = `<span class="badge badge-active">Active</span>`;
+    if (code.status === "used") {
+      statusBadge = `<span class="badge badge-completed">Used</span>`;
+    } else if (code.status === "revoked") {
+      statusBadge = `<span class="badge badge-cancelled">Revoked</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <span style="font-family:var(--font-mono); font-weight:700; font-size:0.9rem; color:var(--color-primary);">${code.code}</span>
+        </td>
+        <td>${statusBadge}</td>
+        <td><span style="font-size:0.82rem; color:var(--text-muted);">${formatDate(code.createdAt)}</span></td>
+        <td>
+          ${code.usedByEmail ? `
+            <div><strong>${code.usedByEmail}</strong></div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono);">${code.usedBy}</div>
+          ` : `<span class="text-muted">—</span>`}
+        </td>
+        <td><span style="font-size:0.82rem; color:var(--text-muted);">${code.usedAt ? formatDate(code.usedAt) : "—"}</span></td>
+        <td><span style="font-size:0.85rem;">${code.note || "—"}</span></td>
+        <td>
+          ${code.status === "active" ? `
+            <button class="btn btn-secondary btn-sm" onclick="toggleInviteCodeStatus('${code.id}', 'revoked')">Revoke</button>
+          ` : (code.status === "revoked" ? `
+            <button class="btn btn-primary btn-sm" onclick="toggleInviteCodeStatus('${code.id}', 'active')">Reactivate</button>
+          ` : `<span style="font-size:0.78rem; color:var(--text-muted);">Redeemed</span>`)}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+window.openCreateInviteModal = function() {
+  openModal("create-invite-code-modal");
+};
+
+window.toggleInviteCodeStatus = async function(codeDocId, newStatus) {
+  try {
+    await FidoDB.updateInviteCodeStatus(codeDocId, newStatus);
+    showToast(`Invite code marked as ${newStatus}`, "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast("Failed to update invite code: " + err.message, "error");
+  }
+};

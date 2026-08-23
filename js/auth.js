@@ -2,10 +2,12 @@
  * FidoConnect - Firebase Authentication Service
  * 
  * Direct Firebase Auth integration: Email/Password, Google Sign-In,
- * Password Reset, Session Listener, and Administrator identity checks.
+ * Password Reset, Session Listener, Required Profile Validation,
+ * and Administrator identity checks.
  */
 
 import { auth, db, googleProvider } from "./firebase-config.js";
+import { FidoDB } from "./db.js";
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -17,7 +19,8 @@ import {
 import { 
   doc, 
   getDoc, 
-  setDoc 
+  setDoc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const ADMIN_EMAIL = "thecard.primary@gmail.com";
@@ -43,6 +46,16 @@ class AuthService {
 
   getCurrentUser() {
     return this._currentUser;
+  }
+
+  // Required profile fields: Full Name, Email, Phone, Business / Organization Name
+  isProfileComplete(user) {
+    if (!user) return false;
+    const hasName = Boolean(user.name && user.name.trim().length > 0);
+    const hasEmail = Boolean(user.email && user.email.trim().length > 0);
+    const hasPhone = Boolean(user.phone && user.phone.trim().length > 0);
+    const hasBusiness = Boolean(user.businessName && user.businessName.trim().length > 0);
+    return hasName && hasEmail && hasPhone && hasBusiness;
   }
 
   // Promise that resolves once Firebase Auth verifies initial session
@@ -88,16 +101,16 @@ class AuthService {
               isAdmin: isUserAdmin
             };
           } else {
-            // First time sign-in (e.g. via Google), create profile
+            // First time sign-in, initialize user profile document
             const newUserData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email.toLowerCase(),
-              name: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+              name: firebaseUser.displayName || "",
               photoURL: firebaseUser.photoURL || null,
               role: isUserAdmin ? "admin" : "client",
               accountType: isUserAdmin ? "admin" : "client",
               phone: "",
-              businessName: null,
+              businessName: "",
               skills: [],
               portfolio: null,
               membershipStatus: "inactive",
@@ -118,7 +131,7 @@ class AuthService {
           this._currentUser = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            name: firebaseUser.displayName || "User",
+            name: firebaseUser.displayName || "",
             role: isUserAdmin ? "admin" : "client",
             isAdmin: isUserAdmin
           };
@@ -136,7 +149,7 @@ class AuthService {
     });
   }
 
-  // Intercept clicks on protected links for logged-out visitors
+  // Intercept clicks on protected links for logged-out or incomplete-profile visitors
   _setupProtectedNavigation() {
     document.addEventListener("click", async (e) => {
       const link = e.target.closest("a, button[data-href]");
@@ -149,7 +162,7 @@ class AuthService {
       const isProtected = protectedPages.some(page => href.split("?")[0].endsWith(page) || href.startsWith(page));
 
       if (isProtected) {
-        if (this._authReady && this._currentUser) {
+        if (this._authReady && this._currentUser && this.isProfileComplete(this._currentUser)) {
           return;
         }
 
@@ -163,6 +176,13 @@ class AuthService {
           }
           setTimeout(() => {
             window.location.href = `auth.html?redirect=${encodeURIComponent(href)}`;
+          }, 300);
+        } else if (!this.isProfileComplete(user)) {
+          if (typeof showToast === "function") {
+            showToast("Please complete your profile to continue", "info");
+          }
+          setTimeout(() => {
+            window.location.href = `auth.html?redirect=${encodeURIComponent(href)}&complete_profile=true`;
           }, 300);
         } else {
           window.location.href = href;
@@ -195,12 +215,12 @@ class AuthService {
       const newUserData = {
         uid: firebaseUser.uid,
         email: firebaseUser.email.toLowerCase(),
-        name: firebaseUser.displayName || firebaseUser.email.split("@")[0],
+        name: firebaseUser.displayName || "",
         photoURL: firebaseUser.photoURL || null,
         role: selectedRole,
         accountType: selectedRole,
         phone: "",
-        businessName: selectedRole === "client" ? (firebaseUser.displayName || null) : null,
+        businessName: "",
         skills: [],
         portfolio: null,
         membershipStatus: selectedRole === "freelancer" ? "inactive" : null,
@@ -223,9 +243,12 @@ class AuthService {
   }
 
   // 2. Email / Password Registration
-  async register({ email, password, name, role = "client", phone = "", businessName = "", skills = [], portfolio = "" }) {
+  async register({ email, password, name, role = "client", phone = "", businessName = "", inviteCode = "", skills = [], portfolio = "" }) {
     if (!email || !password || !name) {
       throw new Error("Please enter your name, email, and password.");
+    }
+    if (!phone || !phone.trim()) {
+      throw new Error("Please enter your WhatsApp / phone number.");
     }
 
     const isUserAdmin = this.isAdminEmail(email);
@@ -234,19 +257,47 @@ class AuthService {
       throw new Error("Invalid account type selected.");
     }
 
+    // Business / Organization Name requirement
+    let finalBusinessName = businessName ? businessName.trim() : "";
+    if (role === "freelancer" && !finalBusinessName) {
+      finalBusinessName = "Independent Freelancer";
+    }
+    if (!finalBusinessName) {
+      throw new Error("Please enter your business or organization name.");
+    }
+
+    // Freelancer Invite Code Validation
+    if (role === "freelancer" && !isUserAdmin) {
+      if (!inviteCode || !inviteCode.trim()) {
+        throw new Error("A valid FidoConnect Invite Code is required for freelancer registration.");
+      }
+      // Validate code against Firestore
+      await FidoDB.validateInviteCode(inviteCode.trim());
+    }
+
     const finalRole = isUserAdmin ? "admin" : role;
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
     const uid = cred.user.uid;
+
+    // Claim invite code in Firestore after user account is created
+    if (role === "freelancer" && !isUserAdmin && inviteCode) {
+      try {
+        await FidoDB.claimInviteCode(inviteCode.trim(), uid, email.trim().toLowerCase());
+      } catch (e) {
+        console.warn("Claim invite code warning:", e);
+      }
+    }
 
     const newUserData = {
       uid: uid,
       email: email.trim().toLowerCase(),
       name: name.trim(),
       photoURL: null,
-      phone: phone ? phone.trim() : "",
+      phone: phone.trim(),
       role: finalRole,
       accountType: finalRole,
-      businessName: finalRole === "client" ? (businessName ? businessName.trim() : name.trim()) : null,
+      businessName: finalBusinessName,
+      usedInviteCode: role === "freelancer" ? inviteCode.trim().toUpperCase() : null,
       skills: finalRole === "freelancer" ? skills : [],
       portfolio: finalRole === "freelancer" ? portfolio.trim() : null,
       membershipStatus: finalRole === "freelancer" ? "inactive" : null,
@@ -295,7 +346,7 @@ class AuthService {
       this._currentUser = {
         uid: uid,
         email: cred.user.email,
-        name: cred.user.displayName || "User",
+        name: cred.user.displayName || "",
         role: isUserAdmin ? "admin" : "client",
         isAdmin: isUserAdmin
       };
@@ -305,7 +356,34 @@ class AuthService {
     return this._currentUser;
   }
 
-  // 4. Logout
+  // 4. Update User Profile (Mandatory profile completion)
+  async updateUserProfile(uid, profileData) {
+    if (!uid) throw new Error("User ID is required.");
+    const userDocRef = doc(db, "users", uid);
+    
+    const updatePayload = {
+      ...profileData,
+      updatedAt: new Date().toISOString()
+    };
+
+    await setDoc(userDocRef, updatePayload, { merge: true });
+
+    if (this._currentUser && this._currentUser.uid === uid) {
+      this._currentUser = {
+        ...this._currentUser,
+        ...updatePayload
+      };
+    }
+
+    this.updateNavUI();
+    this._listeners.forEach(cb => {
+      try { cb(this._currentUser); } catch (e) { console.error(e); }
+    });
+
+    return this._currentUser;
+  }
+
+  // 5. Logout
   async logout() {
     await signOut(auth);
     this._currentUser = null;
@@ -313,7 +391,7 @@ class AuthService {
     window.location.href = "index.html";
   }
 
-  // 5. Password Reset
+  // 6. Password Reset
   async resetPassword(email) {
     if (!email) throw new Error("Please enter your email address.");
     await sendPasswordResetEmail(auth, email.trim());
@@ -364,6 +442,14 @@ class AuthService {
       const currentTarget = window.location.pathname.split("/").pop() + window.location.search;
       const targetUrl = currentTarget || "account.html";
       window.location.href = `auth.html?redirect=${encodeURIComponent(targetUrl)}`;
+      return false;
+    }
+
+    // Check mandatory profile completion
+    if (!this.isProfileComplete(user)) {
+      const currentTarget = window.location.pathname.split("/").pop() + window.location.search;
+      const targetUrl = currentTarget || "account.html";
+      window.location.href = `auth.html?redirect=${encodeURIComponent(targetUrl)}&complete_profile=true`;
       return false;
     }
 

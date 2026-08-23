@@ -37,12 +37,28 @@ service cloud.firestore {
       
       // Normal user can update non-privileged fields (cannot elevate role to 'admin' or alter membership status unless admin)
       allow update: if (isOwner(userId) && 
-                        request.resource.data.role == resource.data.role &&
-                        request.resource.data.membershipStatus == resource.data.membershipStatus) || 
+                        (request.resource.data.role == resource.data.role || (resource.data.role == null && request.resource.data.role != 'admin')) &&
+                        (request.resource.data.membershipStatus == resource.data.membershipStatus || resource.data.membershipStatus == null)) || 
                        isAdmin();
       
       // Only admin can delete users
       allow delete: if isAdmin();
+    }
+
+    // --- Invite Codes Collection ---
+    match /inviteCodes/{inviteCodeId} {
+      // Admin has full control
+      allow read, write: if isAdmin();
+
+      // Anyone authenticated or public during registration can read/verify invite codes
+      allow read: if true;
+
+      // Allow claiming an invite code when registering
+      allow update: if (isAuthenticated() && 
+                        resource.data.status == 'active' && 
+                        request.resource.data.status == 'used' && 
+                        request.resource.data.usedBy == request.auth.uid) || 
+                       isAdmin();
     }
 
     // --- Projects Collection ---

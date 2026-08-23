@@ -446,6 +446,95 @@ const FidoDB = {
       totalRevenue: totalRevenue > 0 ? `$${totalRevenue.toLocaleString()}` : "$0",
       agencyMargin: totalMargin > 0 ? `$${totalMargin.toLocaleString()}` : "$0"
     };
+  },
+
+  // --- 9. Invite Codes ---
+  async getInviteCodes() {
+    const codesRef = collection(db, "inviteCodes");
+    const snapshot = await getDocs(codesRef);
+    let codes = [];
+    snapshot.forEach(docSnap => {
+      codes.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    codes.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return codes;
+  },
+
+  async validateInviteCode(codeStr) {
+    if (!codeStr || !codeStr.trim()) {
+      throw new Error("Please enter a valid invite code.");
+    }
+    const cleanCode = codeStr.trim().toUpperCase();
+    const codesRef = collection(db, "inviteCodes");
+    const q = query(codesRef, where("code", "==", cleanCode), limit(1));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      throw new Error("Invalid invite code. Please check your code and try again.");
+    }
+
+    const docSnap = snap.docs[0];
+    const data = docSnap.data();
+
+    if (data.status === "used") {
+      throw new Error("This invite code has already been used by another account.");
+    }
+    if (data.status === "revoked") {
+      throw new Error("This invite code has been revoked and is no longer valid.");
+    }
+    if (data.status !== "active") {
+      throw new Error("This invite code is currently inactive.");
+    }
+
+    return { id: docSnap.id, ...data };
+  },
+
+  async claimInviteCode(codeStr, freelancerUid, freelancerEmail) {
+    const validCode = await this.validateInviteCode(codeStr);
+    const docRef = doc(db, "inviteCodes", validCode.id);
+    await updateDoc(docRef, {
+      status: "used",
+      usedBy: freelancerUid,
+      usedByEmail: freelancerEmail,
+      usedAt: new Date().toISOString()
+    });
+    return { ...validCode, status: "used", usedBy: freelancerUid, usedByEmail: freelancerEmail };
+  },
+
+  async createInviteCode({ code, note = "", createdBy = "admin" }) {
+    if (!code || !code.trim()) {
+      throw new Error("Please provide an invite code.");
+    }
+    const cleanCode = code.trim().toUpperCase();
+    
+    const codesRef = collection(db, "inviteCodes");
+    const q = query(codesRef, where("code", "==", cleanCode), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      throw new Error(`Invite code "${cleanCode}" already exists. Please choose a different code.`);
+    }
+
+    const newCodeData = {
+      code: cleanCode,
+      note: note.trim(),
+      status: "active",
+      createdBy: createdBy,
+      createdAt: new Date().toISOString(),
+      usedBy: null,
+      usedByEmail: null,
+      usedAt: null
+    };
+
+    const docRef = await addDoc(codesRef, newCodeData);
+    return { id: docRef.id, ...newCodeData };
+  },
+
+  async updateInviteCodeStatus(codeDocId, newStatus) {
+    const docRef = doc(db, "inviteCodes", codeDocId);
+    await updateDoc(docRef, {
+      status: newStatus,
+      updatedAt: new Date().toISOString()
+    });
   }
 };
 

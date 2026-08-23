@@ -96,6 +96,11 @@
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
         <span>11. Settings</span>
       </div>
+
+      <div class="admin-nav-item" data-section="sec-invite-codes">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+        <span>12. Invite Codes</span>
+      </div>
     </aside>
 
     <!-- Admin Main Body -->
@@ -467,7 +472,67 @@
         </div>
       </div>
 
+      <!-- 12. Invite Codes Section -->
+      <div id="sec-invite-codes" class="admin-tab-section" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="margin-bottom: 0.25rem;">Freelancer Invite Codes</h2>
+            <p class="text-muted" style="margin: 0;">Create and manage registration invite codes for verified freelancers.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openCreateInviteModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            + Create Invite Code
+          </button>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Invite Code</th>
+                <th>Status</th>
+                <th>Created Date</th>
+                <th>Used By Freelancer</th>
+                <th>Used Date</th>
+                <th>Note / Recipient</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-invite-codes-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </main>
+  </div>
+
+  <!-- Create Invite Code Modal -->
+  <div id="create-invite-code-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 460px;">
+      <button class="modal-close-btn" onclick="closeModal('create-invite-code-modal')">&times;</button>
+      <h3 style="margin-bottom: 0.5rem;">Create Freelancer Invite Code</h3>
+      <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1.25rem;">Generate a unique registration code for verified freelancer invitations.</p>
+      
+      <form id="create-invite-code-form">
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+            <label class="form-label form-label-required" style="margin-bottom:0;">Invite Code</label>
+            <button type="button" id="btn-generate-random-code" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;">Generate Random</button>
+          </div>
+          <input type="text" id="newInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026" style="text-transform:uppercase;" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Note / Intended Freelancer</label>
+          <input type="text" id="newInviteNote" class="form-control" placeholder="e.g. For John Doe (Web Dev)" />
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('create-invite-code-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Code</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Record Payment Modal -->

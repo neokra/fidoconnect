@@ -78,6 +78,7 @@ html {
   font-size: 16px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -88,6 +89,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 a {
@@ -1116,4 +1119,57 @@ textarea.form-control {
   .header-actions .btn-post-desktop {
     display: none;
   }
+}
+
+@media (max-width: 540px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .container-narrow {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    max-width: 100%;
+  }
+
+  .auth-card,
+  .card {
+    padding: 1.25rem 1rem;
+    border-radius: var(--border-radius-md);
+  }
+
+  .tab-nav {
+    display: flex;
+    width: 100%;
+    gap: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 0.55rem 0.5rem;
+    font-size: 0.92rem;
+  }
+
+  .btn-google {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.88rem;
+  }
+
+  .role-option-card {
+    padding: 0.85rem 0.75rem;
+  }
+
+  .modal-card {
+    padding: 1.25rem 1rem;
+    max-height: 94vh;
+  }
+}
+
+.modal-overlay.modal-mandatory {
+  backdrop-filter: blur(4px);
+  background-color: rgba(15, 23, 42, 0.85);
+  z-index: 3000;
 }

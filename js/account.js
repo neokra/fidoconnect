@@ -87,7 +87,7 @@ async function renderAdminAccountView(container) {
           </div>
           <h3 style="color:white; font-size:1.6rem; margin-bottom:0.35rem;">FidoConnect Admin Panel</h3>
           <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0;">
-            Manage all 11 agency modules: project requests, approvals, proposals, network members, payments, reviews, and client communication.
+            Manage all 12 agency modules: project requests, approvals, proposals, network members, payments, reviews, invite codes, and client communication.
           </p>
         </div>
         <div>
