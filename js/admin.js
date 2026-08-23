@@ -18,16 +18,8 @@ let allAdminReviews = [];
 let allAdminMessages = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Strict admin guard: only thecard.primary@gmail.com
-  const currentUser = await FidoAuth.waitForAuth();
-  
-  if (!currentUser || !FidoAuth.isAdminEmail(currentUser.email)) {
-    showToast("Access restricted to designated administrator.", "error");
-    setTimeout(() => {
-      window.location.href = "account.html";
-    }, 1000);
-    return;
-  }
+  const isAuth = await FidoAuth.requireAuth(["admin"]);
+  if (!isAuth) return;
 
   setupAdminTabs();
   setupFilterListeners();

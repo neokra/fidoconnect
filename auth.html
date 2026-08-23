@@ -326,7 +326,7 @@
       clientCard.addEventListener("click", () => setRole("client"));
       freelancerCard.addEventListener("click", () => setRole("freelancer"));
 
-      // Check URL parameters
+      // Check URL parameters and redirect
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("mode") === "register") {
         registerTabBtn.click();
@@ -335,7 +335,14 @@
         setRole("freelancer");
       }
 
-      const getRedirectUrl = () => urlParams.get("redirect") || "account.html";
+      // Show notification if user was redirected because page requires login
+      if (urlParams.has("redirect")) {
+        showToast("Please log in first", "info");
+      }
+
+      const getRedirectUrl = () => {
+        return urlParams.get("redirect") || "account.html";
+      };
 
       // 3. Google Sign-In Handlers
       const googleLoginBtn = document.getElementById("google-login-btn");
@@ -345,7 +352,8 @@
           try {
             await FidoAuth.loginWithGoogle("client");
             showToast("Signed in with Google!", "success");
-            setTimeout(() => window.location.href = getRedirectUrl(), 350);
+            const target = getRedirectUrl();
+            setTimeout(() => window.location.href = target, 350);
           } catch (err) {
             showToast(err.message || "Google login failed", "error");
             googleLoginBtn.disabled = false;
@@ -360,7 +368,8 @@
           try {
             await FidoAuth.loginWithGoogle(selectedRole);
             showToast("Account created with Google!", "success");
-            setTimeout(() => window.location.href = getRedirectUrl(), 350);
+            const target = getRedirectUrl();
+            setTimeout(() => window.location.href = target, 350);
           } catch (err) {
             showToast(err.message || "Google sign-up failed", "error");
             googleRegBtn.disabled = false;
@@ -383,7 +392,8 @@
           try {
             await FidoAuth.login(email, password);
             showToast("Signed in successfully!", "success");
-            setTimeout(() => window.location.href = getRedirectUrl(), 350);
+            const target = getRedirectUrl();
+            setTimeout(() => window.location.href = target, 350);
           } catch (err) {
             showToast(err.message || "Failed to sign in.", "error");
             submitBtn.disabled = false;
@@ -423,7 +433,8 @@
             });
 
             showToast("Account created successfully!", "success");
-            setTimeout(() => window.location.href = "account.html", 350);
+            const target = getRedirectUrl();
+            setTimeout(() => window.location.href = target, 350);
           } catch (err) {
             showToast(err.message || "Registration failed.", "error");
             submitBtn.disabled = false;

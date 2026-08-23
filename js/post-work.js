@@ -6,6 +6,9 @@ import { FidoAuth } from "./auth.js";
 import { FidoDB } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const isAuth = await FidoAuth.requireAuth();
+  if (!isAuth) return;
+
   const form = document.getElementById("post-work-form");
   const formContainer = document.getElementById("post-work-form-container");
   const confirmationContainer = document.getElementById("submission-confirmation");

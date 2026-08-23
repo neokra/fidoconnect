@@ -28,6 +28,7 @@ class AuthService {
     this._authReady = false;
     this._listeners = [];
     this._initAuth();
+    this._setupProtectedNavigation();
   }
 
   // Check if an email matches the designated administrator
@@ -135,6 +136,34 @@ class AuthService {
     });
   }
 
+  // Intercept clicks on protected links for logged-out visitors
+  _setupProtectedNavigation() {
+    document.addEventListener("click", (e) => {
+      const link = e.target.closest("a");
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      const protectedPages = ["post-work.html", "find-work.html", "project-details.html", "account.html", "admin.html"];
+      const isProtected = protectedPages.some(page => href.split("?")[0].endsWith(page) || href.startsWith(page));
+
+      if (isProtected) {
+        const user = this.getCurrentUser();
+        if (this._authReady && !user) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof showToast === "function") {
+            showToast("Please log in first", "info");
+          }
+          setTimeout(() => {
+            window.location.href = `auth.html?redirect=${encodeURIComponent(href)}`;
+          }, 300);
+        }
+      }
+    }, true);
+  }
+
   // 1. Google Sign-In
   async loginWithGoogle(intendedRole = "client") {
     const result = await signInWithPopup(auth, googleProvider);
@@ -194,7 +223,6 @@ class AuthService {
 
     const isUserAdmin = this.isAdminEmail(email);
 
-    // Enforce role constraints: never allow non-admin email to register as admin
     if (!isUserAdmin && role !== "client" && role !== "freelancer") {
       throw new Error("Invalid account type selected.");
     }
@@ -285,7 +313,7 @@ class AuthService {
     return true;
   }
 
-  // Header Nav State Update (Standard clean UI)
+  // Header Nav State Update
   updateNavUI() {
     const user = this.getCurrentUser();
     const container = document.getElementById("header-auth-actions");
@@ -326,7 +354,9 @@ class AuthService {
   async requireAuth(allowedRoles = []) {
     const user = await this.waitForAuth();
     if (!user) {
-      window.location.href = `auth.html?redirect=${encodeURIComponent(window.location.pathname)}`;
+      const currentTarget = window.location.pathname.split("/").pop() + window.location.search;
+      const targetUrl = currentTarget || "account.html";
+      window.location.href = `auth.html?redirect=${encodeURIComponent(targetUrl)}`;
       return false;
     }
 

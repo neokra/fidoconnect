@@ -10,6 +10,9 @@ let currentCategoryFilter = "all";
 let currentSearchQuery = "";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const isAuth = await FidoAuth.requireAuth();
+  if (!isAuth) return;
+
   const urlParams = new URLSearchParams(window.location.search);
   const paramCategory = urlParams.get("category");
   if (paramCategory) {

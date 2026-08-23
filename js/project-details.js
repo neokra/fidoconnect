@@ -8,6 +8,9 @@ import { FidoDB } from "./db.js";
 let currentProject = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const isAuth = await FidoAuth.requireAuth();
+  if (!isAuth) return;
+
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get("id");
 

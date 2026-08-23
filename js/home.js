@@ -2,6 +2,7 @@
  * FidoConnect - Homepage Controller
  */
 
+import { FidoAuth } from "./auth.js";
 import { FidoDB } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -9,8 +10,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelectorAll(".category-card").forEach(card => {
     card.addEventListener("click", () => {
       const category = card.getAttribute("data-category");
-      if (category) {
-        window.location.href = `find-work.html?category=${encodeURIComponent(category)}`;
+      if (!category) return;
+
+      const target = `find-work.html?category=${encodeURIComponent(category)}`;
+      const user = FidoAuth.getCurrentUser();
+
+      if (FidoAuth._authReady && !user) {
+        if (typeof showToast === "function") {
+          showToast("Please log in first", "info");
+        }
+        setTimeout(() => {
+          window.location.href = `auth.html?redirect=${encodeURIComponent(target)}`;
+        }, 300);
+      } else {
+        window.location.href = target;
       }
     });
   });
