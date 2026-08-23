@@ -89,31 +89,28 @@ function renderRoleMembershipState() {
       </div>
     `;
     bannerContainer.style.display = "block";
-  } else if (currentUser.role === "freelancer" && currentUser.membershipStatus !== "active") {
+  } else if (currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
     bannerContainer.innerHTML = `
-      <div class="notice-box notice-warning" style="flex-direction:column; gap:0.6rem;">
+      <div class="notice-box notice-info" style="flex-direction:column; gap:0.5rem;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-          <strong style="font-size:1rem;">Membership required to apply for projects</strong>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <strong style="font-size:1rem;">Standard Freelancer Access</strong>
         </div>
-        <p style="margin:0; font-size:0.9rem; color:#78350f;">
-          FidoConnect members can apply directly for available projects.
+        <p style="margin:0; font-size:0.9rem; color:var(--text-color);">
+          You can browse project summaries. Verified freelancer invitation is required to view detailed specifications and submit proposals.
         </p>
-        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-top:0.25rem;">
-          <a href="account.html#membership" class="btn btn-primary btn-sm">View Membership</a>
-          <span style="font-size:0.8rem; color:#92400e;">
-            * Membership provides access to project opportunities. Projects are not guaranteed.
-          </span>
+        <div style="margin-top:0.25rem;">
+          <a href="account.html#invite" class="btn btn-secondary btn-sm">Enter Invite Code in Account</a>
         </div>
       </div>
     `;
     bannerContainer.style.display = "block";
-  } else if (currentUser.role === "freelancer" && currentUser.membershipStatus === "active") {
+  } else if (currentUser.role === "freelancer" && FidoAuth.isFreelancerVerified(currentUser)) {
     bannerContainer.innerHTML = `
       <div class="notice-box notice-success" style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <span><strong>Active FidoConnect Member</strong> — You have full access to submit proposals for available projects.</span>
+          <span><strong>Verified Freelancer Access</strong> — You have full access to view project specifications and submit proposals.</span>
         </div>
       </div>
     `;
@@ -157,7 +154,8 @@ function renderProjectsList() {
   }
 
   const currentUser = FidoAuth.getCurrentUser();
-  const canApplyDirectly = currentUser && currentUser.role === "freelancer" && currentUser.membershipStatus === "active";
+  const isVerifiedFreelancer = currentUser && currentUser.role === "freelancer" && FidoAuth.isFreelancerVerified(currentUser);
+  const isUnverifiedFreelancer = currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser);
 
   container.innerHTML = filtered.map(project => `
     <div class="project-card">
@@ -190,10 +188,20 @@ function renderProjectsList() {
         <span style="font-size:0.8rem; color:var(--text-muted);">
           Agency Coordinated
         </span>
-        <a href="project-details.html?id=${project.projectId || project.id}" class="btn ${canApplyDirectly ? "btn-primary" : "btn-secondary"} btn-sm">
-          ${canApplyDirectly ? "Apply for Project" : "View Details"}
-        </a>
+        ${isUnverifiedFreelancer ? `
+          <button type="button" class="btn btn-secondary btn-sm" onclick="handleUnverifiedDetailsClick()">
+            View Details
+          </button>
+        ` : `
+          <a href="project-details.html?id=${project.projectId || project.id}" class="btn ${isVerifiedFreelancer ? "btn-primary" : "btn-secondary"} btn-sm">
+            ${isVerifiedFreelancer ? "Apply for Project" : "View Details"}
+          </a>
+        `}
       </div>
     </div>
   `).join("");
 }
+
+window.handleUnverifiedDetailsClick = function() {
+  showToast("Invited/verified freelancer access is required to view project details and apply.", "info");
+};

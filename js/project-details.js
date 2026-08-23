@@ -11,6 +11,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth();
   if (!isAuth) return;
 
+  const currentUser = FidoAuth.getCurrentUser();
+  if (currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
+    showToast("Invited/verified freelancer access is required to view project details.", "info");
+    window.location.href = "find-work.html";
+    return;
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get("id");
 
@@ -185,6 +192,11 @@ function setupApplicationForm() {
 
     if (!currentUser) {
       showToast("Please log in to apply.", "error");
+      return;
+    }
+
+    if (currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
+      showToast("Invited/verified freelancer access is required to submit proposals.", "error");
       return;
     }
 

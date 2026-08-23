@@ -3,7 +3,7 @@
  * 
  * Direct Firebase Auth integration: Email/Password, Google Sign-In,
  * Password Reset, Session Listener, Required Profile Validation,
- * and Administrator identity checks.
+ * Freelancer Invite Verification, and Administrator identity checks.
  */
 
 import { auth, db, googleProvider } from "./firebase-config.js";
@@ -58,6 +58,14 @@ class AuthService {
     return hasName && hasEmail && hasPhone && hasBusiness;
   }
 
+  // Check if freelancer has verified invite access
+  isFreelancerVerified(user) {
+    if (!user) return false;
+    if (this.isAdminEmail(user.email)) return true;
+    if (user.role !== "freelancer") return true;
+    return user.inviteVerified === true;
+  }
+
   // Promise that resolves once Firebase Auth verifies initial session
   async waitForAuth() {
     if (this._authReady) return this._currentUser;
@@ -96,6 +104,8 @@ class AuthService {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               photoURL: firebaseUser.photoURL || data.photoURL || null,
+              inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
+              inviteCodeId: data.inviteCodeId || null,
               ...data,
               role: isUserAdmin ? "admin" : (data.role || "client"),
               isAdmin: isUserAdmin
@@ -111,6 +121,8 @@ class AuthService {
               accountType: isUserAdmin ? "admin" : "client",
               phone: "",
               businessName: "",
+              inviteVerified: isUserAdmin ? true : false,
+              inviteCodeId: null,
               skills: [],
               portfolio: null,
               membershipStatus: "inactive",
@@ -133,6 +145,8 @@ class AuthService {
             email: firebaseUser.email,
             name: firebaseUser.displayName || "",
             role: isUserAdmin ? "admin" : "client",
+            inviteVerified: isUserAdmin ? true : false,
+            inviteCodeId: null,
             isAdmin: isUserAdmin
           };
         }
@@ -163,6 +177,15 @@ class AuthService {
 
       if (isProtected) {
         if (this._authReady && this._currentUser && this.isProfileComplete(this._currentUser)) {
+          // If trying to access project-details.html, check invite verification
+          if (href.includes("project-details.html") && this._currentUser.role === "freelancer" && !this.isFreelancerVerified(this._currentUser)) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof showToast === "function") {
+              showToast("Invited/verified freelancer access is required to view project details.", "info");
+            }
+            return;
+          }
           return;
         }
 
@@ -184,6 +207,10 @@ class AuthService {
           setTimeout(() => {
             window.location.href = `auth.html?redirect=${encodeURIComponent(href)}&complete_profile=true`;
           }, 300);
+        } else if (href.includes("project-details.html") && user.role === "freelancer" && !this.isFreelancerVerified(user)) {
+          if (typeof showToast === "function") {
+            showToast("Invited/verified freelancer access is required to view project details.", "info");
+          }
         } else {
           window.location.href = href;
         }
@@ -206,6 +233,8 @@ class AuthService {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         photoURL: firebaseUser.photoURL || data.photoURL || null,
+        inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
+        inviteCodeId: data.inviteCodeId || null,
         ...data,
         role: isUserAdmin ? "admin" : (data.role || "client"),
         isAdmin: isUserAdmin
@@ -221,6 +250,8 @@ class AuthService {
         accountType: selectedRole,
         phone: "",
         businessName: "",
+        inviteVerified: isUserAdmin ? true : false,
+        inviteCodeId: null,
         skills: [],
         portfolio: null,
         membershipStatus: selectedRole === "freelancer" ? "inactive" : null,
@@ -257,7 +288,7 @@ class AuthService {
       throw new Error("Invalid account type selected.");
     }
 
-    // Business / Organization Name requirement
+    // Business / Organization Name
     let finalBusinessName = businessName ? businessName.trim() : "";
     if (role === "freelancer" && !finalBusinessName) {
       finalBusinessName = "Independent Freelancer";
@@ -266,23 +297,25 @@ class AuthService {
       throw new Error("Please enter your business or organization name.");
     }
 
-    // Freelancer Invite Code Validation
-    if (role === "freelancer" && !isUserAdmin) {
-      if (!inviteCode || !inviteCode.trim()) {
-        throw new Error("A valid FidoConnect Invite Code is required for freelancer registration.");
-      }
-      // Validate code against Firestore
-      await FidoDB.validateInviteCode(inviteCode.trim());
+    // Optional Freelancer Invite Code Validation
+    let validCodeDoc = null;
+    if (role === "freelancer" && !isUserAdmin && inviteCode && inviteCode.trim()) {
+      validCodeDoc = await FidoDB.validateInviteCode(inviteCode.trim());
     }
 
     const finalRole = isUserAdmin ? "admin" : role;
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
     const uid = cred.user.uid;
 
-    // Claim invite code in Firestore after user account is created
-    if (role === "freelancer" && !isUserAdmin && inviteCode) {
+    let inviteVerified = false;
+    let inviteCodeId = null;
+
+    // Associate and claim invite code if valid code was provided
+    if (validCodeDoc) {
       try {
-        await FidoDB.claimInviteCode(inviteCode.trim(), uid, email.trim().toLowerCase());
+        await FidoDB.claimInviteCode(validCodeDoc.code, uid, email.trim().toLowerCase());
+        inviteVerified = true;
+        inviteCodeId = validCodeDoc.id;
       } catch (e) {
         console.warn("Claim invite code warning:", e);
       }
@@ -297,7 +330,8 @@ class AuthService {
       role: finalRole,
       accountType: finalRole,
       businessName: finalBusinessName,
-      usedInviteCode: role === "freelancer" ? inviteCode.trim().toUpperCase() : null,
+      inviteVerified: isUserAdmin ? true : inviteVerified,
+      inviteCodeId: isUserAdmin ? null : inviteCodeId,
       skills: finalRole === "freelancer" ? skills : [],
       portfolio: finalRole === "freelancer" ? portfolio.trim() : null,
       membershipStatus: finalRole === "freelancer" ? "inactive" : null,
@@ -338,6 +372,8 @@ class AuthService {
         uid: uid,
         email: cred.user.email,
         photoURL: cred.user.photoURL || data.photoURL || null,
+        inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
+        inviteCodeId: data.inviteCodeId || null,
         ...data,
         role: isUserAdmin ? "admin" : (data.role || "client"),
         isAdmin: isUserAdmin
@@ -348,6 +384,8 @@ class AuthService {
         email: cred.user.email,
         name: cred.user.displayName || "",
         role: isUserAdmin ? "admin" : "client",
+        inviteVerified: isUserAdmin ? true : false,
+        inviteCodeId: null,
         isAdmin: isUserAdmin
       };
     }
@@ -356,7 +394,7 @@ class AuthService {
     return this._currentUser;
   }
 
-  // 4. Update User Profile (Mandatory profile completion)
+  // 4. Update User Profile (Mandatory profile completion or updates)
   async updateUserProfile(uid, profileData) {
     if (!uid) throw new Error("User ID is required.");
     const userDocRef = doc(db, "users", uid);
@@ -407,7 +445,7 @@ class AuthService {
     if (user) {
       let roleLabel = user.role;
       if (user.role === "freelancer") {
-        roleLabel = user.membershipStatus === "active" ? "Member" : "Freelancer";
+        roleLabel = user.inviteVerified ? "Verified Freelancer" : (user.membershipStatus === "active" ? "Member" : "Freelancer");
       } else if (user.role === "admin") {
         roleLabel = "Admin";
       }
@@ -450,6 +488,16 @@ class AuthService {
       const currentTarget = window.location.pathname.split("/").pop() + window.location.search;
       const targetUrl = currentTarget || "account.html";
       window.location.href = `auth.html?redirect=${encodeURIComponent(targetUrl)}&complete_profile=true`;
+      return false;
+    }
+
+    // Check project-details.html access for unverified freelancers
+    const currentPath = window.location.pathname.split("/").pop();
+    if (currentPath === "project-details.html" && user.role === "freelancer" && !this.isFreelancerVerified(user)) {
+      if (typeof showToast === "function") {
+        showToast("Invited/verified freelancer access is required to view project details.", "info");
+      }
+      window.location.href = "find-work.html";
       return false;
     }
 

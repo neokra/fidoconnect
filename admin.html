@@ -490,11 +490,13 @@
             <thead>
               <tr>
                 <th>Invite Code</th>
+                <th>Source / Platform</th>
+                <th>Target Freelancer</th>
                 <th>Status</th>
-                <th>Created Date</th>
-                <th>Used By Freelancer</th>
+                <th>Created</th>
+                <th>Used By (UID / Email)</th>
                 <th>Used Date</th>
-                <th>Note / Recipient</th>
+                <th>Notes / Info</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -508,10 +510,10 @@
 
   <!-- Create Invite Code Modal -->
   <div id="create-invite-code-modal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 460px;">
+    <div class="modal-card" style="max-width: 500px;">
       <button class="modal-close-btn" onclick="closeModal('create-invite-code-modal')">&times;</button>
       <h3 style="margin-bottom: 0.5rem;">Create Freelancer Invite Code</h3>
-      <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1.25rem;">Generate a unique registration code for verified freelancer invitations.</p>
+      <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1.25rem;">Generate an invitation code for verified freelancer onboarding. All metadata fields are optional.</p>
       
       <form id="create-invite-code-form">
         <div class="form-group">
@@ -522,9 +524,41 @@
           <input type="text" id="newInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026" style="text-transform:uppercase;" required />
         </div>
 
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Source / Platform</label>
+            <select id="newInvitePlatform" class="form-control">
+              <option value="Freelancer">Freelancer</option>
+              <option value="Upwork">Upwork</option>
+              <option value="Fiverr">Fiverr</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group" id="invite-other-platform-group" style="display:none;">
+            <label class="form-label">Other Platform Name</label>
+            <input type="text" id="newInviteOtherPlatform" class="form-control" placeholder="e.g. LinkedIn, Direct Referral" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Freelancer Name</label>
+            <input type="text" id="newInviteFreelancerName" class="form-control" placeholder="e.g. Alex Johnson" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">@ Username / Handle</label>
+            <input type="text" id="newInviteHandle" class="form-control" placeholder="e.g. @alexdev" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Additional Info</label>
+          <input type="text" id="newInviteAdditionalInfo" class="form-control" placeholder="e.g. Full-stack specialist, 5+ yrs experience" />
+        </div>
+
         <div class="form-group">
           <label class="form-label">Note / Intended Freelancer</label>
-          <input type="text" id="newInviteNote" class="form-control" placeholder="e.g. For John Doe (Web Dev)" />
+          <input type="text" id="newInviteNote" class="form-control" placeholder="e.g. Sent via email on March 2" />
         </div>
 
         <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">

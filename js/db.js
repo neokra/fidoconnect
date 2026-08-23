@@ -460,6 +460,13 @@ export const FidoDB = {
     return codes;
   },
 
+  async getInviteCodeById(codeDocId) {
+    if (!codeDocId) return null;
+    const docRef = doc(db, "inviteCodes", codeDocId);
+    const snap = await getDoc(docRef);
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  },
+
   async validateInviteCode(codeStr) {
     if (!codeStr || !codeStr.trim()) {
       throw new Error("Please enter a valid invite code.");
@@ -501,7 +508,15 @@ export const FidoDB = {
     return { ...validCode, status: "used", usedBy: freelancerUid, usedByEmail: freelancerEmail };
   },
 
-  async createInviteCode({ code, note = "", createdBy = "admin" }) {
+  async createInviteCode({ 
+    code, 
+    platform = "Freelancer", 
+    freelancerName = "", 
+    freelancerHandle = "", 
+    additionalInfo = "", 
+    note = "", 
+    createdBy = "admin" 
+  }) {
     if (!code || !code.trim()) {
       throw new Error("Please provide an invite code.");
     }
@@ -516,7 +531,11 @@ export const FidoDB = {
 
     const newCodeData = {
       code: cleanCode,
-      note: note.trim(),
+      platform: platform ? platform.trim() : "Freelancer",
+      freelancerName: freelancerName ? freelancerName.trim() : "",
+      freelancerHandle: freelancerHandle ? freelancerHandle.trim() : "",
+      additionalInfo: additionalInfo ? additionalInfo.trim() : "",
+      note: note ? note.trim() : "",
       status: "active",
       createdBy: createdBy,
       createdAt: new Date().toISOString(),
@@ -531,13 +550,38 @@ export const FidoDB = {
 
   async updateInviteCodeStatus(codeDocId, newStatus) {
     const docRef = doc(db, "inviteCodes", codeDocId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error("Invite code not found.");
+    }
+
+    const data = snap.data();
+
     await updateDoc(docRef, {
       status: newStatus,
       updatedAt: new Date().toISOString()
     });
+
+    // If this code was used by a freelancer, synchronize user profile access
+    if (data.usedBy) {
+      try {
+        const userDocRef = doc(db, "users", data.usedBy);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const isVerified = newStatus !== "revoked";
+          await updateDoc(userDocRef, {
+            inviteVerified: isVerified,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.warn("Could not sync user inviteVerified status:", err);
+      }
+    }
   }
 };
 
+export { FidoDB };
 export const dbService = FidoDB;
 window.FidoDB = FidoDB;
 export default FidoDB;

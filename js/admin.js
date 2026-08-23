@@ -104,12 +104,29 @@ function setupModalForms() {
 
   // Create Invite Code Form
   const inviteForm = document.getElementById("create-invite-code-form");
+  const platformSelect = document.getElementById("newInvitePlatform");
+  const otherPlatformGroup = document.getElementById("invite-other-platform-group");
+
+  if (platformSelect && otherPlatformGroup) {
+    platformSelect.addEventListener("change", () => {
+      otherPlatformGroup.style.display = platformSelect.value === "Other" ? "block" : "none";
+    });
+  }
+
   if (inviteForm) {
     inviteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
         const code = document.getElementById("newInviteCode").value.trim().toUpperCase();
-        const note = document.getElementById("newInviteNote").value.trim();
+        let platform = document.getElementById("newInvitePlatform") ? document.getElementById("newInvitePlatform").value : "Freelancer";
+        if (platform === "Other") {
+          const customPlatform = document.getElementById("newInviteOtherPlatform") ? document.getElementById("newInviteOtherPlatform").value.trim() : "";
+          platform = customPlatform ? `Other: ${customPlatform}` : "Other";
+        }
+        const freelancerName = document.getElementById("newInviteFreelancerName") ? document.getElementById("newInviteFreelancerName").value.trim() : "";
+        const freelancerHandle = document.getElementById("newInviteHandle") ? document.getElementById("newInviteHandle").value.trim() : "";
+        const additionalInfo = document.getElementById("newInviteAdditionalInfo") ? document.getElementById("newInviteAdditionalInfo").value.trim() : "";
+        const note = document.getElementById("newInviteNote") ? document.getElementById("newInviteNote").value.trim() : "";
 
         if (!code) {
           showToast("Please enter an invite code.", "error");
@@ -119,13 +136,23 @@ function setupModalForms() {
         const currentUser = FidoAuth.getCurrentUser();
         await FidoDB.createInviteCode({
           code,
+          platform,
+          freelancerName,
+          freelancerHandle,
+          additionalInfo,
           note,
           createdBy: currentUser ? currentUser.email : "admin"
         });
 
         closeModal("create-invite-code-modal");
         document.getElementById("newInviteCode").value = "";
-        document.getElementById("newInviteNote").value = "";
+        if (document.getElementById("newInviteOtherPlatform")) document.getElementById("newInviteOtherPlatform").value = "";
+        if (document.getElementById("newInviteFreelancerName")) document.getElementById("newInviteFreelancerName").value = "";
+        if (document.getElementById("newInviteHandle")) document.getElementById("newInviteHandle").value = "";
+        if (document.getElementById("newInviteAdditionalInfo")) document.getElementById("newInviteAdditionalInfo").value = "";
+        if (document.getElementById("newInviteNote")) document.getElementById("newInviteNote").value = "";
+        if (otherPlatformGroup) otherPlatformGroup.style.display = "none";
+
         showToast(`Invite code ${code} created successfully!`, "success");
         await loadAdminData();
       } catch (err) {
@@ -610,7 +637,7 @@ function renderInviteCodesTable() {
   if (!container) return;
 
   if (allAdminInviteCodes.length === 0) {
-    container.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No invite codes created yet. Click "+ Create Invite Code" to generate one.</td></tr>`;
+    container.innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding:2rem;">No invite codes created yet. Click "+ Create Invite Code" to generate one.</td></tr>`;
     return;
   }
 
@@ -627,6 +654,14 @@ function renderInviteCodesTable() {
         <td>
           <span style="font-family:var(--font-mono); font-weight:700; font-size:0.9rem; color:var(--color-primary);">${code.code}</span>
         </td>
+        <td>
+          <span class="badge badge-inactive">${code.platform || "Freelancer"}</span>
+        </td>
+        <td>
+          ${code.freelancerName ? `<div><strong>${code.freelancerName}</strong></div>` : ""}
+          ${code.freelancerHandle ? `<div style="font-size:0.78rem; color:var(--color-accent);">${code.freelancerHandle}</div>` : ""}
+          ${!code.freelancerName && !code.freelancerHandle ? `<span class="text-muted">—</span>` : ""}
+        </td>
         <td>${statusBadge}</td>
         <td><span style="font-size:0.82rem; color:var(--text-muted);">${formatDate(code.createdAt)}</span></td>
         <td>
@@ -636,13 +671,19 @@ function renderInviteCodesTable() {
           ` : `<span class="text-muted">—</span>`}
         </td>
         <td><span style="font-size:0.82rem; color:var(--text-muted);">${code.usedAt ? formatDate(code.usedAt) : "—"}</span></td>
-        <td><span style="font-size:0.85rem;">${code.note || "—"}</span></td>
+        <td>
+          ${code.note ? `<div>${code.note}</div>` : ""}
+          ${code.additionalInfo ? `<div style="font-size:0.78rem; color:var(--text-muted);">${code.additionalInfo}</div>` : ""}
+          ${!code.note && !code.additionalInfo ? `<span class="text-muted">—</span>` : ""}
+        </td>
         <td>
           ${code.status === "active" ? `
             <button class="btn btn-secondary btn-sm" onclick="toggleInviteCodeStatus('${code.id}', 'revoked')">Revoke</button>
           ` : (code.status === "revoked" ? `
             <button class="btn btn-primary btn-sm" onclick="toggleInviteCodeStatus('${code.id}', 'active')">Reactivate</button>
-          ` : `<span style="font-size:0.78rem; color:var(--text-muted);">Redeemed</span>`)}
+          ` : (code.usedBy ? `
+            <button class="btn btn-secondary btn-sm" onclick="toggleInviteCodeStatus('${code.id}', 'revoked')">Revoke Access</button>
+          ` : `<span style="font-size:0.78rem; color:var(--text-muted);">Redeemed</span>`))}
         </td>
       </tr>
     `;

@@ -400,7 +400,34 @@ async function renderFreelancerView(container) {
 
     <div id="freelancer-profile-tab" class="tab-pane">
       <div class="card" style="max-width: 600px;">
-        <h3 style="margin-bottom: 1.25rem;">Freelancer Profile</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem;">
+          <h3 style="margin:0;">Freelancer Profile</h3>
+          <span class="badge ${currentUser.inviteVerified ? "badge-active" : "badge-inactive"}">
+            ${currentUser.inviteVerified ? "✓ Verified Freelancer" : "Standard (Invite Required)"}
+          </span>
+        </div>
+
+        ${!currentUser.inviteVerified ? `
+          <div class="card" style="background-color:var(--bg-subtle); margin-bottom:1.5rem; padding:1.25rem;">
+            <h4 style="font-size:1rem; margin-bottom:0.25rem;">Verify Freelancer Invite Code</h4>
+            <p class="text-muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+              Enter an invitation code from FidoConnect administration to unlock protected project specifications and proposal submissions.
+            </p>
+            <form id="redeem-invite-code-form" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <input type="text" id="redeem-invite-input" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026" style="text-transform:uppercase; max-width:240px;" required />
+              <button type="submit" id="redeem-invite-btn" class="btn btn-primary btn-sm">Redeem Code</button>
+            </form>
+          </div>
+        ` : `
+          <div class="notice-box notice-success" style="margin-bottom:1.5rem; font-size:0.85rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+              <strong>Verified Partner Account</strong><br/>
+              Your account has full access to browse and submit proposals on all project opportunities.
+            </div>
+          </div>
+        `}
+
         <form id="freelancer-profile-form">
           <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -429,6 +456,40 @@ async function renderFreelancerView(container) {
   `;
 
   document.getElementById("freelancer-logout-btn").addEventListener("click", () => FidoAuth.logout());
+
+  const redeemForm = document.getElementById("redeem-invite-code-form");
+  if (redeemForm) {
+    redeemForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const codeInput = document.getElementById("redeem-invite-input");
+      const btn = document.getElementById("redeem-invite-btn");
+      const codeStr = codeInput ? codeInput.value.trim() : "";
+
+      if (!codeStr) return;
+
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+
+      try {
+        const validCode = await FidoDB.validateInviteCode(codeStr);
+        await FidoDB.claimInviteCode(validCode.code, currentUser.uid, currentUser.email);
+        await FidoDB.updateUser(currentUser.uid, {
+          inviteVerified: true,
+          inviteCodeId: validCode.id
+        });
+
+        currentUser.inviteVerified = true;
+        currentUser.inviteCodeId = validCode.id;
+
+        showToast("Invite code verified! You now have full access to view project details and submit proposals.", "success");
+        await renderFreelancerView(container);
+      } catch (err) {
+        showToast(err.message || "Failed to redeem invite code.", "error");
+        btn.disabled = false;
+        btn.textContent = "Redeem Code";
+      }
+    });
+  }
 
   const toggleMemberBtn = document.getElementById("toggle-membership-btn");
   if (toggleMemberBtn) {

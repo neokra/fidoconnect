@@ -25,12 +25,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isVerifiedFreelancer() {
+      return isAuthenticated() && isUserDocument(request.auth.uid) && getUserData().inviteVerified == true;
+    }
+
     // --- Users Collection ---
     match /users/{userId} {
       // Owner can read their own profile; Admin can read all profiles
       allow read: if isOwner(userId) || isAdmin();
       
-      // Allow registration/Google sign-in, but FORBID setting role == 'admin' unless the authenticated email is the administrator email
+      // Allow registration/Google sign-in, but FORBID setting role == 'admin' unless administrator email
       allow create: if isAuthenticated() && 
                     request.auth.uid == userId && 
                     (request.resource.data.role != 'admin' || isAdmin());
@@ -50,10 +54,10 @@ service cloud.firestore {
       // Admin has full control
       allow read, write: if isAdmin();
 
-      // Anyone authenticated or public during registration can read/verify invite codes
-      allow read: if true;
+      // Non-admin can only get single code for verification (cannot list/browse entire collection)
+      allow get: if true;
 
-      // Allow claiming an invite code when registering
+      // Allow claiming an invite code when registering/verifying
       allow update: if (isAuthenticated() && 
                         resource.data.status == 'active' && 
                         request.resource.data.status == 'used' && 
@@ -63,7 +67,7 @@ service cloud.firestore {
 
     // --- Projects Collection ---
     match /projects/{projectId} {
-      // Anyone can read published projects with public visibility (sensitive client contact protected in app layer)
+      // Anyone can read published projects with public visibility (summary view on Find Work)
       // Clients can read their own submitted projects; Assigned freelancers and Admins can read
       allow read: if resource.data.status == 'Published' || 
                      (isAuthenticated() && (resource.data.clientId == request.auth.uid || 
@@ -93,8 +97,10 @@ service cloud.firestore {
       // Freelancers can read their own applications; admins can read all
       allow read: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
       
-      // Freelancer can submit 1 proposal
-      allow create: if isAuthenticated() && request.resource.data.freelancerId == request.auth.uid;
+      // Only verified freelancers (or admin) can submit proposals
+      allow create: if isAuthenticated() && 
+                       request.resource.data.freelancerId == request.auth.uid && 
+                       (isVerifiedFreelancer() || isAdmin());
       
       // Freelancer can update draft notes; Admin can update status (Shortlisted, Selected, Rejected)
       allow update: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid &&

@@ -212,12 +212,12 @@
               <input type="text" id="regBusiness" class="form-control" placeholder="Business Name or Organization" required />
             </div>
 
-            <!-- Freelancer Required Invite Code -->
+            <!-- Freelancer Optional Invite Code -->
             <div class="form-group" id="freelancer-invite-group" style="display: none;">
-              <label for="regInviteCode" class="form-label form-label-required">FidoConnect Invite Code</label>
-              <input type="text" id="regInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-JOIN-2026" style="text-transform:uppercase;" />
+              <label for="regInviteCode" class="form-label">Freelancer Invite Code <span class="text-muted" style="font-weight: normal; font-size: 0.8rem;">(Optional)</span></label>
+              <input type="text" id="regInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026 (Optional)" style="text-transform:uppercase;" />
               <small class="text-muted" style="font-size:0.78rem; display:block; margin-top:3px;">
-                Verified freelancer invitation code provided by FidoConnect administration.
+                Optional invitation code. Verified freelancers gain access to detailed project specs and proposals.
               </small>
             </div>
 
@@ -294,12 +294,12 @@
           </div>
         </div>
 
-        <!-- Invite code if completing as Freelancer -->
+        <!-- Optional Invite code if completing as Freelancer -->
         <div class="form-group" id="complete-invite-group" style="display:none;">
-          <label for="completeInviteCode" class="form-label form-label-required">FidoConnect Invite Code</label>
-          <input type="text" id="completeInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-JOIN-2026" style="text-transform:uppercase;" />
+          <label for="completeInviteCode" class="form-label">Freelancer Invite Code <span class="text-muted" style="font-weight: normal; font-size: 0.8rem;">(Optional)</span></label>
+          <input type="text" id="completeInviteCode" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026 (Optional)" style="text-transform:uppercase;" />
           <small class="text-muted" style="font-size:0.78rem; display:block; margin-top:3px;">
-            Verified freelancer invitation code provided by FidoConnect administration.
+            Optional invitation code. Verified freelancers gain access to detailed project specs and proposals.
           </small>
         </div>
 
@@ -545,15 +545,15 @@
               throw new Error("Please enter your business or organization name.");
             }
 
-            let usedInviteCode = pendingUser.usedInviteCode || null;
+            let inviteVerified = pendingUser.inviteVerified === true;
+            let inviteCodeId = pendingUser.inviteCodeId || null;
 
-            // If freelancer and not admin and invite code needed
-            if (completeModalRole === "freelancer" && !FidoAuth.isAdminEmail(pendingUser.email) && !usedInviteCode) {
-              if (!inviteCode) {
-                throw new Error("A valid FidoConnect Invite Code is required for freelancer verification.");
-              }
-              await FidoDB.claimInviteCode(inviteCode, pendingUser.uid, pendingUser.email);
-              usedInviteCode = inviteCode.toUpperCase().trim();
+            // If freelancer and entered an invite code
+            if (completeModalRole === "freelancer" && !FidoAuth.isAdminEmail(pendingUser.email) && inviteCode) {
+              const validCodeDoc = await FidoDB.validateInviteCode(inviteCode);
+              await FidoDB.claimInviteCode(validCodeDoc.code, pendingUser.uid, pendingUser.email);
+              inviteVerified = true;
+              inviteCodeId = validCodeDoc.id;
             }
 
             const updateData = {
@@ -562,7 +562,8 @@
               businessName,
               role: pendingUser.role || completeModalRole,
               accountType: pendingUser.accountType || completeModalRole,
-              usedInviteCode: usedInviteCode
+              inviteVerified: FidoAuth.isAdminEmail(pendingUser.email) ? true : inviteVerified,
+              inviteCodeId: FidoAuth.isAdminEmail(pendingUser.email) ? null : inviteCodeId
             };
 
             await FidoAuth.updateUserProfile(pendingUser.uid, updateData);
