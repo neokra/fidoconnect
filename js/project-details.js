@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const currentUser = FidoAuth.getCurrentUser();
   if (currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
-    showToast("Invited/verified freelancer access is required to view project details.", "info");
+    showToast("Freelancer verification is required to view full project details and apply for work.", "info");
     window.location.href = "find-work.html";
     return;
   }

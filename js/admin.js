@@ -118,13 +118,10 @@ function setupModalForms() {
       e.preventDefault();
       try {
         const code = document.getElementById("newInviteCode").value.trim().toUpperCase();
-        let platform = document.getElementById("newInvitePlatform") ? document.getElementById("newInvitePlatform").value : "Freelancer";
-        if (platform === "Other") {
-          const customPlatform = document.getElementById("newInviteOtherPlatform") ? document.getElementById("newInviteOtherPlatform").value.trim() : "";
-          platform = customPlatform ? `Other: ${customPlatform}` : "Other";
-        }
+        const sourcePlatform = document.getElementById("newInvitePlatform") ? document.getElementById("newInvitePlatform").value : "Freelancer";
+        const otherPlatform = (sourcePlatform === "Other" && document.getElementById("newInviteOtherPlatform")) ? document.getElementById("newInviteOtherPlatform").value.trim() : "";
         const freelancerName = document.getElementById("newInviteFreelancerName") ? document.getElementById("newInviteFreelancerName").value.trim() : "";
-        const freelancerHandle = document.getElementById("newInviteHandle") ? document.getElementById("newInviteHandle").value.trim() : "";
+        const username = document.getElementById("newInviteHandle") ? document.getElementById("newInviteHandle").value.trim() : "";
         const additionalInfo = document.getElementById("newInviteAdditionalInfo") ? document.getElementById("newInviteAdditionalInfo").value.trim() : "";
         const note = document.getElementById("newInviteNote") ? document.getElementById("newInviteNote").value.trim() : "";
 
@@ -136,9 +133,10 @@ function setupModalForms() {
         const currentUser = FidoAuth.getCurrentUser();
         await FidoDB.createInviteCode({
           code,
-          platform,
+          sourcePlatform,
+          otherPlatform,
           freelancerName,
-          freelancerHandle,
+          username,
           additionalInfo,
           note,
           createdBy: currentUser ? currentUser.email : "admin"
@@ -655,12 +653,12 @@ function renderInviteCodesTable() {
           <span style="font-family:var(--font-mono); font-weight:700; font-size:0.9rem; color:var(--color-primary);">${code.code}</span>
         </td>
         <td>
-          <span class="badge badge-inactive">${code.platform || "Freelancer"}</span>
+          <span class="badge badge-inactive">${code.sourcePlatform || code.platform || "Freelancer"}${code.otherPlatform ? ` (${code.otherPlatform})` : ""}</span>
         </td>
         <td>
           ${code.freelancerName ? `<div><strong>${code.freelancerName}</strong></div>` : ""}
-          ${code.freelancerHandle ? `<div style="font-size:0.78rem; color:var(--color-accent);">${code.freelancerHandle}</div>` : ""}
-          ${!code.freelancerName && !code.freelancerHandle ? `<span class="text-muted">—</span>` : ""}
+          ${code.username || code.freelancerHandle ? `<div style="font-size:0.78rem; color:var(--color-accent);">${code.username || code.freelancerHandle}</div>` : ""}
+          ${!code.freelancerName && !code.username && !code.freelancerHandle ? `<span class="text-muted">—</span>` : ""}
         </td>
         <td>${statusBadge}</td>
         <td><span style="font-size:0.82rem; color:var(--text-muted);">${formatDate(code.createdAt)}</span></td>

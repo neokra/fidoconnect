@@ -23,6 +23,35 @@ import {
 
 export const FidoDB = {
   // --- 1. Projects ---
+  async getPublicProjects(filter = {}) {
+    const publicRef = collection(db, "publicProjects");
+    const snapshot = await getDocs(publicRef);
+    let projects = [];
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const proj = { id: docSnap.id, ...data };
+
+      if (filter.category && filter.category !== "all" && proj.category !== filter.category) {
+        return;
+      }
+
+      if (filter.search) {
+        const queryStr = filter.search.toLowerCase();
+        const matchesTitle = (proj.title || "").toLowerCase().includes(queryStr);
+        const matchesDesc = (proj.description || "").toLowerCase().includes(queryStr);
+        const matchesCat = (proj.category || "").toLowerCase().includes(queryStr);
+        const matchesId = (proj.projectId || "").toLowerCase().includes(queryStr);
+        if (!matchesTitle && !matchesDesc && !matchesCat && !matchesId) return;
+      }
+
+      projects.push(proj);
+    });
+
+    projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return projects;
+  },
+
   async getProjects(filter = {}) {
     const projectsRef = collection(db, "projects");
     let constraints = [];
@@ -81,35 +110,62 @@ export const FidoDB = {
   },
 
   async getProjectById(projectId) {
-    const docRef = doc(db, "projects", projectId);
-    const docSnap = await getDoc(docRef);
+    try {
+      const docRef = doc(db, "projects", projectId);
+      const docSnap = await getDoc(docRef);
 
-    let proj = null;
-    if (docSnap.exists()) {
-      proj = { id: docSnap.id, ...docSnap.data() };
-    } else {
-      const q = query(collection(db, "projects"), where("projectId", "==", projectId), limit(1));
-      const qSnap = await getDocs(q);
-      if (!qSnap.empty) {
-        const firstDoc = qSnap.docs[0];
-        proj = { id: firstDoc.id, ...firstDoc.data() };
+      if (docSnap.exists()) {
+        const proj = { id: docSnap.id, ...docSnap.data() };
+        const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+        const isAdmin = window.FidoAuth ? window.FidoAuth.isAdmin() : false;
+        const isOwner = currentUser && proj.clientId === currentUser.uid;
+
+        if (!isAdmin && !isOwner) {
+          delete proj.clientEmail;
+          delete proj.clientPhone;
+          delete proj.clientAddress;
+          delete proj.privateContactDetails;
+        }
+        return proj;
       }
+    } catch (err) {
+      console.warn("Protected project read restricted, trying publicProjects:", err);
     }
 
-    if (!proj) return null;
+    try {
+      const pubDocRef = doc(db, "publicProjects", projectId);
+      const pubDocSnap = await getDoc(pubDocRef);
+      if (pubDocSnap.exists()) {
+        return { id: pubDocSnap.id, ...pubDocSnap.data() };
+      }
+    } catch (e) {}
 
-    const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
-    const isAdmin = window.FidoAuth ? window.FidoAuth.isAdmin() : false;
-    const isOwner = currentUser && proj.clientId === currentUser.uid;
+    return null;
+  },
 
-    if (!isAdmin && !isOwner) {
-      delete proj.clientEmail;
-      delete proj.clientPhone;
-      delete proj.clientAddress;
-      delete proj.privateContactDetails;
+  async syncPublicProject(projectId, projectData) {
+    try {
+      const publicRef = doc(db, "publicProjects", projectId);
+      if (projectData.status === "Published" || projectData.visibility === "public") {
+        const publicData = {
+          id: projectId,
+          projectId: projectId,
+          title: projectData.title,
+          category: projectData.category || "Other",
+          description: projectData.description || "",
+          budget: projectData.budget || "To be discussed",
+          deadline: projectData.deadline || "Flexible",
+          status: projectData.status,
+          createdAt: projectData.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(publicRef, publicData, { merge: true });
+      } else {
+        await deleteDoc(publicRef).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("syncPublicProject error:", err);
     }
-
-    return proj;
   },
 
   async createProject(projectData) {
@@ -172,6 +228,16 @@ export const FidoDB = {
       updatedAt: new Date().toISOString()
     };
     await updateDoc(docRef, cleanUpdates);
+
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        await this.syncPublicProject(projectId, snap.data());
+      }
+    } catch (err) {
+      console.warn("Public project sync error:", err);
+    }
+
     return { id: projectId, ...cleanUpdates };
   },
 
@@ -472,16 +538,24 @@ export const FidoDB = {
       throw new Error("Please enter a valid invite code.");
     }
     const cleanCode = codeStr.trim().toUpperCase();
-    const codesRef = collection(db, "inviteCodes");
-    const q = query(codesRef, where("code", "==", cleanCode), limit(1));
-    const snap = await getDocs(q);
+    const docRef = doc(db, "inviteCodes", cleanCode);
+    let docSnap = await getDoc(docRef);
+    let data = null;
+    let codeId = cleanCode;
 
-    if (snap.empty) {
-      throw new Error("Invalid invite code. Please check your code and try again.");
+    if (docSnap.exists()) {
+      data = docSnap.data();
+    } else {
+      const q = query(collection(db, "inviteCodes"), where("code", "==", cleanCode), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        docSnap = snap.docs[0];
+        data = docSnap.data();
+        codeId = docSnap.id;
+      } else {
+        throw new Error("Invalid invite code. Please check your code and try again.");
+      }
     }
-
-    const docSnap = snap.docs[0];
-    const data = docSnap.data();
 
     if (data.status === "used") {
       throw new Error("This invite code has already been used by another account.");
@@ -493,7 +567,7 @@ export const FidoDB = {
       throw new Error("This invite code is currently inactive.");
     }
 
-    return { id: docSnap.id, ...data };
+    return { id: codeId, ...data };
   },
 
   async claimInviteCode(codeStr, freelancerUid, freelancerEmail) {
@@ -510,9 +584,10 @@ export const FidoDB = {
 
   async createInviteCode({ 
     code, 
-    platform = "Freelancer", 
+    sourcePlatform = "Freelancer", 
+    otherPlatform = "", 
     freelancerName = "", 
-    freelancerHandle = "", 
+    username = "", 
     additionalInfo = "", 
     note = "", 
     createdBy = "admin" 
@@ -521,19 +596,18 @@ export const FidoDB = {
       throw new Error("Please provide an invite code.");
     }
     const cleanCode = code.trim().toUpperCase();
-    
-    const codesRef = collection(db, "inviteCodes");
-    const q = query(codesRef, where("code", "==", cleanCode), limit(1));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
+    const docRef = doc(db, "inviteCodes", cleanCode);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
       throw new Error(`Invite code "${cleanCode}" already exists. Please choose a different code.`);
     }
 
     const newCodeData = {
       code: cleanCode,
-      platform: platform ? platform.trim() : "Freelancer",
+      sourcePlatform: sourcePlatform ? sourcePlatform.trim() : "Freelancer",
+      otherPlatform: otherPlatform ? otherPlatform.trim() : "",
       freelancerName: freelancerName ? freelancerName.trim() : "",
-      freelancerHandle: freelancerHandle ? freelancerHandle.trim() : "",
+      username: username ? username.trim() : "",
       additionalInfo: additionalInfo ? additionalInfo.trim() : "",
       note: note ? note.trim() : "",
       status: "active",
@@ -544,8 +618,8 @@ export const FidoDB = {
       usedAt: null
     };
 
-    const docRef = await addDoc(codesRef, newCodeData);
-    return { id: docRef.id, ...newCodeData };
+    await setDoc(docRef, newCodeData);
+    return { id: cleanCode, ...newCodeData };
   },
 
   async updateInviteCodeStatus(codeDocId, newStatus) {

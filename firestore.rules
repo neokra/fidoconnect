@@ -7,129 +7,137 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-             request.auth.token.email != null && 
-             request.auth.token.email.lower() == 'thecard.primary@gmail.com';
-    }
-
-    function isUserDocument(userId) {
-      return exists(/databases/$(database)/documents/users/$(userId));
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return request.auth != null
+        && request.auth.token.email == "thecard.primary@gmail.com"
+        && request.auth.token.email_verified == true;
     }
 
     function isVerifiedFreelancer() {
-      return isAuthenticated() && isUserDocument(request.auth.uid) && getUserData().inviteVerified == true;
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.inviteVerified == true;
     }
 
-    // --- Users Collection ---
+    // --- 1. Users Collection ---
     match /users/{userId} {
       // Owner can read their own profile; Admin can read all profiles
       allow read: if isOwner(userId) || isAdmin();
       
-      // Allow registration/Google sign-in, but FORBID setting role == 'admin' unless administrator email
-      allow create: if isAuthenticated() && 
-                    request.auth.uid == userId && 
-                    (request.resource.data.role != 'admin' || isAdmin());
+      // Allow registration / initial user profile creation
+      allow create: if isOwner(userId)
+                    && (request.resource.data.role != 'admin' || isAdmin())
+                    && (request.resource.data.inviteVerified == false || (request.resource.data.inviteVerified == true && request.resource.data.inviteCodeId != null) || isAdmin());
       
-      // Normal user can update non-privileged fields (cannot elevate role to 'admin' or alter membership status unless admin)
-      allow update: if (isOwner(userId) && 
-                        (request.resource.data.role == resource.data.role || (resource.data.role == null && request.resource.data.role != 'admin')) &&
-                        (request.resource.data.membershipStatus == resource.data.membershipStatus || resource.data.membershipStatus == null)) || 
-                       isAdmin();
+      // Normal users can update non-privileged profile fields; cannot self-modify role, membershipStatus, inviteVerified, or inviteCodeId
+      allow update: if (isOwner(userId)
+                        && request.resource.data.role == resource.data.role
+                        && request.resource.data.membershipStatus == resource.data.membershipStatus
+                        && request.resource.data.inviteVerified == resource.data.inviteVerified
+                        && request.resource.data.inviteCodeId == resource.data.inviteCodeId)
+                       || isAdmin();
       
       // Only admin can delete users
       allow delete: if isAdmin();
     }
 
-    // --- Invite Codes Collection ---
+    // --- 2. Invite Codes Collection ---
     match /inviteCodes/{inviteCodeId} {
       // Admin has full control
       allow read, write: if isAdmin();
 
-      // Non-admin can only get single code for verification (cannot list/browse entire collection)
-      allow get: if true;
+      // Authenticated users can get a specific document if they know the code ID (e.g. for validation/claim), but CANNOT list/browse all
+      allow get: if isAuthenticated() && (resource.data.status == 'active' || resource.data.usedBy == request.auth.uid || isAdmin());
 
-      // Allow claiming an invite code when registering/verifying
-      allow update: if (isAuthenticated() && 
-                        resource.data.status == 'active' && 
-                        request.resource.data.status == 'used' && 
-                        request.resource.data.usedBy == request.auth.uid) || 
-                       isAdmin();
+      // Authenticated users can claim an active invite code for their own UID
+      allow update: if (isAuthenticated()
+                        && resource.data.status == 'active'
+                        && request.resource.data.status == 'used'
+                        && request.resource.data.usedBy == request.auth.uid
+                        && request.resource.data.code == resource.data.code)
+                       || isAdmin();
     }
 
-    // --- Projects Collection ---
+    // --- 3. Public Projects Collection (Safe representation for Find Work) ---
+    match /publicProjects/{projectId} {
+      // All authenticated users can read public project summaries for Find Work browsing
+      allow read: if isAuthenticated();
+      
+      // Synchronized on project creation/publish by client owner or admin
+      allow write: if isAuthenticated() || isAdmin();
+    }
+
+    // --- 4. Protected Projects Collection (Full confidential details) ---
     match /projects/{projectId} {
-      // Anyone can read published projects with public visibility (summary view on Find Work)
-      // Clients can read their own submitted projects; Assigned freelancers and Admins can read
-      allow read: if resource.data.status == 'Published' || 
-                     (isAuthenticated() && (resource.data.clientId == request.auth.uid || 
-                                           resource.data.assignedFreelancerId == request.auth.uid || 
-                                           isAdmin()));
+      // Protected project read: Owner/client, assigned freelancer, verified freelancer, or admin
+      allow read: if (isAuthenticated() && (
+                       resource.data.clientId == request.auth.uid ||
+                       resource.data.assignedFreelancerId == request.auth.uid ||
+                       isVerifiedFreelancer() ||
+                       isAdmin()
+                     ));
       
-      // Allow project creation by clients / submission form
-      allow create: if true;
+      // Authenticated clients can create projects
+      allow create: if isAuthenticated() && request.resource.data.clientId == request.auth.uid;
       
-      // Only Admin or project owner (for non-status fields) can update project
-      allow update: if (isAuthenticated() && resource.data.clientId == request.auth.uid && 
-                        request.resource.data.status == resource.data.status &&
-                        request.resource.data.assignedFreelancerId == resource.data.assignedFreelancerId) || 
-                       isAdmin();
+      // Only project owner (client) or admin can update
+      allow update: if (isOwner(resource.data.clientId)
+                        && request.resource.data.status == resource.data.status
+                        && request.resource.data.assignedFreelancerId == resource.data.assignedFreelancerId)
+                       || isAdmin();
       
       // Only Admin can delete/cancel projects
       allow delete: if isAdmin();
     }
 
-    // --- Counters Collection (Atomic Project ID sequence) ---
+    // --- 5. Counters Collection (Atomic Project ID sequence) ---
     match /counters/{counterId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated() || isAdmin();
     }
 
-    // --- Applications Collection ---
+    // --- 6. Applications Collection ---
     match /applications/{applicationId} {
       // Freelancers can read their own applications; admins can read all
       allow read: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
       
       // Only verified freelancers (or admin) can submit proposals
-      allow create: if isAuthenticated() && 
-                       request.resource.data.freelancerId == request.auth.uid && 
-                       (isVerifiedFreelancer() || isAdmin());
+      allow create: if isAuthenticated()
+                    && request.resource.data.freelancerId == request.auth.uid
+                    && (isVerifiedFreelancer() || isAdmin());
       
       // Freelancer can update draft notes; Admin can update status (Shortlisted, Selected, Rejected)
-      allow update: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid &&
-                        request.resource.data.status == resource.data.status) || 
-                       isAdmin();
+      allow update: if (isAuthenticated()
+                        && resource.data.freelancerId == request.auth.uid
+                        && request.resource.data.status == resource.data.status)
+                       || isAdmin();
       
       // Only admin can delete applications
       allow delete: if isAdmin();
     }
 
-    // --- Memberships Collection ---
+    // --- 7. Memberships Collection ---
     match /memberships/{membershipId} {
       allow read: if (isAuthenticated() && resource.data.freelancerId == request.auth.uid) || isAdmin();
       allow write: if isAdmin();
     }
 
-    // --- Payments Collection ---
+    // --- 8. Payments Collection ---
     match /payments/{paymentId} {
       allow read, write: if isAdmin();
     }
 
-    // --- Reviews Collection ---
+    // --- 9. Reviews Collection ---
     match /reviews/{reviewId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create, update: if isAuthenticated();
       allow delete: if isAdmin();
     }
 
-    // --- Messages Collection ---
+    // --- 10. Messages Collection ---
     match /messages/{messageId} {
       allow read: if isAuthenticated() && (
         resource.data.senderId == request.auth.uid || 
@@ -140,7 +148,7 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // --- Settings Collection ---
+    // --- 11. Settings Collection ---
     match /settings/{settingId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

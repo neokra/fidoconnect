@@ -50,7 +50,13 @@ function setupEventListeners() {
 
 async function loadProjects() {
   try {
-    allProjects = await FidoDB.getProjects({ status: "Published" });
+    let projs = await FidoDB.getPublicProjects({ status: "Published" });
+    if (projs.length === 0) {
+      try {
+        projs = await FidoDB.getProjects({ status: "Published" });
+      } catch (e) {}
+    }
+    allProjects = projs;
     
     if (currentCategoryFilter !== "all") {
       document.querySelectorAll(".category-pill").forEach(pill => {
@@ -203,5 +209,5 @@ function renderProjectsList() {
 }
 
 window.handleUnverifiedDetailsClick = function() {
-  showToast("Invited/verified freelancer access is required to view project details and apply.", "info");
+  showToast("Freelancer verification is required to view full project details and apply for work.", "info");
 };
