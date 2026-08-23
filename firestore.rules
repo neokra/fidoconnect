@@ -33,12 +33,12 @@ service cloud.firestore {
                     && (request.resource.data.role != 'admin' || isAdmin())
                     && (request.resource.data.inviteVerified == false || (request.resource.data.inviteVerified == true && request.resource.data.inviteCodeId != null) || isAdmin());
       
-      // Normal users can update non-privileged profile fields; cannot self-modify role, membershipStatus, inviteVerified, or inviteCodeId
+      // Normal users can update non-privileged profile fields, complete profile role, or verify invite with inviteCodeId
       allow update: if (isOwner(userId)
-                        && request.resource.data.role == resource.data.role
-                        && request.resource.data.membershipStatus == resource.data.membershipStatus
-                        && request.resource.data.inviteVerified == resource.data.inviteVerified
-                        && request.resource.data.inviteCodeId == resource.data.inviteCodeId)
+                        && (request.resource.data.role == resource.data.role || (resource.data.role == null && request.resource.data.role != 'admin'))
+                        && (request.resource.data.membershipStatus == resource.data.membershipStatus || resource.data.membershipStatus == null)
+                        && (request.resource.data.inviteVerified == resource.data.inviteVerified || (request.resource.data.inviteVerified == true && request.resource.data.inviteCodeId != null))
+                        && (request.resource.data.inviteCodeId == resource.data.inviteCodeId || resource.data.inviteCodeId == null || request.resource.data.inviteCodeId != null))
                        || isAdmin();
       
       // Only admin can delete users

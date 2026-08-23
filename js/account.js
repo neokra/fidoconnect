@@ -471,16 +471,7 @@ async function renderFreelancerView(container) {
       btn.textContent = "Verifying...";
 
       try {
-        const validCode = await FidoDB.validateInviteCode(codeStr);
-        await FidoDB.claimInviteCode(validCode.code, currentUser.uid, currentUser.email);
-        await FidoDB.updateUser(currentUser.uid, {
-          inviteVerified: true,
-          inviteCodeId: validCode.id
-        });
-
-        currentUser.inviteVerified = true;
-        currentUser.inviteCodeId = validCode.id;
-
+        await FidoAuth.verifyFreelancerInvite(codeStr);
         showToast("Invite code verified! You now have full access to view project details and submit proposals.", "success");
         await renderFreelancerView(container);
       } catch (err) {

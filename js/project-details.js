@@ -11,13 +11,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth();
   if (!isAuth) return;
 
-  const currentUser = FidoAuth.getCurrentUser();
-  if (currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
-    showToast("Freelancer verification is required to view full project details and apply for work.", "info");
-    window.location.href = "find-work.html";
-    return;
-  }
-
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get("id");
 
@@ -27,8 +20,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  await loadProjectDetails(projectId);
-  setupApplicationForm();
+  const currentUser = FidoAuth.getCurrentUser();
+  const isUnverifiedFreelancer = currentUser && currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser);
+
+  setupInviteModal(projectId);
+
+  if (isUnverifiedFreelancer) {
+    openModal("invite-code-modal");
+  } else {
+    await loadProjectDetails(projectId);
+    setupApplicationForm();
+  }
 
   FidoAuth.onAuthChange(() => {
     if (currentProject) {
@@ -36,6 +38,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
+function setupInviteModal(projectId) {
+  const inviteForm = document.getElementById("invite-verify-form");
+  if (!inviteForm) return;
+
+  inviteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("modalInviteCodeInput");
+    const btn = document.getElementById("modalInviteVerifyBtn");
+    const code = input ? input.value.trim() : "";
+
+    if (!code) {
+      showToast("Please enter an invite code.", "error");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Verifying...";
+
+    try {
+      await FidoAuth.verifyFreelancerInvite(code);
+      closeModal("invite-code-modal");
+      showToast("Invite code verified successfully!", "success");
+
+      await loadProjectDetails(projectId);
+      setupApplicationForm();
+    } catch (err) {
+      showToast(err.message || "Invalid invite code.", "error");
+      btn.disabled = false;
+      btn.textContent = "Verify Code";
+    }
+  });
+}
 
 async function loadProjectDetails(projectId) {
   try {
@@ -99,91 +134,96 @@ async function renderApplicationCTA() {
       <div class="card" style="background-color:var(--bg-subtle);">
         <h4>${isOwner ? "Your Submitted Project" : "Client Account View"}</h4>
         <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 1rem;">
-          ${isOwner ? "Our agency team is actively coordinating this project." : "This project is managed directly by FidoConnect agency."}
+          ${isOwner ? "You posted this project request. FidoConnect coordinates candidate vetting and delivery." : "This project was posted by a FidoConnect client."}
         </p>
-        <a href="account.html" class="btn btn-secondary btn-block">View My Account</a>
-      </div>
-    `;
-    return;
-  }
-
-  if (FidoAuth.isAdmin()) {
-    ctaContainer.innerHTML = `
-      <div class="card" style="background-color:var(--color-accent-soft); border-color:var(--color-accent-border);">
-        <h4>Admin Management</h4>
-        <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 1rem;">Manage proposals, assign freelancers, or modify status.</p>
-        <a href="admin.html" class="btn btn-primary btn-block">Open in Admin Dashboard</a>
-      </div>
-    `;
-    return;
-  }
-
-  // Freelancer Role
-  if (currentUser.membershipStatus !== "active") {
-    ctaContainer.innerHTML = `
-      <div class="card" style="background-color:#fffbeb; border-color:#fde68a;">
-        <h4 style="color:#92400e;">Membership Required</h4>
-        <p style="font-size:0.88rem; color:#b45309; margin:0.4rem 0 1rem;">
-          Active FidoConnect membership is required to apply for projects.
-        </p>
-        <a href="account.html#membership" class="btn btn-primary btn-block">View Membership Options</a>
-        <div style="font-size:0.75rem; color:#92400e; margin-top:0.6rem;">
-          * Membership provides access to project opportunities. Projects are not guaranteed.
+        <div style="font-size:0.85rem; color:var(--text-muted);">
+          Status: <strong>${currentProject.status}</strong>
         </div>
       </div>
     `;
     return;
   }
 
-  // Check if freelancer already applied
-  try {
-    const userApps = await FidoDB.getApplications({
-      projectId: currentProject.projectId || currentProject.id,
-      freelancerId: currentUser.uid
-    });
-
-    if (userApps.length > 0) {
-      const myApp = userApps[0];
-      ctaContainer.innerHTML = `
-        <div class="card" style="background-color:var(--bg-subtle);">
-          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-            <svg width="20" height="20" style="color:var(--color-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <h4 style="margin:0;">Proposal Submitted</h4>
-          </div>
-          <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 0.8rem;">
-            Status: ${getStatusBadge(myApp.status)}
-          </p>
-          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
-            Our team is reviewing candidate suitability and will update your account.
-          </p>
-          <a href="account.html" class="btn btn-secondary btn-block">View in My Applications</a>
-        </div>
-      `;
-      return;
-    }
-  } catch (err) {
-    console.error("Error checking existing application:", err);
+  if (currentUser.role === "admin") {
+    ctaContainer.innerHTML = `
+      <div class="card" style="background-color:var(--bg-subtle);">
+        <h4>Administrator View</h4>
+        <p class="text-muted" style="font-size:0.85rem; margin:0.4rem 0 1rem;">
+          Manage status, review submitted proposals, and assign professionals from the admin panel.
+        </p>
+        <a href="admin.html#projects" class="btn btn-primary btn-sm btn-block">Open in Admin Console</a>
+      </div>
+    `;
+    return;
   }
 
-  // Eligible to apply
+  // Role is Freelancer
+  const isVerified = FidoAuth.isFreelancerVerified(currentUser);
+  if (!isVerified) {
+    ctaContainer.innerHTML = `
+      <div class="card text-center" style="padding: 1.5rem;">
+        <h4>Invite Verification Required</h4>
+        <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 1rem;">
+          Freelancer access is invite-only. Enter your FidoConnect invite code to apply for work.
+        </p>
+        <button type="button" class="btn btn-primary btn-block" onclick="openModal('invite-code-modal')">
+          Enter Invite Code
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const apps = await FidoDB.getApplications({
+    projectId: currentProject.projectId || currentProject.id,
+    freelancerId: currentUser.uid
+  });
+
+  const hasApplied = apps.length > 0;
+
+  if (hasApplied) {
+    const app = apps[0];
+    ctaContainer.innerHTML = `
+      <div class="card" style="border: 2px solid var(--color-primary-light); background-color: var(--bg-surface);">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-primary);"></span>
+          <h4 style="margin:0; font-size:1rem;">Application Submitted</h4>
+        </div>
+        <p class="text-muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+          Your proposal is under agency review.
+        </p>
+        <div style="font-size:0.82rem; color:var(--text-muted); background:var(--bg-subtle); padding:0.6rem; border-radius:var(--radius-sm); margin-bottom:0.75rem;">
+          Status: <strong>${app.status || "Submitted"}</strong><br/>
+          Submitted: ${formatDate(app.createdAt)}
+        </div>
+        <a href="account.html" class="btn btn-secondary btn-sm btn-block">View in Account</a>
+      </div>
+    `;
+    return;
+  }
+
+  const isMemberActive = currentUser.membershipStatus === "active";
+
   ctaContainer.innerHTML = `
-    <div class="card" style="background-color:var(--bg-surface); border: 2px solid var(--color-primary);">
-      <h4>Apply for This Project</h4>
-      <p class="text-muted" style="font-size:0.88rem; margin:0.4rem 0 1.25rem;">
-        Submit your proposal, delivery timeframe, and relevant experience to the FidoConnect agency team.
+    <div class="card" style="background-color:var(--bg-subtle);">
+      <h4 style="margin-bottom:0.4rem;">Submit Proposal</h4>
+      <p class="text-muted" style="font-size:0.85rem; margin-bottom:1.25rem;">
+        FidoConnect coordinates deliverables and manages client payments directly.
       </p>
-      <button class="btn btn-primary btn-block btn-lg" onclick="openModal('apply-modal')">
-        Submit Proposal
+      
+      <button id="btn-open-apply-modal" class="btn btn-primary btn-block btn-lg" onclick="openModal('apply-modal')">
+        Apply for this Project
       </button>
-      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.75rem; text-align:center;">
-        FidoConnect manages all client communication and payment milestones.
+
+      <div style="margin-top:0.75rem; font-size:0.78rem; color:var(--text-muted); text-align:center;">
+        ${isMemberActive ? "✓ Active Member Account" : "Agency managed coordination"}
       </div>
     </div>
   `;
 }
 
 function setupApplicationForm() {
-  const form = document.getElementById("apply-project-form");
+  const form = document.getElementById("application-form");
   if (!form) return;
 
   form.addEventListener("submit", async (e) => {
@@ -196,17 +236,17 @@ function setupApplicationForm() {
     }
 
     if (currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
-      showToast("Invited/verified freelancer access is required to submit proposals.", "error");
+      showToast("Freelancer verification is required to submit proposals.", "error");
       return;
     }
 
-    const message = document.getElementById("app-message").value.trim();
-    const deliveryDays = document.getElementById("app-delivery").value.trim();
-    const portfolio = document.getElementById("app-portfolio").value.trim();
-    const submitBtn = document.getElementById("app-submit-btn");
+    const message = document.getElementById("appMessage").value.trim();
+    const deliveryDays = document.getElementById("appDeliveryTime") ? document.getElementById("appDeliveryTime").value.trim() : "Flexible";
+    const portfolio = document.getElementById("appPortfolio") ? document.getElementById("appPortfolio").value.trim() : "";
+    const submitBtn = document.getElementById("submit-app-btn");
 
     if (!message) {
-      showToast("Please describe your suitability for this project.", "error");
+      showToast("Please write a short proposal.", "error");
       return;
     }
 
@@ -232,7 +272,7 @@ function setupApplicationForm() {
     } catch (err) {
       showToast(err.message || "Failed to submit proposal.", "error");
       submitBtn.disabled = false;
-      submitBtn.textContent = "Submit Proposal";
+      submitBtn.textContent = "Submit Application";
     }
   });
 }

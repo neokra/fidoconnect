@@ -8,6 +8,7 @@ import { FidoDB } from "./db.js";
 let allProjects = [];
 let currentCategoryFilter = "all";
 let currentSearchQuery = "";
+let pendingTargetProjectId = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth();
@@ -44,6 +45,41 @@ function setupEventListeners() {
     searchInput.addEventListener("input", (e) => {
       currentSearchQuery = e.target.value.trim().toLowerCase();
       renderProjectsList();
+    });
+  }
+
+  const inviteForm = document.getElementById("invite-verify-form");
+  if (inviteForm) {
+    inviteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("modalInviteCodeInput");
+      const btn = document.getElementById("modalInviteVerifyBtn");
+      const code = input ? input.value.trim() : "";
+
+      if (!code) {
+        showToast("Please enter an invite code.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+
+      try {
+        await FidoAuth.verifyFreelancerInvite(code);
+        closeModal("invite-code-modal");
+        showToast("Invite code verified successfully!", "success");
+
+        if (pendingTargetProjectId) {
+          window.location.href = `project-details.html?id=${encodeURIComponent(pendingTargetProjectId)}`;
+        } else {
+          renderRoleMembershipState();
+          renderProjectsList();
+        }
+      } catch (err) {
+        showToast(err.message || "Invalid invite code.", "error");
+        btn.disabled = false;
+        btn.textContent = "Verify Code";
+      }
     });
   }
 }
@@ -100,13 +136,13 @@ function renderRoleMembershipState() {
       <div class="notice-box notice-info" style="flex-direction:column; gap:0.5rem;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <strong style="font-size:1rem;">Standard Freelancer Access</strong>
+          <strong style="font-size:1rem;">Freelancer access is invite-only.</strong>
         </div>
         <p style="margin:0; font-size:0.9rem; color:var(--text-color);">
-          You can browse project summaries. Verified freelancer invitation is required to view detailed specifications and submit proposals.
+          Enter your FidoConnect invite code to unlock project details and apply for work.
         </p>
         <div style="margin-top:0.25rem;">
-          <a href="account.html#invite" class="btn btn-secondary btn-sm">Enter Invite Code in Account</a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openInviteModalForProject('')">Enter Invite Code</button>
         </div>
       </div>
     `;
@@ -195,7 +231,7 @@ function renderProjectsList() {
           Agency Coordinated
         </span>
         ${isUnverifiedFreelancer ? `
-          <button type="button" class="btn btn-secondary btn-sm" onclick="handleUnverifiedDetailsClick()">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openInviteModalForProject('${project.projectId || project.id}')">
             View Details
           </button>
         ` : `
@@ -208,6 +244,13 @@ function renderProjectsList() {
   `).join("");
 }
 
-window.handleUnverifiedDetailsClick = function() {
-  showToast("Freelancer verification is required to view full project details and apply for work.", "info");
+window.openInviteModalForProject = function(projectId) {
+  pendingTargetProjectId = projectId || null;
+  const input = document.getElementById("modalInviteCodeInput");
+  if (input) input.value = "";
+  openModal("invite-code-modal");
+};
+
+window.handleUnverifiedDetailsClick = function(projectId) {
+  openInviteModalForProject(projectId);
 };

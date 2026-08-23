@@ -177,15 +177,6 @@ class AuthService {
 
       if (isProtected) {
         if (this._authReady && this._currentUser && this.isProfileComplete(this._currentUser)) {
-          // If trying to access project-details.html, check invite verification
-          if (href.includes("project-details.html") && this._currentUser.role === "freelancer" && !this.isFreelancerVerified(this._currentUser)) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (typeof showToast === "function") {
-              showToast("Invited/verified freelancer access is required to view project details.", "info");
-            }
-            return;
-          }
           return;
         }
 
@@ -207,10 +198,6 @@ class AuthService {
           setTimeout(() => {
             window.location.href = `auth.html?redirect=${encodeURIComponent(href)}&complete_profile=true`;
           }, 300);
-        } else if (href.includes("project-details.html") && user.role === "freelancer" && !this.isFreelancerVerified(user)) {
-          if (typeof showToast === "function") {
-            showToast("Invited/verified freelancer access is required to view project details.", "info");
-          }
         } else {
           window.location.href = href;
         }
@@ -421,7 +408,38 @@ class AuthService {
     return this._currentUser;
   }
 
-  // 5. Logout
+  // 5. Verify and Redeem Freelancer Invite Code
+  async verifyFreelancerInvite(codeStr) {
+    if (!this._currentUser) {
+      throw new Error("You must be logged in to verify an invite code.");
+    }
+    const cleanCode = (codeStr || "").trim().toUpperCase();
+    if (!cleanCode) {
+      throw new Error("Please enter an invite code.");
+    }
+
+    const validCodeDoc = await FidoDB.validateInviteCode(cleanCode);
+    await FidoDB.claimInviteCode(validCodeDoc.code, this._currentUser.uid, this._currentUser.email);
+
+    const userDocRef = doc(db, "users", this._currentUser.uid);
+    await updateDoc(userDocRef, {
+      inviteVerified: true,
+      inviteCodeId: validCodeDoc.id,
+      updatedAt: new Date().toISOString()
+    });
+
+    this._currentUser.inviteVerified = true;
+    this._currentUser.inviteCodeId = validCodeDoc.id;
+
+    this.updateNavUI();
+    this._listeners.forEach(cb => {
+      try { cb(this._currentUser); } catch (e) { console.error(e); }
+    });
+
+    return validCodeDoc;
+  }
+
+  // 6. Logout
   async logout() {
     await signOut(auth);
     this._currentUser = null;
@@ -429,7 +447,7 @@ class AuthService {
     window.location.href = "index.html";
   }
 
-  // 6. Password Reset
+  // 7. Password Reset
   async resetPassword(email) {
     if (!email) throw new Error("Please enter your email address.");
     await sendPasswordResetEmail(auth, email.trim());
@@ -488,16 +506,6 @@ class AuthService {
       const currentTarget = window.location.pathname.split("/").pop() + window.location.search;
       const targetUrl = currentTarget || "account.html";
       window.location.href = `auth.html?redirect=${encodeURIComponent(targetUrl)}&complete_profile=true`;
-      return false;
-    }
-
-    // Check project-details.html access for unverified freelancers
-    const currentPath = window.location.pathname.split("/").pop();
-    if (currentPath === "project-details.html" && user.role === "freelancer" && !this.isFreelancerVerified(user)) {
-      if (typeof showToast === "function") {
-        showToast("Invited/verified freelancer access is required to view project details.", "info");
-      }
-      window.location.href = "find-work.html";
       return false;
     }
 
