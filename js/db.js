@@ -452,22 +452,55 @@ export const FidoDB = {
     });
 
     applications.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    return applications;
+
+    // Deduplicate applications by (projectId + freelancerId) to protect against duplicate entries
+    const seen = new Set();
+    const uniqueApplications = [];
+    for (const app of applications) {
+      const key = `${app.projectId}_${app.freelancerId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueApplications.push(app);
+      }
+    }
+
+    return uniqueApplications;
   },
 
   async createApplication(appData) {
-    const appsRef = collection(db, "applications");
+    if (!appData.projectId || !appData.freelancerId) {
+      throw new Error("Project ID and Freelancer ID are required.");
+    }
 
+    // Deterministic document ID guarantees exact-one record per project + freelancer
+    const appId = `${appData.projectId}_${appData.freelancerId}`;
+    const docRef = doc(db, "applications", appId);
+    const existingDoc = await getDoc(docRef);
+
+    if (existingDoc.exists()) {
+      const existingData = existingDoc.data();
+      if (existingData.status !== "Withdrawn" && existingData.status !== "Rejected" && existingData.status !== "Cancelled") {
+        throw new Error("You have already submitted an application for this project.");
+      }
+    }
+
+    // Also check for legacy auto-id docs if any exist
+    const appsRef = collection(db, "applications");
     const checkQuery = query(
       appsRef,
       where("projectId", "==", appData.projectId),
       where("freelancerId", "==", appData.freelancerId),
-      limit(1)
+      limit(2)
     );
     const existingSnap = await getDocs(checkQuery);
-
     if (!existingSnap.empty) {
-      throw new Error("You have already submitted an application for this project.");
+      const activeExisting = existingSnap.docs.find(d => {
+        const data = d.data();
+        return d.id !== appId && !["Withdrawn", "Rejected", "Cancelled"].includes(data.status);
+      });
+      if (activeExisting) {
+        throw new Error("You have already submitted an application for this project.");
+      }
     }
 
     const newApp = {
@@ -480,11 +513,12 @@ export const FidoDB = {
       message: appData.message,
       deliveryDays: appData.deliveryDays || "Not specified",
       status: "Submitted",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
-    const docRef = await addDoc(appsRef, newApp);
-    return { id: docRef.id, ...newApp };
+    await setDoc(docRef, newApp);
+    return { id: appId, ...newApp };
   },
 
   async updateApplication(appId, updates) {

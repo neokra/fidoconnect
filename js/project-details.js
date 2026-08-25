@@ -12,6 +12,8 @@ import { FidoDB, SKILL_TAXONOMY } from "./db.js";
 
 let currentProject = null;
 let currentProjectId = "";
+let isApplicationFormSetup = false;
+let isSubmittingApplication = false;
 
 // Skill modal state
 let selectedModalCategories = new Set();
@@ -505,11 +507,18 @@ function restoreApplicationDraft(projectId) {
 }
 
 window.handleMembershipModalClose = function() {
+  isSubmittingApplication = false;
   closeModal("membership-required-modal");
   openModal("apply-modal");
+  const submitBtn = document.getElementById("submit-app-btn");
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Application";
+  }
 };
 
 window.handleViewMembershipPlans = function() {
+  isSubmittingApplication = false;
   const msg = document.getElementById("appMessage") ? document.getElementById("appMessage").value.trim() : "";
   const delivery = document.getElementById("appDeliveryTime") ? document.getElementById("appDeliveryTime").value.trim() : "";
   const portfolio = document.getElementById("appPortfolio") ? document.getElementById("appPortfolio").value.trim() : "";
@@ -527,19 +536,28 @@ window.handleViewMembershipPlans = function() {
 };
 
 function setupApplicationForm() {
+  if (isApplicationFormSetup) return;
   const form = document.getElementById("application-form");
   if (!form) return;
+  isApplicationFormSetup = true;
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    if (isSubmittingApplication) return;
+    isSubmittingApplication = true;
+
     const currentUser = FidoAuth.getCurrentUser();
+    const submitBtn = document.getElementById("submit-app-btn");
 
     if (!currentUser) {
+      isSubmittingApplication = false;
       showToast("Please log in to apply.", "error");
       return;
     }
 
     if (currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
+      isSubmittingApplication = false;
       showToast("Freelancer verification is required to submit proposals.", "error");
       return;
     }
@@ -547,11 +565,16 @@ function setupApplicationForm() {
     const message = document.getElementById("appMessage").value.trim();
     const deliveryDays = document.getElementById("appDeliveryTime") ? document.getElementById("appDeliveryTime").value.trim() : "Flexible";
     const portfolio = document.getElementById("appPortfolio") ? document.getElementById("appPortfolio").value.trim() : "";
-    const submitBtn = document.getElementById("submit-app-btn");
 
     if (!message) {
+      isSubmittingApplication = false;
       showToast("Please write a short proposal.", "error");
       return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Processing...";
     }
 
     // Save draft in session
@@ -564,6 +587,11 @@ function setupApplicationForm() {
 
     // Step 1: Check Membership Gate BEFORE Application Submission
     if (currentUser.role === "freelancer" && currentUser.membershipStatus !== "active") {
+      isSubmittingApplication = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Application";
+      }
       closeModal("apply-modal");
       openModal("membership-required-modal");
       return;
@@ -571,8 +599,10 @@ function setupApplicationForm() {
 
     // Step 2: One active application check
     try {
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Verifying...";
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Verifying...";
+      }
 
       const userApps = await FidoDB.getApplications({ freelancerId: currentUser.uid });
       const activeApp = userApps.find(a => 
@@ -581,12 +611,12 @@ function setupApplicationForm() {
 
       if (activeApp && activeApp.projectId !== targetProjId) {
         showToast(`You already have an active application for project ${activeApp.projectId}. Freelancers can have one active application at a time.`, "error");
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Application";
         return;
       }
 
-      submitBtn.textContent = "Submitting Proposal...";
+      if (submitBtn) {
+        submitBtn.textContent = "Submitting Proposal...";
+      }
 
       await FidoDB.createApplication({
         projectId: targetProjId,
@@ -608,8 +638,11 @@ function setupApplicationForm() {
     } catch (err) {
       showToast(err.message || "Failed to submit proposal.", "error");
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Submit Application";
+      isSubmittingApplication = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Application";
+      }
     }
   });
 }
