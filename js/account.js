@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   currentUser = FidoAuth.getCurrentUser();
   setupSkillProfileModal();
   await renderAccountView();
-  setupEventListeners();
 
   FidoAuth.onAuthChange(async (user) => {
     if (user) {
@@ -42,7 +41,7 @@ function setupEventListeners() {
   });
 
   const urlParams = new URLSearchParams(window.location.search);
-  const tabParam = urlParams.get("tab");
+  const tabParam = urlParams.get("tab") || (urlParams.get("return_project") ? "membership" : "");
   if (tabParam) {
     const tabName = tabParam.endsWith("-tab") ? tabParam : `${tabParam}-tab`;
     const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
@@ -68,6 +67,9 @@ async function renderAccountView() {
   } else {
     await renderClientView(container);
   }
+
+  // Re-attach tab switching after every dynamic render
+  setupEventListeners();
 }
 
 // 1. Administrator Account Portal
@@ -675,10 +677,15 @@ window.handleActivatePlan = async function(planId) {
         window.location.href = `project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true`;
       }, 700);
     } else {
+      // Patch currentUser and FidoAuth._currentUser so UI reflects membership immediately
       currentUser.membershipStatus = "active";
       currentUser.membershipPlan = res.plan.name;
+      if (window.FidoAuth && window.FidoAuth._currentUser) {
+        window.FidoAuth._currentUser.membershipStatus = "active";
+        window.FidoAuth._currentUser.membershipPlan = res.plan.name;
+      }
       const container = document.getElementById("account-layout-container");
-      if (container) await renderFreelancerView(container);
+      if (container) await renderAccountView();
     }
   } catch (err) {
     showToast("Failed to activate membership: " + err.message, "error");
@@ -697,13 +704,11 @@ window.handleWithdrawApplication = async function(appId) {
   try {
     await FidoDB.withdrawApplication(appId, currentUser.uid);
     showToast("Application withdrawn. You can now apply for other projects.", "success");
-    const container = document.getElementById("account-layout-container");
-    if (container) await renderFreelancerView(container);
+    await renderAccountView();
   } catch (err) {
     showToast("Failed to withdraw application: " + err.message, "error");
   }
 };
-}
 
 // --- Skill Profile Modal Setup & Handlers for Account Page ---
 function setupSkillProfileModal() {

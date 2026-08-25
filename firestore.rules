@@ -187,7 +187,10 @@ service cloud.firestore {
 
     // --- 8. Payments Collection ---
     match /payments/{paymentId} {
-      allow read, write: if isAdmin();
+      // Admin has full access; authenticated users can create their own payment records (e.g. membership activation)
+      allow read, delete: if isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.get('freelancerId', '') == request.auth.uid || isAdmin();
+      allow update: if isAdmin();
     }
 
     // --- 9. Reviews Collection ---

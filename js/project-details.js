@@ -32,12 +32,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   setupInviteModal(currentProjectId);
   setupSkillProfileModal();
-  await evaluateAndLoadProject();
 
   // Check if returning from plans page after membership activation
   const fromPlan = urlParams.get("from_plan");
   const membershipActivated = urlParams.get("membership_activated");
   const currentUser = FidoAuth.getCurrentUser();
+
+  await evaluateAndLoadProject();
 
   if ((fromPlan === "true" || membershipActivated === "true") && currentUser && currentUser.membershipStatus === "active") {
     showToast("✓ Membership active! You can now submit your proposal.", "success");

@@ -40,6 +40,15 @@ function setupAdminTabs() {
       if (targetSec) targetSec.style.display = "block";
     });
   });
+
+  // Handle URL hash or tab query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get("tab") || (window.location.hash ? window.location.hash.replace("#", "") : "");
+  if (tabParam) {
+    const secId = tabParam.startsWith("sec-") ? tabParam : `sec-${tabParam}`;
+    const targetItem = document.querySelector(`.admin-nav-item[data-section="${secId}"]`);
+    if (targetItem) targetItem.click();
+  }
 }
 
 function setupFilterListeners() {
