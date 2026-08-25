@@ -68,6 +68,14 @@ class AuthService {
     return user.inviteVerified === true;
   }
 
+  // Check if freelancer has completed their skill profile
+  isSkillProfileComplete(user) {
+    if (!user) return false;
+    if (this.isAdminEmail(user.email)) return true;
+    if (user.role !== "freelancer") return true;
+    return Boolean(user.profileCompleted === true && Array.isArray(user.categories) && user.categories.length > 0);
+  }
+
   // Promise that resolves once Firebase Auth verifies initial session
   async waitForAuth() {
     if (this._authReady) return this._currentUser;

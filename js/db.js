@@ -21,7 +21,124 @@ import {
   runTransaction 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+export const SKILL_TAXONOMY = {
+  "Website": [
+    "HTML/CSS",
+    "JavaScript",
+    "React",
+    "WordPress",
+    "Shopify",
+    "Landing Pages",
+    "Portfolio Websites",
+    "Other"
+  ],
+  "Data Entry": [
+    "Excel",
+    "Google Sheets",
+    "PDF to Excel",
+    "Web Research",
+    "Copy/Paste",
+    "Data Cleaning",
+    "Other"
+  ],
+  "Design": [
+    "Logo Design",
+    "Social Media Design",
+    "UI Design",
+    "Thumbnail Design",
+    "Photoshop",
+    "Canva",
+    "Other"
+  ],
+  "Documents": [
+    "Microsoft Word",
+    "PowerPoint",
+    "PDF Formatting",
+    "Resume/CV",
+    "Document Conversion",
+    "Other"
+  ],
+  "Digital Marketing": [
+    "Social Media",
+    "SEO",
+    "Content Writing",
+    "Email Marketing",
+    "Ads",
+    "Other"
+  ],
+  "Other": [
+    "Other"
+  ]
+};
+
 export const FidoDB = {
+  SKILL_TAXONOMY,
+
+  // --- Skill Matching & Profile Helpers ---
+  checkProjectSkillMatch(project, user) {
+    if (!project || !user) return false;
+    if (window.FidoAuth && window.FidoAuth.isAdminEmail(user.email)) return true;
+    if (user.role !== "freelancer") return false;
+
+    const userCategories = Array.isArray(user.categories) ? user.categories : [];
+    const projCategory = (project.category || "").trim().toLowerCase();
+    
+    // 1. Direct Category Match
+    const categoryMatched = userCategories.some(cat => cat.trim().toLowerCase() === projCategory);
+    if (categoryMatched) return true;
+
+    // 2. Subcategory or Required Skills Match
+    const userSubcategories = Array.isArray(user.subcategories) ? user.subcategories : [];
+    const userSkills = Array.isArray(user.skills) ? user.skills : [];
+    const customSkills = user.customSkills ? user.customSkills.split(",").map(s => s.trim().toLowerCase()) : [];
+    const allUserSkills = [...userCategories, ...userSubcategories, ...userSkills, ...customSkills].map(s => s.trim().toLowerCase());
+
+    const projSkills = Array.isArray(project.requiredSkills) ? project.requiredSkills : [];
+    const projSubcategory = project.subcategory ? [project.subcategory] : [];
+    const allProjRequirements = [project.category, ...projSkills, ...projSubcategory].filter(Boolean).map(s => s.trim().toLowerCase());
+
+    return allProjRequirements.some(req => allUserSkills.includes(req));
+  },
+
+  async saveSkillProfile(uid, { categories = [], subcategories = [], bio = "", customSkills = "" }) {
+    if (!uid) throw new Error("User ID is required.");
+    const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+    if (!currentUser || (currentUser.uid !== uid && !window.FidoAuth.isAdmin())) {
+      throw new Error("Unauthorized to edit this user's profile.");
+    }
+
+    const cleanCategories = Array.from(new Set(categories.map(c => c.trim()).filter(Boolean)));
+    const cleanSubcategories = Array.from(new Set(subcategories.map(s => s.trim()).filter(Boolean)));
+    const cleanCustom = customSkills ? customSkills.trim() : "";
+    const customList = cleanCustom ? cleanCustom.split(",").map(s => s.trim()).filter(Boolean) : [];
+    const combinedSkills = Array.from(new Set([...cleanCategories, ...cleanSubcategories, ...customList]));
+
+    const profileUpdates = {
+      userId: uid,
+      categories: cleanCategories,
+      subcategories: cleanSubcategories,
+      bio: bio ? bio.trim() : "",
+      customSkills: cleanCustom,
+      skills: combinedSkills,
+      profileCompleted: true,
+      updatedAt: new Date().toISOString()
+    };
+
+    return this.updateUser(uid, profileUpdates);
+  },
+
+  async getSkillProfile(uid) {
+    const user = await this.getUserById(uid);
+    if (!user) return null;
+    return {
+      categories: user.categories || [],
+      subcategories: user.subcategories || [],
+      bio: user.bio || "",
+      customSkills: user.customSkills || "",
+      profileCompleted: Boolean(user.profileCompleted)
+    };
+  },
+
   // --- 1. Projects ---
   async getPublicProjects(filter = {}) {
     const publicRef = collection(db, "publicProjects");

@@ -861,6 +861,118 @@ textarea.form-control {
   color: var(--text-muted);
 }
 
+/* --- Skill Profile Modal & Selection UI --- */
+.skill-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.skill-category-option {
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  background-color: var(--bg-surface);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.skill-category-option:hover {
+  border-color: var(--color-accent);
+  background-color: var(--bg-subtle);
+}
+
+.skill-category-option.selected {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.skill-category-option input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.subcategories-container {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.subcategory-group {
+  margin-bottom: 1rem;
+}
+
+.subcategory-group:last-child {
+  margin-bottom: 0;
+}
+
+.subcategory-group-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.subcategory-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--border-radius-full);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-primary-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.skill-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.skill-chip.selected {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Locked / Mismatched Project Card States */
+.project-card-locked {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.project-card-locked .project-title {
+  color: #475569;
+}
+
+
 /* --- Banner & Notice Boxes --- */
 .notice-box {
   padding: 1rem 1.25rem;

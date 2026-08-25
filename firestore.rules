@@ -59,7 +59,8 @@ service cloud.firestore {
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                            'name', 'photoURL', 'phone', 'businessName', 'skills',
                            'portfolio', 'role', 'accountType', 'inviteVerified',
-                           'inviteCodeId', 'membershipStatus', 'membershipPlan', 'updatedAt'
+                           'inviteCodeId', 'membershipStatus', 'membershipPlan', 'updatedAt',
+                           'categories', 'subcategories', 'bio', 'customSkills', 'profileCompleted', 'userId'
                          ])
                       && (
                         // Routine profile edits cannot alter access or membership.

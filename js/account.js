@@ -5,15 +5,18 @@
  */
 
 import { FidoAuth } from "./auth.js";
-import { FidoDB } from "./db.js";
+import { FidoDB, SKILL_TAXONOMY } from "./db.js";
 
 let currentUser = null;
+let selectedModalCategories = new Set();
+let selectedModalSubcategories = new Set();
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth();
   if (!isAuth) return;
 
   currentUser = FidoAuth.getCurrentUser();
+  setupSkillProfileModal();
   await renderAccountView();
   setupEventListeners();
 
@@ -408,11 +411,63 @@ async function renderFreelancerView(container) {
     </div>
 
     <div id="freelancer-profile-tab" class="tab-pane">
-      <div class="card" style="max-width: 600px;">
+      <div class="card" style="max-width: 680px; margin-bottom: 1.5rem;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
-          <h3 style="margin:0;">Freelancer Profile</h3>
+          <div>
+            <h3 style="margin:0;">Verified Skill Profile & Services</h3>
+            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Your verified skills determine which projects are unlocked for you in Find Work.</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
+            Edit Skills & Bio
+          </button>
+        </div>
+
+        ${currentUser.profileCompleted ? `
+          <div style="display:flex; flex-direction:column; gap:1rem; background:var(--bg-subtle); padding:1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Primary Categories</div>
+              <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted">None selected</span>'}
+              </div>
+            </div>
+
+            ${(currentUser.subcategories && currentUser.subcategories.length > 0) ? `
+              <div>
+                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Skills & Tools</div>
+                <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                  ${currentUser.subcategories.map(sub => `<span class="badge badge-inactive">${sub}</span>`).join("")}
+                </div>
+              </div>
+            ` : ""}
+
+            ${currentUser.customSkills ? `
+              <div>
+                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Custom Skills</div>
+                <p style="font-size:0.88rem; margin:0;">${currentUser.customSkills}</p>
+              </div>
+            ` : ""}
+
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">About You</div>
+              <p style="font-size:0.88rem; margin:0; line-height:1.5; color:var(--color-primary-muted);">${currentUser.bio || "No introduction provided yet."}</p>
+            </div>
+          </div>
+        ` : `
+          <div class="notice-box notice-warning" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <strong>Skill Profile Setup Required</strong>
+              <div style="font-size:0.85rem; color:var(--text-muted);">Complete your profile to match and unlock relevant project requests.</div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openSkillProfileModal()">Complete Skills Setup</button>
+          </div>
+        `}
+      </div>
+
+      <div class="card" style="max-width: 680px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
+          <h3 style="margin:0;">Personal & Contact Details</h3>
           <span class="badge ${currentUser.inviteVerified ? "badge-active" : "badge-inactive"}">
-            ${currentUser.inviteVerified ? "✓ Verified" : "○ Invite Required"}
+            ${currentUser.inviteVerified ? "✓ Verified Partner" : "○ Invite Required"}
           </span>
         </div>
 
@@ -432,7 +487,7 @@ async function renderFreelancerView(container) {
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <div>
               <strong>Verified Partner Account</strong><br/>
-              Your account has full access to browse and submit proposals on all project opportunities.
+              Your account has full access to browse and submit proposals on matching project opportunities.
             </div>
           </div>
         `}
@@ -454,11 +509,7 @@ async function renderFreelancerView(container) {
             <label class="form-label">Portfolio / GitHub / Dribbble Link</label>
             <input type="url" id="edit-free-portfolio" class="form-control" placeholder="https://yourportfolio.com" value="${currentUser.portfolio || ""}" />
           </div>
-          <div class="form-group">
-            <label class="form-label">Key Skills (comma separated)</label>
-            <input type="text" id="edit-free-skills" class="form-control" placeholder="Website, HTML, Design, Figma" value="${(currentUser.skills || []).join(", ")}" />
-          </div>
-          <button type="submit" class="btn btn-primary">Save Profile</button>
+          <button type="submit" class="btn btn-primary">Save Personal Details</button>
         </form>
       </div>
     </div>
@@ -511,14 +562,10 @@ async function renderFreelancerView(container) {
     profForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
-        const skillsRaw = document.getElementById("edit-free-skills").value;
-        const skillsArr = skillsRaw.split(",").map(s => s.trim()).filter(Boolean);
-
         await FidoDB.updateUser(currentUser.uid, {
           name: document.getElementById("edit-free-name").value.trim(),
           phone: document.getElementById("edit-free-phone").value.trim(),
-          portfolio: document.getElementById("edit-free-portfolio").value.trim(),
-          skills: skillsArr
+          portfolio: document.getElementById("edit-free-portfolio").value.trim()
         });
         showToast("Profile updated successfully", "success");
       } catch (err) {
@@ -527,3 +574,164 @@ async function renderFreelancerView(container) {
     });
   }
 }
+
+// --- Skill Profile Modal Setup & Handlers for Account Page ---
+function setupSkillProfileModal() {
+  const categoryOptions = document.querySelectorAll(".skill-category-option");
+  categoryOptions.forEach(opt => {
+    const checkbox = opt.querySelector("input[type='checkbox']");
+    if (!checkbox) return;
+
+    checkbox.addEventListener("change", () => {
+      const cat = checkbox.value;
+      if (checkbox.checked) {
+        opt.classList.add("selected");
+        selectedModalCategories.add(cat);
+      } else {
+        opt.classList.remove("selected");
+        selectedModalCategories.delete(cat);
+        const subList = SKILL_TAXONOMY[cat] || [];
+        subList.forEach(s => selectedModalSubcategories.delete(s));
+      }
+      renderModalSubcategories();
+    });
+  });
+
+  const skillForm = document.getElementById("skill-profile-form");
+  if (skillForm) {
+    skillForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = FidoAuth.getCurrentUser();
+      if (!user) return;
+
+      if (selectedModalCategories.size === 0) {
+        showToast("Please select at least one primary service category.", "error");
+        return;
+      }
+
+      const bio = document.getElementById("modalBioInput").value.trim();
+      if (!bio) {
+        showToast("Please write a short introduction about yourself.", "error");
+        return;
+      }
+
+      const customSkillsInput = document.getElementById("modalCustomSkillsInput");
+      const customSkills = customSkillsInput ? customSkillsInput.value.trim() : "";
+
+      const categories = Array.from(selectedModalCategories);
+      const subcategories = Array.from(selectedModalSubcategories);
+
+      const submitBtn = document.getElementById("modalSaveSkillsBtn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving Skills...";
+
+      try {
+        await FidoDB.saveSkillProfile(user.uid, {
+          categories,
+          subcategories,
+          bio,
+          customSkills
+        });
+
+        closeModal("skill-profile-modal");
+        showToast("Skill profile updated successfully!", "success");
+
+        currentUser = FidoAuth.getCurrentUser();
+        await renderAccountView();
+      } catch (err) {
+        showToast(err.message || "Failed to save skill profile.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Save & Continue";
+      }
+    });
+  }
+}
+
+function renderModalSubcategories() {
+  const container = document.getElementById("modal-subcategories-container");
+  const wrapper = document.getElementById("subcategories-wrapper");
+  const customGroup = document.getElementById("custom-skills-group");
+  if (!container || !wrapper) return;
+
+  if (selectedModalCategories.size === 0) {
+    wrapper.style.display = "none";
+    if (customGroup) customGroup.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+
+  wrapper.style.display = "block";
+  let hasOther = selectedModalCategories.has("Other");
+
+  let html = "";
+  selectedModalCategories.forEach(cat => {
+    const subList = SKILL_TAXONOMY[cat] || [];
+    if (subList.length === 0) return;
+
+    html += `
+      <div class="subcategory-group">
+        <div class="subcategory-group-title">${cat} Skills & Tools</div>
+        <div class="subcategory-chips-wrap">
+          ${subList.map(sub => {
+            const isSelected = selectedModalSubcategories.has(sub);
+            if (sub === "Other") hasOther = true;
+            return `
+              <button type="button" class="skill-chip ${isSelected ? "selected" : ""}" data-category="${cat}" data-sub="${sub}">
+                ${isSelected ? "✓ " : "+ "}${sub}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  if (customGroup) {
+    customGroup.style.display = hasOther ? "block" : "none";
+  }
+
+  container.querySelectorAll(".skill-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const sub = chip.getAttribute("data-sub");
+      if (selectedModalSubcategories.has(sub)) {
+        selectedModalSubcategories.delete(sub);
+        chip.classList.remove("selected");
+        chip.textContent = `+ ${sub}`;
+      } else {
+        selectedModalSubcategories.add(sub);
+        chip.classList.add("selected");
+        chip.textContent = `✓ ${sub}`;
+      }
+    });
+  });
+}
+
+export function openSkillProfileModal() {
+  const user = FidoAuth.getCurrentUser();
+
+  selectedModalCategories = new Set(user && Array.isArray(user.categories) ? user.categories : []);
+  selectedModalSubcategories = new Set(user && Array.isArray(user.subcategories) ? user.subcategories : []);
+
+  document.querySelectorAll(".skill-category-option").forEach(opt => {
+    const checkbox = opt.querySelector("input[type='checkbox']");
+    if (checkbox) {
+      const isChecked = selectedModalCategories.has(checkbox.value);
+      checkbox.checked = isChecked;
+      if (isChecked) opt.classList.add("selected");
+      else opt.classList.remove("selected");
+    }
+  });
+
+  const bioInput = document.getElementById("modalBioInput");
+  if (bioInput) bioInput.value = (user && user.bio) || "";
+
+  const customSkillsInput = document.getElementById("modalCustomSkillsInput");
+  if (customSkillsInput) customSkillsInput.value = (user && user.customSkills) || "";
+
+  renderModalSubcategories();
+  openModal("skill-profile-modal");
+}
+window.openSkillProfileModal = openSkillProfileModal;

@@ -1,14 +1,25 @@
 /**
  * FidoConnect - Find Work Controller
+ * 
+ * Features:
+ * - Public & Verified project browsing
+ * - Invite-only verification gate
+ * - One-time Freelancer Skill Profile onboarding
+ * - Dynamic Category & Subcategory taxonomy
+ * - Skill-matched project unlocking & locked card indicators
  */
 
 import { FidoAuth } from "./auth.js";
-import { FidoDB } from "./db.js";
+import { FidoDB, SKILL_TAXONOMY } from "./db.js";
 
 let allProjects = [];
 let currentCategoryFilter = "all";
 let currentSearchQuery = "";
 let pendingTargetProjectId = null;
+
+// Modal skill selection state
+let selectedModalCategories = new Set();
+let selectedModalSubcategories = new Set();
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth();
@@ -31,6 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function setupEventListeners() {
+  // Category filter pills on the main page
   document.querySelectorAll(".category-pill").forEach(pill => {
     pill.addEventListener("click", () => {
       document.querySelectorAll(".category-pill").forEach(p => p.classList.remove("active"));
@@ -40,6 +52,7 @@ function setupEventListeners() {
     });
   });
 
+  // Search input
   const searchInput = document.getElementById("project-search-input");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
@@ -48,6 +61,7 @@ function setupEventListeners() {
     });
   }
 
+  // Invite code verification form
   const inviteForm = document.getElementById("invite-verify-form");
   if (inviteForm) {
     inviteForm.addEventListener("submit", async (e) => {
@@ -69,8 +83,12 @@ function setupEventListeners() {
         closeModal("invite-code-modal");
         showToast("Invite code verified successfully!", "success");
 
-        if (pendingTargetProjectId) {
-          window.location.href = `project-details.html?id=${encodeURIComponent(pendingTargetProjectId)}`;
+        const currentUser = FidoAuth.getCurrentUser();
+        // Check if skill profile is completed
+        if (!FidoAuth.isSkillProfileComplete(currentUser)) {
+          openSkillProfileModal(pendingTargetProjectId);
+        } else if (pendingTargetProjectId) {
+          handleTargetProjectNavigation(pendingTargetProjectId);
         } else {
           renderRoleMembershipState();
           renderProjectsList();
@@ -81,6 +99,196 @@ function setupEventListeners() {
         btn.textContent = "Verify Code";
       }
     });
+  }
+
+  // Skill Profile Modal setup
+  setupSkillProfileModal();
+}
+
+function setupSkillProfileModal() {
+  const categoryOptions = document.querySelectorAll(".skill-category-option");
+  categoryOptions.forEach(opt => {
+    const checkbox = opt.querySelector("input[type='checkbox']");
+    if (!checkbox) return;
+
+    checkbox.addEventListener("change", () => {
+      const cat = checkbox.value;
+      if (checkbox.checked) {
+        opt.classList.add("selected");
+        selectedModalCategories.add(cat);
+      } else {
+        opt.classList.remove("selected");
+        selectedModalCategories.delete(cat);
+        // Remove subcategories of this category
+        const subList = SKILL_TAXONOMY[cat] || [];
+        subList.forEach(s => selectedModalSubcategories.delete(s));
+      }
+      renderModalSubcategories();
+    });
+  });
+
+  const skillForm = document.getElementById("skill-profile-form");
+  if (skillForm) {
+    skillForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const currentUser = FidoAuth.getCurrentUser();
+      if (!currentUser) return;
+
+      if (selectedModalCategories.size === 0) {
+        showToast("Please select at least one primary service category.", "error");
+        return;
+      }
+
+      const bio = document.getElementById("modalBioInput").value.trim();
+      if (!bio) {
+        showToast("Please write a short introduction about yourself.", "error");
+        return;
+      }
+
+      const customSkillsInput = document.getElementById("modalCustomSkillsInput");
+      const customSkills = customSkillsInput ? customSkillsInput.value.trim() : "";
+
+      const categories = Array.from(selectedModalCategories);
+      const subcategories = Array.from(selectedModalSubcategories);
+
+      const submitBtn = document.getElementById("modalSaveSkillsBtn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving Skills...";
+
+      try {
+        await FidoDB.saveSkillProfile(currentUser.uid, {
+          categories,
+          subcategories,
+          bio,
+          customSkills
+        });
+
+        closeModal("skill-profile-modal");
+        showToast("Skill profile saved successfully!", "success");
+
+        renderRoleMembershipState();
+        renderProjectsList();
+
+        if (pendingTargetProjectId) {
+          handleTargetProjectNavigation(pendingTargetProjectId);
+          pendingTargetProjectId = null;
+        }
+      } catch (err) {
+        showToast(err.message || "Failed to save skill profile.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Save & Continue";
+      }
+    });
+  }
+}
+
+function renderModalSubcategories() {
+  const container = document.getElementById("modal-subcategories-container");
+  const wrapper = document.getElementById("subcategories-wrapper");
+  const customGroup = document.getElementById("custom-skills-group");
+  if (!container || !wrapper) return;
+
+  if (selectedModalCategories.size === 0) {
+    wrapper.style.display = "none";
+    if (customGroup) customGroup.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+
+  wrapper.style.display = "block";
+  let hasOther = selectedModalCategories.has("Other");
+
+  let html = "";
+  selectedModalCategories.forEach(cat => {
+    const subList = SKILL_TAXONOMY[cat] || [];
+    if (subList.length === 0) return;
+
+    html += `
+      <div class="subcategory-group">
+        <div class="subcategory-group-title">${cat} Skills & Tools</div>
+        <div class="subcategory-chips-wrap">
+          ${subList.map(sub => {
+            const isSelected = selectedModalSubcategories.has(sub);
+            if (sub === "Other") hasOther = true;
+            return `
+              <button type="button" class="skill-chip ${isSelected ? "selected" : ""}" data-category="${cat}" data-sub="${sub}">
+                ${isSelected ? "✓ " : "+ "}${sub}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  if (customGroup) {
+    customGroup.style.display = hasOther ? "block" : "none";
+  }
+
+  // Attach chip click handlers
+  container.querySelectorAll(".skill-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const sub = chip.getAttribute("data-sub");
+      if (selectedModalSubcategories.has(sub)) {
+        selectedModalSubcategories.delete(sub);
+        chip.classList.remove("selected");
+        chip.textContent = `+ ${sub}`;
+      } else {
+        selectedModalSubcategories.add(sub);
+        chip.classList.add("selected");
+        chip.textContent = `✓ ${sub}`;
+      }
+    });
+  });
+}
+
+export function openSkillProfileModal(targetProjectId = "") {
+  pendingTargetProjectId = targetProjectId || null;
+  const currentUser = FidoAuth.getCurrentUser();
+
+  selectedModalCategories = new Set(currentUser && Array.isArray(currentUser.categories) ? currentUser.categories : []);
+  selectedModalSubcategories = new Set(currentUser && Array.isArray(currentUser.subcategories) ? currentUser.subcategories : []);
+
+  // Set checkboxes
+  document.querySelectorAll(".skill-category-option").forEach(opt => {
+    const checkbox = opt.querySelector("input[type='checkbox']");
+    if (checkbox) {
+      const isChecked = selectedModalCategories.has(checkbox.value);
+      checkbox.checked = isChecked;
+      if (isChecked) opt.classList.add("selected");
+      else opt.classList.remove("selected");
+    }
+  });
+
+  // Set bio & custom skills
+  const bioInput = document.getElementById("modalBioInput");
+  if (bioInput) bioInput.value = (currentUser && currentUser.bio) || "";
+
+  const customSkillsInput = document.getElementById("modalCustomSkillsInput");
+  if (customSkillsInput) customSkillsInput.value = (currentUser && currentUser.customSkills) || "";
+
+  renderModalSubcategories();
+  openModal("skill-profile-modal");
+}
+window.openSkillProfileModal = openSkillProfileModal;
+
+function handleTargetProjectNavigation(projectId) {
+  const currentUser = FidoAuth.getCurrentUser();
+  const project = allProjects.find(p => (p.projectId || p.id) === projectId || p.id === projectId);
+
+  if (!project) {
+    window.location.href = `project-details.html?id=${encodeURIComponent(projectId)}`;
+    return;
+  }
+
+  const isMatch = FidoDB.checkProjectSkillMatch(project, currentUser);
+  if (isMatch || FidoAuth.isAdmin()) {
+    window.location.href = `project-details.html?id=${encodeURIComponent(projectId)}`;
+  } else {
+    showToast(`Project ${project.projectId || project.id} requires ${project.category} skills, which are outside your verified profile.`, "info");
   }
 }
 
@@ -148,14 +356,38 @@ function renderRoleMembershipState() {
     `;
     bannerContainer.style.display = "block";
   } else if (currentUser.role === "freelancer" && FidoAuth.isFreelancerVerified(currentUser)) {
-    bannerContainer.innerHTML = `
-      <div class="notice-box notice-success" style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <span><strong>Verified Freelancer Access</strong> — You have full access to view project specifications and submit proposals.</span>
+    const hasSkillProfile = FidoAuth.isSkillProfileComplete(currentUser);
+
+    if (!hasSkillProfile) {
+      bannerContainer.innerHTML = `
+        <div class="notice-box notice-warning" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div>
+              <strong>Skill Profile Setup Required</strong> — Tell us what you can do so we can match you with the right projects.
+            </div>
+          </div>
+          <div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openSkillProfileModal('')">Complete Skill Profile</button>
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      const cats = (currentUser.categories || []).join(", ");
+      bannerContainer.innerHTML = `
+        <div class="notice-box notice-success" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+              <strong>Verified Skill Profile:</strong> Unlocked projects match your selected services (${cats}).
+            </div>
+          </div>
+          <div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal('')">Update Skills</button>
+          </div>
+        </div>
+      `;
+    }
     bannerContainer.style.display = "block";
   } else {
     bannerContainer.style.display = "none";
@@ -196,55 +428,128 @@ function renderProjectsList() {
   }
 
   const currentUser = FidoAuth.getCurrentUser();
-  const isVerifiedFreelancer = currentUser
-    && currentUser.role === "freelancer"
-    && FidoAuth.isFreelancerVerified(currentUser);
-  const hasDetailAccess = FidoAuth.isAdmin() || isVerifiedFreelancer;
+  const isAdmin = FidoAuth.isAdmin();
+  const isFreelancer = currentUser && currentUser.role === "freelancer";
+  const isVerifiedFreelancer = isFreelancer && FidoAuth.isFreelancerVerified(currentUser);
+  const hasSkillProfile = isVerifiedFreelancer && FidoAuth.isSkillProfileComplete(currentUser);
 
-  container.innerHTML = filtered.map(project => `
-    <div class="project-card">
-      <div class="project-card-header">
-        <span class="project-id-badge">${project.projectId || project.id}</span>
-        <span class="project-category-badge">${project.category}</span>
-      </div>
+  container.innerHTML = filtered.map(project => {
+    const projId = project.projectId || project.id;
+    let cardClass = "project-card";
+    let matchBadge = "";
+    let actionButton = "";
 
-      <div>
-        <h3 class="project-title">${project.title}</h3>
-        <p class="project-desc" style="margin-top:0.4rem;">${project.description}</p>
-      </div>
+    if (isAdmin) {
+      actionButton = `
+        <a href="project-details.html?id=${projId}" class="btn btn-secondary btn-sm">
+          View Details
+        </a>
+      `;
+    } else if (!currentUser || !isVerifiedFreelancer) {
+      actionButton = `
+        <button type="button" class="btn btn-secondary btn-sm" onclick="handleProjectActionClick('${projId}')">
+          Unlock Details
+        </button>
+      `;
+    } else if (!hasSkillProfile) {
+      // Verified but hasn't completed skill profile yet
+      matchBadge = `<span class="badge badge-inactive" style="font-size:0.75rem;">Profile Setup</span>`;
+      actionButton = `
+        <button type="button" class="btn btn-primary btn-sm" onclick="handleProjectActionClick('${projId}')">
+          View Details & Apply
+        </button>
+      `;
+    } else {
+      // Verified with completed skill profile
+      const isMatch = FidoDB.checkProjectSkillMatch(project, currentUser);
 
-      <div class="project-meta-grid">
-        <div class="meta-item">
-          <span class="meta-label">Budget</span>
-          <span class="meta-val text-accent">${project.budget}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Deadline</span>
-          <span class="meta-val">${formatDate(project.deadline)}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Posted</span>
-          <span class="meta-val">${formatDate(project.createdAt)}</span>
-        </div>
-      </div>
-
-      <div class="project-card-footer">
-        <span style="font-size:0.8rem; color:var(--text-muted);">
-          Agency Coordinated
-        </span>
-        ${hasDetailAccess ? `
-          <a href="project-details.html?id=${project.projectId || project.id}" class="btn ${isVerifiedFreelancer ? "btn-primary" : "btn-secondary"} btn-sm">
-            ${isVerifiedFreelancer ? "Apply for Project" : "View Details"}
+      if (isMatch) {
+        matchBadge = `<span class="badge badge-active" style="font-size:0.75rem;">✓ Matches your skills</span>`;
+        actionButton = `
+          <a href="project-details.html?id=${projId}" class="btn btn-primary btn-sm">
+            View Details & Apply
           </a>
-        ` : `
-          <button type="button" class="btn btn-secondary btn-sm" onclick="openInviteModalForProject('${project.projectId || project.id}')">
-            Unlock Details
+        `;
+      } else {
+        cardClass += " project-card-locked";
+        matchBadge = `<span class="badge" style="background:#fee2e2; color:#991b1b; font-size:0.75rem;">🔒 Skill mismatch</span>`;
+        actionButton = `
+          <button type="button" class="btn btn-secondary btn-sm" onclick="handleLockedProjectClick('${project.category}')" style="cursor:not-allowed; opacity:0.8;">
+            🔒 Locked
           </button>
-        `}
+        `;
+      }
+    }
+
+    return `
+      <div class="${cardClass}">
+        <div class="project-card-header">
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <span class="project-id-badge">${projId}</span>
+            <span class="project-category-badge">${project.category}</span>
+          </div>
+          ${matchBadge}
+        </div>
+
+        <div>
+          <h3 class="project-title">${project.title}</h3>
+          <p class="project-desc" style="margin-top:0.4rem;">${project.description}</p>
+        </div>
+
+        <div class="project-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Budget</span>
+            <span class="meta-val text-accent">${project.budget}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Deadline</span>
+            <span class="meta-val">${formatDate(project.deadline)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Posted</span>
+            <span class="meta-val">${formatDate(project.createdAt)}</span>
+          </div>
+        </div>
+
+        <div class="project-card-footer">
+          <span style="font-size:0.8rem; color:var(--text-muted);">
+            Agency Coordinated
+          </span>
+          ${actionButton}
+        </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
+
+window.handleProjectActionClick = function(projectId) {
+  const currentUser = FidoAuth.getCurrentUser();
+
+  if (!currentUser) {
+    window.location.href = `auth.html?redirect=${encodeURIComponent("find-work.html")}`;
+    return;
+  }
+
+  if (currentUser.role === "freelancer") {
+    if (!FidoAuth.isFreelancerVerified(currentUser)) {
+      openInviteModalForProject(projectId);
+      return;
+    }
+
+    if (!FidoAuth.isSkillProfileComplete(currentUser)) {
+      openSkillProfileModal(projectId);
+      return;
+    }
+
+    handleTargetProjectNavigation(projectId);
+  } else {
+    window.location.href = `project-details.html?id=${encodeURIComponent(projectId)}`;
+  }
+};
+
+window.handleLockedProjectClick = function(categoryName) {
+  showToast(`🔒 Locked — This project requires ${categoryName} skills, which are outside your verified profile.`, "info");
+};
 
 window.openInviteModalForProject = function(projectId) {
   pendingTargetProjectId = projectId || null;
