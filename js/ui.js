@@ -107,8 +107,30 @@ function highlightActiveNav() {
   });
 }
 
+// Global Page Preloader Management (1-2s screen loader)
+function initPagePreloader() {
+  let preloader = document.getElementById("page-preloader");
+  if (!preloader) {
+    preloader = document.createElement("div");
+    preloader.id = "page-preloader";
+    preloader.innerHTML = '<div class="preloader-spinner"></div>';
+    document.body.prepend(preloader);
+  }
+
+  // Remove loader after ~1.2 seconds
+  setTimeout(() => {
+    preloader.classList.add("fade-out");
+    setTimeout(() => {
+      if (preloader && preloader.parentNode) {
+        preloader.remove();
+      }
+    }, 400);
+  }, 1200);
+}
+
 // Document Ready Initialization
 document.addEventListener("DOMContentLoaded", () => {
+  initPagePreloader();
   highlightActiveNav();
   // Close modals when clicking backdrop
   document.querySelectorAll(".modal-overlay").forEach(overlay => {
@@ -120,3 +142,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
+

@@ -966,6 +966,47 @@ textarea.form-control {
   color: var(--color-primary);
 }
 
+/* --- Global Page Preloader --- */
+#page-preloader {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+#page-preloader.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.preloader-spinner {
+  width: 42px;
+  height: 42px;
+  border: 3.5px solid #e2e8f0;
+  border-top-color: var(--color-accent, #2563eb);
+  border-radius: 50%;
+  animation: preloaderSpin 0.75s linear infinite;
+}
+
+@keyframes preloaderSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* --- Toast Notifications --- */
 #toast-container {
   position: fixed;
