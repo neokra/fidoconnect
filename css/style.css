@@ -258,6 +258,16 @@ p {
   gap: 0.75rem;
 }
 
+.header-user-desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-user-mobile {
+  display: none;
+}
+
 /* --- Mobile Bottom Navigation Bar --- */
 .mobile-bottom-nav {
   display: none;
@@ -1156,6 +1166,16 @@ textarea.form-control {
 
   .header-actions .btn-post-desktop {
     display: none;
+  }
+
+  .header-user-desktop {
+    display: none !important;
+  }
+
+  .header-user-mobile {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   /* Page header h1 on inner pages */
