@@ -5,7 +5,7 @@
  */
 
 import { FidoAuth } from "./auth.js";
-import { FidoDB, SKILL_TAXONOMY } from "./db.js";
+import { FidoDB, SKILL_TAXONOMY, MEMBERSHIP_PLANS } from "./db.js";
 
 let currentUser = null;
 let selectedModalCategories = new Set();
@@ -41,8 +41,15 @@ function setupEventListeners() {
     });
   });
 
-  if (window.location.hash) {
-    const tabName = window.location.hash.replace("#", "") + "-tab";
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get("tab");
+  if (tabParam) {
+    const tabName = tabParam.endsWith("-tab") ? tabParam : `${tabParam}-tab`;
+    const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+    if (tabBtn) tabBtn.click();
+  } else if (window.location.hash) {
+    const hash = window.location.hash.replace("#", "");
+    const tabName = hash.endsWith("-tab") ? hash : `${hash}-tab`;
     const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
     if (tabBtn) tabBtn.click();
   }
@@ -277,6 +284,8 @@ async function renderFreelancerView(container) {
   const applications = await FidoDB.getApplications({ freelancerId: currentUser.uid });
   const activeProjects = await FidoDB.getProjects({ assignedFreelancerId: currentUser.uid });
   const isMemberActive = currentUser.membershipStatus === "active";
+  const urlParams = new URLSearchParams(window.location.search);
+  const returnProject = urlParams.get("return_project");
 
   container.innerHTML = `
     <div style="margin-bottom: 2rem;">
@@ -286,7 +295,7 @@ async function renderFreelancerView(container) {
             <h2 style="margin:0;">${currentUser.name}</h2>
             <span class="role-badge role-badge-freelancer">🔗 Freelancer</span>
             <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
-              ${isMemberActive ? "✓ Active" : "○ Inactive"}
+              ${isMemberActive ? `✓ ${currentUser.membershipPlan || "Active Member"}` : "○ Inactive Member"}
             </span>
           </div>
           <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
@@ -300,7 +309,7 @@ async function renderFreelancerView(container) {
     <div class="tab-nav">
       <button class="tab-btn active" data-tab="freelancer-apps-tab">My Applications (${applications.length})</button>
       <button class="tab-btn" data-tab="freelancer-projects-tab">Assigned Projects (${activeProjects.length})</button>
-      <button class="tab-btn" data-tab="membership-tab">Membership Plan</button>
+      <button class="tab-btn" data-tab="membership-tab">Membership Plans</button>
       <button class="tab-btn" data-tab="freelancer-profile-tab">Profile & Skills</button>
     </div>
 
@@ -313,28 +322,36 @@ async function renderFreelancerView(container) {
         </div>
       ` : `
         <div style="display:flex; flex-direction:column; gap:1rem;">
-          ${applications.map(app => `
-            <div class="card" style="padding: 1.25rem;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
-                    <span class="project-id-badge">${app.projectId}</span>
-                    ${getStatusBadge(app.status)}
+          ${applications.map(app => {
+            const isActionable = !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(app.status);
+            return `
+              <div class="card" style="padding: 1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
+                      <span class="project-id-badge">${app.projectId}</span>
+                      ${getStatusBadge(app.status)}
+                    </div>
+                    <p style="font-size:0.95rem; margin-top:0.3rem;">"${app.message}"</p>
+                    <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem;">
+                      Estimated Delivery: <strong>${app.deliveryDays}</strong>
+                    </div>
                   </div>
-                  <p style="font-size:0.95rem; margin-top:0.3rem;">"${app.message}"</p>
-                  <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem;">
-                    Estimated Delivery: <strong>${app.deliveryDays}</strong>
-                  </div>
-                </div>
-                <div style="text-align:right;">
-                  <span style="font-size:0.8rem; color:var(--text-muted);">Applied: ${formatDate(app.createdAt)}</span>
-                  <div style="margin-top:0.5rem;">
-                    <a href="project-details.html?id=${app.projectId}" class="btn btn-secondary btn-sm">View Project</a>
+                  <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+                    <span style="font-size:0.8rem; color:var(--text-muted);">Applied: ${formatDate(app.createdAt)}</span>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
+                      <a href="project-details.html?id=${app.projectId}" class="btn btn-secondary btn-sm">View Project</a>
+                      ${isActionable ? `
+                        <button type="button" class="btn btn-sm" style="color:var(--status-cancelled); border:1px solid var(--border-color); background:var(--bg-surface);" onclick="handleWithdrawApplication('${app.id}')">
+                          Withdraw
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          `).join("")}
+            `;
+          }).join("")}
         </div>
       `}
     </div>
@@ -375,38 +392,133 @@ async function renderFreelancerView(container) {
     </div>
 
     <div id="membership-tab" class="tab-pane">
-      <div class="card" style="max-width: 680px;">
-        <h3 style="margin-bottom: 0.5rem;">FidoConnect Membership</h3>
-        <p class="text-muted" style="font-size:0.92rem; margin-bottom: 1.5rem;">
-          Membership gives you access to FidoConnect project opportunities and allows you to apply for suitable projects.
+      <!-- Section Header -->
+      <div style="margin-bottom: 2rem;">
+        <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.4rem;">
+          <span style="width:8px; height:8px; border-radius:50%; background:var(--color-accent);"></span>
+          Selected Freelancer Program
+        </div>
+        <h2 style="font-size: 1.85rem; margin-bottom: 0.4rem;">Plans for Selected Members</h2>
+        <p class="text-muted" style="font-size: 1rem; max-width: 720px; line-height: 1.6; margin-bottom: 0.5rem;">
+          FidoConnect memberships are available to selected freelancers through our invite-only program.
         </p>
+        <p style="font-size: 0.88rem; color: var(--color-primary-muted); max-width: 720px; line-height: 1.6;">
+          You reached this page through a FidoConnect invitation. Your skills have been reviewed and verified, giving you access to membership plans designed for selected freelancers.
+        </p>
+      </div>
 
-        <div class="card" style="background-color:var(--bg-subtle); border-color:var(--border-color); margin-bottom:1.5rem;">
+      <!-- Current Membership Banner / Project Return Prompt -->
+      ${isMemberActive ? `
+        <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 2rem; padding: 1.25rem 1.5rem;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <div>
-              <div style="font-size:0.8rem; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Status</div>
-              <div style="font-size:1.2rem; font-weight:750; color:var(--color-primary); margin-top:2px;">
-                ${isMemberActive ? "Active Standard Membership" : "Membership Inactive"}
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-teal);"></span>
+                <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--color-teal);">Current Active Membership</span>
               </div>
-              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
-                ${isMemberActive ? `Valid until ${formatDate(currentUser.membershipExpiry)}` : "Activate membership to submit proposals"}
+              <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-top:2px;">
+                ${currentUser.membershipPlan || "Selected Basic"}
+              </div>
+              <div style="font-size:0.85rem; color:var(--color-primary-muted); margin-top:2px;">
+                Active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.
               </div>
             </div>
-            <div>
-              <button id="toggle-membership-btn" class="btn ${isMemberActive ? "btn-secondary" : "btn-primary"}">
-                ${isMemberActive ? "Renew / Manage Membership" : "Activate Membership"}
-              </button>
-            </div>
+            ${returnProject ? `
+              <div>
+                <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary">
+                  Return to Project (${returnProject}) & Complete Application &rarr;
+                </a>
+              </div>
+            ` : ''}
           </div>
         </div>
-
-        <div class="notice-box notice-info" style="font-size:0.85rem;">
+      ` : (returnProject ? `
+        <div class="notice-box notice-warning" style="margin-bottom: 2rem;">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           <div>
-            <strong>Clear Agency Commitment</strong><br/>
-            Membership provides access to project opportunities. Projects are not guaranteed.
+            <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
           </div>
         </div>
+      ` : '')}
+
+      <!-- 3 Membership Tiers Grid -->
+      <div class="plans-grid">
+        ${Object.values(MEMBERSHIP_PLANS).map(plan => {
+          const isCurrentPlan = isMemberActive && (currentUser.membershipPlan === plan.name);
+          return `
+            <div class="plan-card ${plan.isRecommended ? 'plan-card-recommended' : ''}">
+              ${plan.badge ? `<div class="plan-badge-recommended">${plan.badge}</div>` : ''}
+              
+              <div class="plan-header">
+                <div class="plan-tagline">${plan.tagline}</div>
+                <h3 class="plan-title">${plan.name}</h3>
+                <div class="plan-price-wrap">
+                  <span class="plan-price">${plan.priceDisplay}</span>
+                  <span class="plan-period">${plan.billingCycle}</span>
+                </div>
+                <p class="plan-desc">${plan.description}</p>
+              </div>
+
+              <ul class="plan-features-list">
+                ${plan.features.map(f => `
+                  <li class="plan-feature-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                    <span>${f}</span>
+                  </li>
+                `).join("")}
+              </ul>
+
+              <div>
+                ${isCurrentPlan ? `
+                  <button type="button" class="btn btn-secondary plan-cta-btn" disabled style="opacity:0.8; cursor:default;">
+                    ✓ Current Active Plan
+                  </button>
+                ` : `
+                  <button type="button" id="btn-plan-${plan.id}" class="btn ${plan.isRecommended ? 'btn-primary' : 'btn-secondary'} plan-cta-btn" onclick="handleActivatePlan('${plan.id}')">
+                    ${isMemberActive ? 'Switch to ' + plan.name.replace('Selected ', '') : plan.buttonText}
+                  </button>
+                `}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+
+      <!-- How FidoConnect Membership Works Section -->
+      <div style="margin: 3rem 0 2rem;">
+        <h3 style="font-size: 1.35rem; margin-bottom: 0.35rem;">How FidoConnect Membership Works</h3>
+        <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 1.25rem;">Understanding our invite-only selected freelancer network.</p>
+
+        <div class="membership-steps-grid">
+          <div class="membership-step-card">
+            <div class="membership-step-number">1</div>
+            <div class="membership-step-title">Invited</div>
+            <p class="membership-step-desc">You were invited based on your skills and portfolio.</p>
+          </div>
+          <div class="membership-step-card">
+            <div class="membership-step-number">2</div>
+            <div class="membership-step-title">Verified</div>
+            <p class="membership-step-desc">Your freelancer profile and skills are reviewed.</p>
+          </div>
+          <div class="membership-step-card">
+            <div class="membership-step-number">3</div>
+            <div class="membership-step-title">Selected</div>
+            <p class="membership-step-desc">You can access projects that match your verified skills.</p>
+          </div>
+          <div class="membership-step-card">
+            <div class="membership-step-number">4</div>
+            <div class="membership-step-title">Member</div>
+            <p class="membership-step-desc">Activate a membership to submit applications and participate in selected project opportunities.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transparent Trust Section ("Before you join") -->
+      <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.5rem; max-width: 840px;">
+        <h4 style="font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--color-primary);">Before you join</h4>
+        <p style="font-size: 0.88rem; line-height: 1.6; color: var(--color-primary-muted); margin: 0;">
+          FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand, project requirements, skill match, and agency selection. Membership does not guarantee a specific project, income, or number of completed jobs.
+        </p>
       </div>
     </div>
 
@@ -448,50 +560,27 @@ async function renderFreelancerView(container) {
             ` : ""}
 
             <div>
-              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">About You</div>
-              <p style="font-size:0.88rem; margin:0; line-height:1.5; color:var(--color-primary-muted);">${currentUser.bio || "No introduction provided yet."}</p>
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">About You / Introduction</div>
+              <p style="font-size:0.88rem; line-height:1.55; margin:0; font-style:italic;">
+                ${currentUser.bio ? `"${currentUser.bio}"` : '<span class="text-muted">No introduction provided yet.</span>'}
+              </p>
             </div>
           </div>
         ` : `
-          <div class="notice-box notice-warning" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div class="notice-box notice-warning" style="margin-bottom:1rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
             <div>
-              <strong>Skill Profile Setup Required</strong>
-              <div style="font-size:0.85rem; color:var(--text-muted);">Complete your profile to match and unlock relevant project requests.</div>
+              <strong>Skill profile incomplete:</strong> Complete your skill profile to unlock matching projects in Find Work.
             </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openSkillProfileModal()">Complete Skills Setup</button>
           </div>
+          <button type="button" class="btn btn-primary" onclick="openSkillProfileModal()">
+            Complete Skill Profile Now
+          </button>
         `}
       </div>
 
       <div class="card" style="max-width: 680px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
-          <h3 style="margin:0;">Personal & Contact Details</h3>
-          <span class="badge ${currentUser.inviteVerified ? "badge-active" : "badge-inactive"}">
-            ${currentUser.inviteVerified ? "✓ Verified Partner" : "○ Invite Required"}
-          </span>
-        </div>
-
-        ${!currentUser.inviteVerified ? `
-          <div class="card" style="background-color:var(--bg-subtle); margin-bottom:1.5rem; padding:1.25rem;">
-            <h4 style="font-size:1rem; margin-bottom:0.25rem;">Verify Freelancer Invite Code</h4>
-            <p class="text-muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-              Enter an invitation code from FidoConnect administration to unlock protected project specifications and proposal submissions.
-            </p>
-            <form id="redeem-invite-code-form" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-              <input type="text" id="redeem-invite-input" class="form-control font-mono" placeholder="e.g. FIDO-PRO-2026" style="text-transform:uppercase; max-width:240px;" required />
-              <button type="submit" id="redeem-invite-btn" class="btn btn-primary btn-sm">Redeem Code</button>
-            </form>
-          </div>
-        ` : `
-          <div class="notice-box notice-success" style="margin-bottom:1.5rem; font-size:0.85rem;">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <div>
-              <strong>Verified Partner Account</strong><br/>
-              Your account has full access to browse and submit proposals on matching project opportunities.
-            </div>
-          </div>
-        `}
-
+        <h3 style="margin-bottom: 1.5rem;">Basic Contact Information</h3>
         <form id="freelancer-profile-form">
           <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -542,21 +631,6 @@ async function renderFreelancerView(container) {
     });
   }
 
-  const toggleMemberBtn = document.getElementById("toggle-membership-btn");
-  if (toggleMemberBtn) {
-    toggleMemberBtn.addEventListener("click", async () => {
-      try {
-        await FidoDB.updateMembership(currentUser.uid, "active", "Standard Member");
-        showToast("Membership activated! You can now apply for all open projects.", "success");
-        currentUser.membershipStatus = "active";
-        currentUser.membershipPlan = "Standard Member";
-        await renderFreelancerView(container);
-      } catch (err) {
-        showToast("Failed to activate membership: " + err.message, "error");
-      }
-    });
-  }
-
   const profForm = document.getElementById("freelancer-profile-form");
   if (profForm) {
     profForm.addEventListener("submit", async (e) => {
@@ -573,6 +647,62 @@ async function renderFreelancerView(container) {
       }
     });
   }
+
+  // Restore active tab if requested in URL or hash
+  if (returnProject || urlParams.get("tab") === "membership") {
+    const memTabBtn = document.querySelector(`[data-tab="membership-tab"]`);
+    if (memTabBtn) memTabBtn.click();
+  }
+}
+
+window.handleActivatePlan = async function(planId) {
+  if (!currentUser) return;
+  const btn = document.getElementById("btn-plan-" + planId);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Activating...";
+  }
+
+  try {
+    const res = await FidoDB.activateMembershipPlan(currentUser.uid, planId);
+    showToast(`✓ Membership activated! ${res.plan.name} is now active.`, "success");
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnProject = urlParams.get("return_project");
+
+    if (returnProject) {
+      setTimeout(() => {
+        window.location.href = `project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true`;
+      }, 700);
+    } else {
+      currentUser.membershipStatus = "active";
+      currentUser.membershipPlan = res.plan.name;
+      const container = document.getElementById("account-layout-container");
+      if (container) await renderFreelancerView(container);
+    }
+  } catch (err) {
+    showToast("Failed to activate membership: " + err.message, "error");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Choose Plan";
+    }
+  }
+};
+
+window.handleWithdrawApplication = async function(appId) {
+  if (!confirm("Are you sure you want to withdraw this application? This will allow you to apply for other matching projects.")) {
+    return;
+  }
+
+  try {
+    await FidoDB.withdrawApplication(appId, currentUser.uid);
+    showToast("Application withdrawn. You can now apply for other projects.", "success");
+    const container = document.getElementById("account-layout-container");
+    if (container) await renderFreelancerView(container);
+  } catch (err) {
+    showToast("Failed to withdraw application: " + err.message, "error");
+  }
+};
 }
 
 // --- Skill Profile Modal Setup & Handlers for Account Page ---

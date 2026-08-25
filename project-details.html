@@ -209,6 +209,29 @@
     </div>
   </div>
 
+  <!-- Freelancer Membership Required Modal -->
+  <div id="membership-required-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px;">
+      <button class="modal-close-btn" onclick="handleMembershipModalClose()">&times;</button>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
+        <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent);">Selected Membership</span>
+      </div>
+      <h3 style="margin-bottom: 0.35rem;">Become a FidoConnect Member</h3>
+      <p style="font-size: 0.92rem; font-weight: 600; color: var(--color-primary); margin-bottom: 0.75rem;">
+        Your application is ready. Activate a membership to submit your application and access selected agency projects.
+      </p>
+      <p class="text-muted" style="font-size: 0.86rem; line-height: 1.55; margin-bottom: 1.5rem;">
+        As a selected and verified freelancer, you can access projects that match your verified skills. Membership gives you access to FidoConnect's selected project opportunities.
+      </p>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+        <button type="button" class="btn btn-secondary" onclick="handleMembershipModalClose()">Not Now</button>
+        <button type="button" id="btn-view-membership-plans" class="btn btn-primary" onclick="handleViewMembershipPlans()">View Membership Plans</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Freelancer Skill Profile Modal -->
   <div id="skill-profile-modal" class="modal-overlay">
     <div class="modal-card" style="max-width: 620px;">

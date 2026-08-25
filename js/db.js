@@ -71,8 +71,79 @@ export const SKILL_TAXONOMY = {
   ]
 };
 
+export const MEMBERSHIP_PLANS = {
+  basic: {
+    id: "basic",
+    name: "Selected Basic",
+    priceDisplay: "₹499",
+    priceAmount: 499,
+    billingCycle: "/ month",
+    badge: "Recommended for New Members",
+    isRecommended: true,
+    tagline: "Start here",
+    description: "For freelancers starting with FidoConnect and looking for selected small projects that match their verified skills.",
+    features: [
+      "Access to selected FidoConnect project opportunities",
+      "Apply to matching projects",
+      "One active application at a time",
+      "Up to 1–2 selected project opportunities during the membership period",
+      "Verified freelancer profile",
+      "Skill-matched project access",
+      "FidoConnect project coordination",
+      "Project performance record"
+    ],
+    buttonText: "Choose Basic"
+  },
+  pro: {
+    id: "pro",
+    name: "Selected Pro",
+    priceDisplay: "₹1,999",
+    priceAmount: 1999,
+    billingCycle: "/ month",
+    badge: null,
+    isRecommended: false,
+    tagline: "For active freelancers",
+    description: "For freelancers ready to take on more selected opportunities through FidoConnect.",
+    features: [
+      "Everything in Basic",
+      "Higher project access",
+      "Up to 5 selected project opportunities",
+      "Priority consideration for suitable projects",
+      "Multiple project opportunities during the membership period, subject to availability",
+      "Enhanced freelancer profile",
+      "Performance history",
+      "Priority agency review"
+    ],
+    buttonText: "Choose Pro"
+  },
+  premium: {
+    id: "premium",
+    name: "Selected Premium",
+    priceDisplay: "₹4,999",
+    priceAmount: 4999,
+    billingCycle: "/ month",
+    badge: null,
+    isRecommended: false,
+    tagline: "For experienced freelancers",
+    description: "For experienced verified freelancers who are ready for higher-value opportunities.",
+    features: [
+      "Everything in Pro",
+      "Higher-value project opportunities",
+      "Up to 10 selected project opportunities",
+      "Priority access to suitable projects",
+      "Priority agency consideration",
+      "Enhanced profile visibility",
+      "Advanced performance record",
+      "Priority support/coordination",
+      "Consideration for larger or more specialized projects"
+    ],
+    buttonText: "Choose Premium"
+  }
+};
+
 export const FidoDB = {
   SKILL_TAXONOMY,
+  MEMBERSHIP_PLANS,
 
   // --- Skill Matching & Profile Helpers ---
   checkProjectSkillMatch(project, user) {
@@ -418,8 +489,30 @@ export const FidoDB = {
 
   async updateApplication(appId, updates) {
     const docRef = doc(db, "applications", appId);
-    await updateDoc(docRef, updates);
-    return { id: appId, ...updates };
+    const cleanUpdates = {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    await updateDoc(docRef, cleanUpdates);
+    return { id: appId, ...cleanUpdates };
+  },
+
+  async withdrawApplication(appId, freelancerId) {
+    const docRef = doc(db, "applications", appId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error("Application not found.");
+    const data = snap.data();
+    if (data.freelancerId !== freelancerId && (!window.FidoAuth || !window.FidoAuth.isAdmin())) {
+      throw new Error("Unauthorized to withdraw this application.");
+    }
+    if (["Completed", "Cancelled", "Withdrawn"].includes(data.status)) {
+      throw new Error("Application cannot be withdrawn in its current state.");
+    }
+    await updateDoc(docRef, {
+      status: "Withdrawn",
+      updatedAt: new Date().toISOString()
+    });
+    return { id: appId, status: "Withdrawn" };
   },
 
   // --- 3. Users ---
@@ -473,9 +566,9 @@ export const FidoDB = {
     return { uid, ...cleanUpdates };
   },
 
-  async updateMembership(freelancerId, status, plan = "Standard Member") {
+  async updateMembership(freelancerId, status, plan = "Selected Basic", durationDays = 30) {
     const startDate = status === "active" ? new Date().toISOString() : null;
-    const expiryDate = status === "active" ? new Date(Date.now() + 365*24*60*60*1000).toISOString() : null;
+    const expiryDate = status === "active" ? new Date(Date.now() + durationDays*24*60*60*1000).toISOString() : null;
 
     return this.updateUser(freelancerId, {
       membershipStatus: status,
@@ -483,6 +576,32 @@ export const FidoDB = {
       membershipStart: startDate,
       membershipExpiry: expiryDate
     });
+  },
+
+  async activateMembershipPlan(freelancerId, planKey = "basic") {
+    const plan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
+    const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
+
+    const updatedUser = await this.updateMembership(freelancerId, "active", plan.name, 30);
+
+    try {
+      await this.addPayment({
+        freelancerId,
+        freelancerName: currentUser ? currentUser.name : "",
+        freelancerEmail: currentUser ? currentUser.email : "",
+        planId: plan.id,
+        planName: plan.name,
+        amount: plan.priceAmount,
+        currency: "INR",
+        paymentMethod: "Online (Simulated)",
+        status: "Completed",
+        type: "membership"
+      });
+    } catch (e) {
+      console.warn("Could not log membership payment:", e);
+    }
+
+    return { user: updatedUser, plan };
   },
 
   // --- 4. Payments ---

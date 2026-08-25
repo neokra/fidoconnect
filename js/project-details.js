@@ -34,6 +34,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupSkillProfileModal();
   await evaluateAndLoadProject();
 
+  // Check if returning from plans page after membership activation
+  const fromPlan = urlParams.get("from_plan");
+  const membershipActivated = urlParams.get("membership_activated");
+  const currentUser = FidoAuth.getCurrentUser();
+
+  if ((fromPlan === "true" || membershipActivated === "true") && currentUser && currentUser.membershipStatus === "active") {
+    showToast("✓ Membership active! You can now submit your proposal.", "success");
+    restoreApplicationDraft(currentProjectId);
+    setTimeout(() => {
+      openModal("apply-modal");
+    }, 400);
+  }
+
   FidoAuth.onAuthChange(async () => {
     await evaluateAndLoadProject();
   });
@@ -67,6 +80,7 @@ async function evaluateAndLoadProject() {
     // Verified & skill profile complete -> load and verify match
     await loadProjectDetails(currentProjectId);
     setupApplicationForm();
+    restoreApplicationDraft(currentProjectId);
   }
 }
 
@@ -396,15 +410,14 @@ async function renderApplicationCTA() {
     return;
   }
 
-  const apps = await FidoDB.getApplications({
-    projectId: currentProject.projectId || currentProject.id,
+  const userApps = await FidoDB.getApplications({
     freelancerId: currentUser.uid
   });
 
-  const hasApplied = apps.length > 0;
+  const thisProjId = currentProject.projectId || currentProject.id;
+  const thisProjectApp = userApps.find(a => a.projectId === thisProjId || a.projectId === currentProject.id || a.projectId === currentProject.projectId);
 
-  if (hasApplied) {
-    const app = apps[0];
+  if (thisProjectApp) {
     ctaContainer.innerHTML = `
       <div class="card" style="border: 2px solid var(--color-primary-light); background-color: var(--bg-surface);">
         <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem;">
@@ -415,10 +428,33 @@ async function renderApplicationCTA() {
           Your proposal is under agency review.
         </p>
         <div style="font-size:0.82rem; color:var(--text-muted); background:var(--bg-subtle); padding:0.6rem; border-radius:var(--radius-sm); margin-bottom:0.75rem;">
-          Status: <strong>${app.status || "Submitted"}</strong><br/>
-          Submitted: ${formatDate(app.createdAt)}
+          Status: <strong>${thisProjectApp.status || "Submitted"}</strong><br/>
+          Submitted: ${formatDate(thisProjectApp.createdAt)}
         </div>
         <a href="account.html" class="btn btn-secondary btn-sm btn-block">View in Account</a>
+      </div>
+    `;
+    return;
+  }
+
+  // Check if freelancer has an active application on another project (1 active application rule)
+  const activeAppOther = userApps.find(a => 
+    !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(a.status)
+  );
+
+  if (activeAppOther) {
+    ctaContainer.innerHTML = `
+      <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--status-submitted);">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--status-submitted);"></span>
+          <h4 style="margin:0; font-size:0.98rem;">Active Application in Progress</h4>
+        </div>
+        <p class="text-muted" style="font-size:0.84rem; line-height:1.5; margin-bottom:0.75rem;">
+          You currently have an active proposal for project <strong>${activeAppOther.projectId}</strong> (Status: <strong>${activeAppOther.status || "Submitted"}</strong>, Submitted: ${formatDate(activeAppOther.createdAt)}). Freelancers can have one active application at a time.
+        </p>
+        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+          <a href="account.html" class="btn btn-secondary btn-sm btn-block">View Active Application in Account</a>
+        </div>
       </div>
     `;
     return;
@@ -438,11 +474,56 @@ async function renderApplicationCTA() {
       </button>
 
       <div style="margin-top:0.75rem; font-size:0.78rem; color:var(--text-muted); text-align:center;">
-        ${isMemberActive ? "✓ Active Member Account" : "Agency managed coordination"}
+        ${isMemberActive ? '<span style="color:var(--color-teal); font-weight:600;">✓ Active FidoConnect Member</span>' : 'Membership required to submit your application'}
       </div>
     </div>
   `;
 }
+
+function restoreApplicationDraft(projectId) {
+  if (!projectId) return;
+  try {
+    const raw = sessionStorage.getItem("fc_app_draft_" + projectId);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (draft.message) {
+      const msgEl = document.getElementById("appMessage");
+      if (msgEl) msgEl.value = draft.message;
+    }
+    if (draft.deliveryDays) {
+      const delEl = document.getElementById("appDeliveryTime");
+      if (delEl) delEl.value = draft.deliveryDays;
+    }
+    if (draft.portfolio) {
+      const portEl = document.getElementById("appPortfolio");
+      if (portEl) portEl.value = draft.portfolio;
+    }
+  } catch (e) {
+    console.warn("Could not restore application draft:", e);
+  }
+}
+
+window.handleMembershipModalClose = function() {
+  closeModal("membership-required-modal");
+  openModal("apply-modal");
+};
+
+window.handleViewMembershipPlans = function() {
+  const msg = document.getElementById("appMessage") ? document.getElementById("appMessage").value.trim() : "";
+  const delivery = document.getElementById("appDeliveryTime") ? document.getElementById("appDeliveryTime").value.trim() : "";
+  const portfolio = document.getElementById("appPortfolio") ? document.getElementById("appPortfolio").value.trim() : "";
+
+  if (currentProjectId) {
+    sessionStorage.setItem("fc_app_draft_" + currentProjectId, JSON.stringify({
+      message: msg,
+      deliveryDays: delivery,
+      portfolio: portfolio
+    }));
+  }
+
+  closeModal("membership-required-modal");
+  window.location.href = `account.html?tab=membership&return_project=${encodeURIComponent(currentProjectId)}`;
+};
 
 function setupApplicationForm() {
   const form = document.getElementById("application-form");
@@ -472,12 +553,42 @@ function setupApplicationForm() {
       return;
     }
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting Proposal...";
+    // Save draft in session
+    const targetProjId = currentProject.projectId || currentProject.id;
+    sessionStorage.setItem("fc_app_draft_" + targetProjId, JSON.stringify({
+      message,
+      deliveryDays,
+      portfolio
+    }));
 
+    // Step 1: Check Membership Gate BEFORE Application Submission
+    if (currentUser.role === "freelancer" && currentUser.membershipStatus !== "active") {
+      closeModal("apply-modal");
+      openModal("membership-required-modal");
+      return;
+    }
+
+    // Step 2: One active application check
     try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Verifying...";
+
+      const userApps = await FidoDB.getApplications({ freelancerId: currentUser.uid });
+      const activeApp = userApps.find(a => 
+        !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(a.status)
+      );
+
+      if (activeApp && activeApp.projectId !== targetProjId) {
+        showToast(`You already have an active application for project ${activeApp.projectId}. Freelancers can have one active application at a time.`, "error");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Application";
+        return;
+      }
+
+      submitBtn.textContent = "Submitting Proposal...";
+
       await FidoDB.createApplication({
-        projectId: currentProject.projectId || currentProject.id,
+        projectId: targetProjId,
         freelancerId: currentUser.uid,
         freelancerName: currentUser.name,
         freelancerEmail: currentUser.email,
@@ -487,12 +598,15 @@ function setupApplicationForm() {
         deliveryDays: deliveryDays || "Flexible"
       });
 
+      sessionStorage.removeItem("fc_app_draft_" + targetProjId);
+
       closeModal("apply-modal");
       showToast("Proposal submitted successfully!", "success");
       await renderApplicationCTA();
 
     } catch (err) {
       showToast(err.message || "Failed to submit proposal.", "error");
+    } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Submit Application";
     }
