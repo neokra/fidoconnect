@@ -157,6 +157,20 @@ p {
   padding-bottom: 3.5rem;
 }
 
+/* --- Page Header (inner-page h1 blocks) --- */
+.page-header-title {
+  font-size: 2.2rem;
+  margin-bottom: 0.4rem;
+}
+
+/* --- Project Details: 2-col sidebar layout --- */
+.layout-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  align-items: start;
+  gap: 2rem;
+}
+
 /* --- Navigation & Header (Desktop) --- */
 .site-header {
   background-color: var(--bg-surface);
@@ -591,6 +605,7 @@ p {
   border-radius: var(--border-radius-lg);
   padding: 2.5rem 2rem;
   margin: 3rem 0;
+  overflow: hidden; /* prevent inner content from expanding beyond rounded card */
 }
 
 .trust-banner h2 {
@@ -723,6 +738,23 @@ p {
 .badge-active { background-color: #ecfdf5; color: #059669; }
 .badge-inactive { background-color: #f1f5f9; color: #64748b; }
 .badge-expired { background-color: #fef2f2; color: #dc2626; }
+
+/* --- Role Badges (compact inline indicators) --- */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--border-radius-full);
+  white-space: nowrap;
+  vertical-align: middle;
+  letter-spacing: 0.01em;
+}
+.role-badge-client     { background-color: #e0f2fe; color: #0369a1; }
+.role-badge-freelancer { background-color: #f0fdf4; color: #166534; }
+.role-badge-admin      { background-color: #fef3c7; color: #92400e; }
 
 /* --- Forms & Controls --- */
 .form-group {
@@ -1074,6 +1106,9 @@ textarea.form-control {
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
+  .layout-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1122,6 +1157,39 @@ textarea.form-control {
   .header-actions .btn-post-desktop {
     display: none;
   }
+
+  /* Page header h1 on inner pages */
+  .page-header-title {
+    font-size: 1.65rem;
+  }
+
+  /* Project card footer: stack on mobile */
+  .project-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  /* Project meta grid: tighten min column width */
+  .project-meta-grid {
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  }
+
+  /* Trust banner inner flex: allow wrapping without overflow */
+  .trust-banner > div {
+    flex-direction: column;
+  }
+
+  /* Toast: prevent clipping beyond viewport */
+  #toast-container {
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+  .toast {
+    min-width: unset;
+    max-width: 100%;
+    width: 100%;
+  }
 }
 
 @media (max-width: 540px) {
@@ -1168,6 +1236,36 @@ textarea.form-control {
   .modal-card {
     padding: 1.25rem 1rem;
     max-height: 94vh;
+  }
+
+  /* Hero on very small phones */
+  .hero-title {
+    font-size: 1.65rem;
+  }
+
+  .hero-section {
+    padding: 2.25rem 0 1.75rem;
+  }
+
+  /* Inner page headers */
+  .page-header-title {
+    font-size: 1.45rem;
+  }
+
+  /* Section titles */
+  .section-title {
+    font-size: 1.45rem;
+  }
+
+  /* Trust banner padding */
+  .trust-banner {
+    padding: 1.75rem 1.25rem;
+    margin: 2rem 0;
+  }
+
+  /* Account header: allow button group to wrap */
+  .account-header-actions {
+    flex-wrap: wrap;
   }
 }
 

@@ -68,10 +68,13 @@ async function renderAdminAccountView(container) {
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
         <div>
-          <h2>${currentUser.name || "Administrator"}</h2>
-          <p class="text-muted">${currentUser.email} • Designated FidoConnect Administrator</p>
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+            <h2 style="margin:0;">${currentUser.name || "Administrator"}</h2>
+            <span class="role-badge role-badge-admin">⚙ Admin</span>
+          </div>
+          <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
         </div>
-        <div>
+        <div class="account-header-actions" style="display:flex; gap:0.5rem; align-items:center;">
           <button id="admin-account-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
         </div>
       </div>
@@ -163,12 +166,15 @@ async function renderClientView(container) {
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
         <div>
-          <h2>${currentUser.businessName || currentUser.name}</h2>
-          <p class="text-muted">${currentUser.email} • Client Account</p>
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+            <h2 style="margin:0;">${currentUser.businessName || currentUser.name}</h2>
+            <span class="role-badge role-badge-client">👤 Client</span>
+          </div>
+          <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
         </div>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-          <a href="post-work.html" class="btn btn-primary">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <div class="account-header-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <a href="post-work.html" class="btn btn-primary btn-sm">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             Post a Work
           </a>
           <button id="client-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
@@ -273,13 +279,16 @@ async function renderFreelancerView(container) {
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
         <div>
-          <h2>${currentUser.name}</h2>
-          <p class="text-muted">${currentUser.email} • Freelancer Network</p>
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+            <h2 style="margin:0;">${currentUser.name}</h2>
+            <span class="role-badge role-badge-freelancer">🔗 Freelancer</span>
+            <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
+              ${isMemberActive ? "✓ Active" : "○ Inactive"}
+            </span>
+          </div>
+          <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
         </div>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-          <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}" style="font-size:0.88rem; padding:0.4rem 0.8rem;">
-            ● Membership: ${isMemberActive ? "Active Member" : "Not Active"}
-          </span>
+        <div class="account-header-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
           <button id="freelancer-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
         </div>
       </div>
@@ -400,10 +409,10 @@ async function renderFreelancerView(container) {
 
     <div id="freelancer-profile-tab" class="tab-pane">
       <div class="card" style="max-width: 600px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
           <h3 style="margin:0;">Freelancer Profile</h3>
           <span class="badge ${currentUser.inviteVerified ? "badge-active" : "badge-inactive"}">
-            ${currentUser.inviteVerified ? "✓ Verified Freelancer" : "Standard (Invite Required)"}
+            ${currentUser.inviteVerified ? "✓ Verified" : "○ Invite Required"}
           </span>
         </div>
 
