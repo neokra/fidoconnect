@@ -439,6 +439,10 @@ class AuthService {
         roleLabel = "Admin";
       }
 
+      const isMemberActive = user.membershipStatus === "active";
+      const planName = isMemberActive ? (user.membershipPlan || "Selected Basic") : "Join";
+      const membershipTarget = `account.html?tab=membership`;
+
       container.innerHTML = `
         <div class="header-user-desktop">
           <a href="account.html" class="btn btn-secondary btn-sm" title="My Account">
@@ -446,12 +450,17 @@ class AuthService {
             <span>${(user.name || "Account").split(" ")[0]}</span>
             <span class="brand-badge">${roleLabel}</span>
           </a>
+          <a href="${membershipTarget}" class="btn btn-primary btn-sm ${isMemberActive ? 'header-plan-btn' : ''}" title="${isMemberActive ? 'Your Membership Plan' : 'Join Membership'}">
+            ${isMemberActive ? `⭐ ${planName}` : 'Join'}
+          </a>
           <button id="logout-btn" class="btn btn-secondary btn-sm" title="Sign Out">
             <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
           </button>
         </div>
         <div class="header-user-mobile">
-          <a href="auth.html?mode=register" class="btn btn-primary btn-sm">Join</a>
+          <a href="${membershipTarget}" class="btn btn-primary btn-sm ${isMemberActive ? 'header-plan-btn' : ''}">
+            ${isMemberActive ? `⭐ ${planName}` : 'Join'}
+          </a>
         </div>
       `;
 

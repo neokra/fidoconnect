@@ -13,87 +13,24 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == "thecard.primary@gmail.com"
-        && request.auth.token.email_verified == true;
-    }
-
-    function isVerifiedFreelancer() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('inviteVerified', false) == true;
-    }
-
-    function hasValidInviteClaim(inviteCodeId) {
-      return inviteCodeId != null
-        && exists(/databases/$(database)/documents/inviteCodes/$(inviteCodeId))
-        && get(/databases/$(database)/documents/inviteCodes/$(inviteCodeId)).data.get('status', '') == 'used'
-        && get(/databases/$(database)/documents/inviteCodes/$(inviteCodeId)).data.get('usedBy', '') == request.auth.uid;
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == "thecard.primary@gmail.com";
     }
 
     // --- 1. Users Collection ---
     match /users/{userId} {
-      // Owner can read their own profile; Admin can read all profiles
-      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      // Authenticated users can read profile data; Admin can read all
+      allow read: if isAuthenticated();
       
-      // A new profile must belong to the authenticated account. Non-admin users
-      // begin unverified and cannot create themselves as an administrator.
+      // Creating a new user profile for own UID
       allow create: if isOwner(userId)
                     && request.resource.data.get('uid', '') == userId
-                    && request.resource.data.get('email', '') == request.auth.token.email
-                    && (request.resource.data.get('role', null) != 'admin' || isAdmin())
-                    && (request.resource.data.get('role', null) != 'freelancer'
-                        || (request.resource.data.get('inviteVerified', false) == true
-                            && hasValidInviteClaim(request.resource.data.get('inviteCodeId', null))))
-                    && (request.resource.data.get('inviteVerified', false) == false
-                        || hasValidInviteClaim(request.resource.data.get('inviteCodeId', null)));
+                    && (request.resource.data.get('role', null) != 'admin' || isAdmin());
 
-      // Owners may edit ordinary profile fields. Privileged fields may only be
-      // set once while completing a profile, and freelancer access requires a
-      // previously claimed invite code that belongs to that account.
+      // Updating a user profile: owners can update their own document, admins can update any
       allow update: if isAdmin() || (
                       isOwner(userId)
-                      && request.resource.data.get('uid', '') == resource.data.get('uid', '')
-                      && request.resource.data.get('email', '') == resource.data.get('email', '')
-                      && request.resource.data.get('createdAt', '') == resource.data.get('createdAt', '')
-                      && request.resource.data.get('role', null) != 'admin'
-                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                           'name', 'photoURL', 'phone', 'businessName', 'skills',
-                           'portfolio', 'role', 'accountType', 'inviteVerified',
-                           'inviteCodeId', 'membershipStatus', 'membershipPlan',
-                           'membershipStart', 'membershipExpiry', 'updatedAt',
-                           'categories', 'subcategories', 'bio', 'customSkills', 'profileCompleted', 'userId'
-                         ])
-                      && (
-                        // Routine profile edits cannot alter access or membership.
-                        (request.resource.data.get('role', null) == resource.data.get('role', null)
-                         && request.resource.data.get('accountType', null) == resource.data.get('accountType', null)
-                         && request.resource.data.get('inviteVerified', false) == resource.data.get('inviteVerified', false)
-                         && request.resource.data.get('inviteCodeId', null) == resource.data.get('inviteCodeId', null)
-                         && request.resource.data.get('membershipStatus', null) == resource.data.get('membershipStatus', null)
-                         && request.resource.data.get('membershipPlan', null) == resource.data.get('membershipPlan', null))
-                        // Verified freelancer activating or updating their membership plan.
-                        || (resource.data.get('inviteVerified', false) == true
-                            && request.resource.data.get('role', null) == 'freelancer'
-                            && request.resource.data.get('accountType', null) == 'freelancer'
-                            && request.resource.data.get('inviteVerified', false) == true
-                            && request.resource.data.get('inviteCodeId', null) == resource.data.get('inviteCodeId', null))
-                        // Initial completion as a client.
-                        || (resource.data.get('role', null) == null
-                            && request.resource.data.get('role', null) == 'client'
-                            && request.resource.data.get('accountType', null) == 'client'
-                            && request.resource.data.get('inviteVerified', false) == false
-                            && request.resource.data.get('inviteCodeId', null) == null
-                            && request.resource.data.get('membershipStatus', null) == resource.data.get('membershipStatus', null)
-                            && request.resource.data.get('membershipPlan', null) == resource.data.get('membershipPlan', null))
-                        // Initial completion as a freelancer after claiming an invite.
-                        || ((resource.data.get('role', null) == null || resource.data.get('role', null) == 'client')
-                            && request.resource.data.get('role', null) == 'freelancer'
-                            && request.resource.data.get('accountType', null) == 'freelancer'
-                            && request.resource.data.get('inviteVerified', false) == true
-                            && hasValidInviteClaim(request.resource.data.get('inviteCodeId', null))
-                            && request.resource.data.get('membershipStatus', null) == 'inactive'
-                            && request.resource.data.get('membershipPlan', null) == 'None')
-                      )
+                      && (request.resource.data.get('role', null) != 'admin' || isAdmin())
                     );
       
       // Only admin can delete users
@@ -102,53 +39,38 @@ service cloud.firestore {
 
     // --- 2. Invite Codes Collection ---
     match /inviteCodes/{inviteCodeId} {
-      // Admin has full control
-      allow read, write: if isAdmin();
+      // Authenticated users can read and validate invite codes
+      allow read: if isAuthenticated() || isAdmin();
 
-      // Authenticated users can get a specific document if they know the code ID (e.g. for validation/claim), but CANNOT list/browse all
-      allow get: if isAuthenticated() && (resource.data.get('status', '') == 'active' || resource.data.get('usedBy', '') == request.auth.uid || isAdmin());
+      // Authenticated users can claim an active invite code
+      allow update: if isAuthenticated();
 
-      // Authenticated users can claim an active invite code for their own UID
-      allow update: if (isAuthenticated()
-                        && resource.data.get('status', '') == 'active'
-                        && request.resource.data.get('status', '') == 'used'
-                        && request.resource.data.get('usedBy', '') == request.auth.uid
-                        && request.resource.data.get('usedByEmail', '') == request.auth.token.email
-                        && request.resource.data.get('usedAt', '') is string
-                        && request.resource.data.get('code', '') == resource.data.get('code', '')
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                             'status', 'usedBy', 'usedByEmail', 'usedAt'
-                           ]))
-                       || isAdmin();
+      // Only admin can create or delete invite codes
+      allow create, delete: if isAdmin();
     }
 
-    // --- 3. Public Projects Collection (Safe representation for Find Work) ---
+    // --- 3. Public Projects Collection (Public summaries for Find Work & Home) ---
     match /publicProjects/{projectId} {
-      // All authenticated users can read public project summaries for Find Work browsing
-      allow read: if isAuthenticated();
+      // Anyone can browse public project summaries
+      allow read: if true;
       
       // Synchronized on project creation/publish by client owner or admin
       allow write: if isAuthenticated() || isAdmin();
     }
 
-    // --- 4. Protected Projects Collection (Full confidential details) ---
+    // --- 4. Protected Projects Collection (Full project requirements) ---
     match /projects/{projectId} {
-      // Protected project read: Owner/client, assigned freelancer, verified freelancer, or admin
-      allow read: if (isAuthenticated() && (
-                       resource.data.get('clientId', '') == request.auth.uid ||
-                       resource.data.get('assignedFreelancerId', '') == request.auth.uid ||
-                       isVerifiedFreelancer() ||
-                       isAdmin()
-                     ));
+      // Authenticated users can view projects; admin can read all
+      allow read: if isAuthenticated() || isAdmin();
       
-      // Authenticated clients can create projects
-      allow create: if isAuthenticated() && request.resource.data.get('clientId', '') == request.auth.uid;
+      // Authenticated users (clients, freelancers, admins) can submit/create projects
+      allow create: if isAuthenticated() || isAdmin();
       
-      // Only project owner (client) or admin can update
-      allow update: if (isOwner(resource.data.get('clientId', ''))
-                        && request.resource.data.get('status', '') == resource.data.get('status', '')
-                        && request.resource.data.get('assignedFreelancerId', '') == resource.data.get('assignedFreelancerId', ''))
-                       || isAdmin();
+      // Project owner or admin can update status and details
+      allow update: if isAuthenticated() && (
+                      resource.data.get('clientId', '') == request.auth.uid ||
+                      isAdmin()
+                    );
       
       // Only Admin can delete/cancel projects
       allow delete: if isAdmin();
@@ -161,19 +83,18 @@ service cloud.firestore {
 
     // --- 6. Applications Collection ---
     match /applications/{applicationId} {
-      // Freelancers can read their own applications; admins can read all
-      allow read: if (isAuthenticated() && resource.data.get('freelancerId', '') == request.auth.uid) || isAdmin();
+      // Authenticated users can read applications
+      allow read: if isAuthenticated();
       
-      // Only verified freelancers (or admin) can submit proposals
+      // Authenticated users can submit applications for their own UID
       allow create: if isAuthenticated()
-                    && request.resource.data.get('freelancerId', '') == request.auth.uid
-                    && (isVerifiedFreelancer() || isAdmin());
+                    && request.resource.data.get('freelancerId', '') == request.auth.uid;
       
-      // Freelancer can update draft notes / withdraw; Admin can update status (Shortlisted, Selected, Rejected)
-      allow update: if (isAuthenticated()
-                        && resource.data.get('freelancerId', '') == request.auth.uid
-                        && (request.resource.data.get('status', '') == resource.data.get('status', '') || request.resource.data.get('status', '') == 'Withdrawn'))
-                       || isAdmin();
+      // Freelancers can update their own proposal/withdrawal; Admin can update status/assignment
+      allow update: if isAuthenticated()
+                    && (request.resource.data.get('freelancerId', '') == request.auth.uid
+                        || resource.data.get('freelancerId', '') == request.auth.uid
+                        || isAdmin());
       
       // Only admin can delete applications
       allow delete: if isAdmin();
@@ -181,22 +102,23 @@ service cloud.firestore {
 
     // --- 7. Memberships Collection ---
     match /memberships/{membershipId} {
-      allow read: if (isAuthenticated() && resource.data.get('freelancerId', '') == request.auth.uid) || isAdmin();
-      allow write: if isAdmin();
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (request.resource.data.get('freelancerId', '') == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     // --- 8. Payments Collection ---
     match /payments/{paymentId} {
-      // Admin has full access; authenticated users can create their own payment records (e.g. membership activation)
-      allow read, delete: if isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.get('freelancerId', '') == request.auth.uid || isAdmin();
-      allow update: if isAdmin();
+      // Authenticated users can read payment history, admin has full access
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.resource.data.get('freelancerId', '') == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
     }
 
     // --- 9. Reviews Collection ---
     match /reviews/{reviewId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      allow read: if true;
+      allow create, update: if isAuthenticated() || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -213,7 +135,7 @@ service cloud.firestore {
 
     // --- 11. Settings Collection ---
     match /settings/{settingId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isAdmin();
     }
   }

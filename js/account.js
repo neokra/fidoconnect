@@ -28,15 +28,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function setupEventListeners() {
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+  const switchTab = (target) => {
+    document.querySelectorAll(".account-nav-card, .tab-btn").forEach(b => {
+      if (b.getAttribute("data-tab") === target) {
+        b.classList.add("active");
+      } else {
+        b.classList.remove("active");
+      }
+    });
+    document.querySelectorAll(".tab-pane").forEach(p => {
+      if (p.id === target) {
+        p.classList.add("active");
+      } else {
+        p.classList.remove("active");
+      }
+    });
+  };
 
-      btn.classList.add("active");
+  document.querySelectorAll(".account-nav-card, .tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
       const target = btn.getAttribute("data-tab");
-      const pane = document.getElementById(target);
-      if (pane) pane.classList.add("active");
+      if (target) switchTab(target);
     });
   });
 
@@ -44,13 +56,11 @@ function setupEventListeners() {
   const tabParam = urlParams.get("tab") || (urlParams.get("return_project") ? "membership" : "");
   if (tabParam) {
     const tabName = tabParam.endsWith("-tab") ? tabParam : `${tabParam}-tab`;
-    const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
-    if (tabBtn) tabBtn.click();
+    switchTab(tabName);
   } else if (window.location.hash) {
     const hash = window.location.hash.replace("#", "");
     const tabName = hash.endsWith("-tab") ? hash : `${hash}-tab`;
-    const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
-    if (tabBtn) tabBtn.click();
+    switchTab(tabName);
   }
 }
 
@@ -75,185 +85,101 @@ async function renderAccountView() {
 // 1. Administrator Account Portal
 async function renderAdminAccountView(container) {
   const stats = await FidoDB.getDashboardStats();
+  const initials = (currentUser.name || "Admin").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   container.innerHTML = `
-    <div style="margin-bottom: 2rem;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-        <div>
-          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
-            <h2 style="margin:0;">${currentUser.name || "Administrator"}</h2>
-            <span class="role-badge role-badge-admin">⚙ Admin</span>
+    <div class="account-dashboard-wrapper">
+      <!-- Profile Header -->
+      <div class="dashboard-profile-card">
+        <div class="dashboard-user-info">
+          <div class="dashboard-avatar">
+            ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" alt="${currentUser.name || "Admin"}">` : initials}
           </div>
-          <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
+          <div class="dashboard-user-details">
+            <div class="dashboard-user-name-row">
+              <h2 class="dashboard-user-name">${currentUser.name || "Administrator"}</h2>
+            </div>
+            <p class="dashboard-user-email">${currentUser.email}</p>
+            <div class="dashboard-badges-row">
+              <span class="role-badge role-badge-admin">⚙ System Administrator</span>
+              <span class="badge badge-active">✓ Master Access</span>
+            </div>
+          </div>
         </div>
-        <div class="account-header-actions" style="display:flex; gap:0.5rem; align-items:center;">
+        <div class="dashboard-header-actions">
+          <a href="admin.html" class="btn btn-primary btn-sm">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            Admin Panel
+          </a>
           <button id="admin-account-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
         </div>
       </div>
-    </div>
 
-    <!-- Admin Panel Card -->
-    <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 2rem; border-radius: var(--border-radius-lg); margin-bottom: 2rem; box-shadow: var(--shadow-md);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem;">
-        <div>
-          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981;"></span>
-            <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:#93c5fd;">System Control</span>
-          </div>
-          <h3 style="color:white; font-size:1.6rem; margin-bottom:0.35rem;">FidoConnect Admin Panel</h3>
-          <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0;">
-            Manage all 12 agency modules: project requests, approvals, proposals, network members, payments, reviews, invite codes, and client communication.
-          </p>
+      <!-- Quick Stats -->
+      <div class="dashboard-stats-grid">
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">New Requests</span>
+          <span class="dashboard-stat-value" style="color:var(--color-accent);">${stats.newRequests}</span>
+          <span class="dashboard-stat-sub">Pending review</span>
         </div>
-        <div>
-          <a href="admin.html" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-            Open Admin Dashboard
-          </a>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Active Projects</span>
+          <span class="dashboard-stat-value">${stats.activeProjects}</span>
+          <span class="dashboard-stat-sub">In progress / Open</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Proposals</span>
+          <span class="dashboard-stat-value">${stats.pendingApplications}</span>
+          <span class="dashboard-stat-sub">Submitted proposals</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Members</span>
+          <span class="dashboard-stat-value">${stats.activeMembers}</span>
+          <span class="dashboard-stat-sub"><span class="stat-dot-active">●</span> Active freelancers</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Total Users</span>
+          <span class="dashboard-stat-value">${stats.totalUsers}</span>
+          <span class="dashboard-stat-sub">Clients & Freelancers</span>
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid rgba(255,255,255,0.12);">
-        <div>
-          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">New Requests</div>
-          <div style="font-size:1.35rem; font-weight:750; color:#60a5fa;">${stats.newRequests}</div>
-        </div>
-        <div>
-          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Active Projects</div>
-          <div style="font-size:1.35rem; font-weight:750; color:#c084fc;">${stats.activeProjects}</div>
-        </div>
-        <div>
-          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Proposals</div>
-          <div style="font-size:1.35rem; font-weight:750; color:#34d399;">${stats.pendingApplications}</div>
-        </div>
-        <div>
-          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Members</div>
-          <div style="font-size:1.35rem; font-weight:750; color:#2dd4bf;">${stats.activeMembers}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Admin Account Settings -->
-    <div class="card" style="max-width: 600px;">
-      <h3 style="margin-bottom: 1.25rem;">Administrator Profile</h3>
-      <form id="admin-profile-form">
-        <div class="form-group">
-          <label class="form-label">Name</label>
-          <input type="text" id="edit-admin-name" class="form-control" value="${currentUser.name || ""}" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email Address</label>
-          <input type="email" class="form-control" value="${currentUser.email}" disabled style="background:#f1f5f9;" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">WhatsApp / Phone</label>
-          <input type="text" id="edit-admin-phone" class="form-control" value="${currentUser.phone || ""}" />
-        </div>
-        <button type="submit" class="btn btn-primary">Save Profile</button>
-      </form>
-    </div>
-  `;
-
-  document.getElementById("admin-account-logout-btn").addEventListener("click", () => FidoAuth.logout());
-
-  document.getElementById("admin-profile-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      await FidoDB.updateUser(currentUser.uid, {
-        name: document.getElementById("edit-admin-name").value.trim(),
-        phone: document.getElementById("edit-admin-phone").value.trim()
-      });
-      showToast("Administrator profile updated", "success");
-    } catch (err) {
-      showToast("Failed to update profile: " + err.message, "error");
-    }
-  });
-}
-
-// 2. Client Account Portal
-async function renderClientView(container) {
-  const clientProjects = await FidoDB.getProjects({ clientId: currentUser.uid });
-
-  container.innerHTML = `
-    <div style="margin-bottom: 2rem;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-        <div>
-          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
-            <h2 style="margin:0;">${currentUser.businessName || currentUser.name}</h2>
-            <span class="role-badge role-badge-client">👤 Client</span>
-          </div>
-          <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
-        </div>
-        <div class="account-header-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-          <a href="post-work.html" class="btn btn-primary btn-sm">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Post a Work
-          </a>
-          <button id="client-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="tab-nav">
-      <button class="tab-btn active" data-tab="client-projects-tab">My Projects (${clientProjects.length})</button>
-      <button class="tab-btn" data-tab="client-profile-tab">Account Details</button>
-    </div>
-
-    <div id="client-projects-tab" class="tab-pane active">
-      ${clientProjects.length === 0 ? `
-        <div class="card text-center" style="padding: 3rem 1rem;">
-          <h4>No submitted projects yet</h4>
-          <p class="text-muted" style="margin: 0.4rem 0 1.25rem;">Have a website update, design, or business task you need done?</p>
-          <a href="post-work.html" class="btn btn-primary">Post Your First Project</a>
-        </div>
-      ` : `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          ${clientProjects.map(proj => `
-            <div class="card" style="padding: 1.25rem;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
-                    <span class="project-id-badge">${proj.projectId || proj.id}</span>
-                    <span class="project-category-badge">${proj.category}</span>
-                    ${getStatusBadge(proj.status)}
-                  </div>
-                  <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
-                  <p class="text-muted" style="font-size:0.88rem;">${proj.description}</p>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong>${proj.budget}</strong></div>
-                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
-                </div>
-              </div>
-              <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--text-muted);">
-                <span>Agency Update: <em style="color:var(--color-primary);">${proj.agencyNotes || "Under agency review"}</em></span>
-                <span>Submitted: ${formatDate(proj.createdAt)}</span>
-              </div>
+      <!-- Admin Panel Callout Card -->
+      <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 2rem; border-radius: var(--border-radius-lg); margin-bottom: 2rem; box-shadow: var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem;">
+          <div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+              <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981;"></span>
+              <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:#93c5fd;">System Control</span>
             </div>
-          `).join("")}
-        </div>
-      `}
-    </div>
-
-    <div id="client-profile-tab" class="tab-pane">
-      <div class="card" style="max-width: 600px;">
-        <h3 style="margin-bottom: 1.25rem;">Business & Contact Information</h3>
-        <form id="client-profile-form">
-          <div class="form-group">
-            <label class="form-label">Contact Name</label>
-            <input type="text" id="edit-client-name" class="form-control" value="${currentUser.name || ""}" required />
+            <h3 style="color:white; font-size:1.5rem; margin-bottom:0.35rem;">FidoConnect Admin Console</h3>
+            <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0;">
+              Manage all 12 agency modules: project requests, approvals, proposals, network members, payments, reviews, invite codes, and client communication.
+            </p>
           </div>
+          <div>
+            <a href="admin.html" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
+              Open Full Console &rarr;
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Account Settings -->
+      <div class="card" style="max-width: 600px;">
+        <h3 style="margin-bottom: 1.25rem;">Administrator Profile</h3>
+        <form id="admin-profile-form">
           <div class="form-group">
-            <label class="form-label">Business / Organization Name</label>
-            <input type="text" id="edit-client-business" class="form-control" value="${currentUser.businessName || ""}" />
+            <label class="form-label">Name</label>
+            <input type="text" id="edit-admin-name" class="form-control" value="${currentUser.name || ""}" required />
           </div>
           <div class="form-group">
             <label class="form-label">Email Address</label>
-            <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
+            <input type="email" class="form-control" value="${currentUser.email}" disabled style="background:#f1f5f9;" />
           </div>
           <div class="form-group">
-            <label class="form-label">WhatsApp / Phone Number</label>
-            <input type="text" id="edit-client-phone" class="form-control" value="${currentUser.phone || ""}" />
+            <label class="form-label">WhatsApp / Phone</label>
+            <input type="text" id="edit-admin-phone" class="form-control" value="${currentUser.phone || ""}" />
           </div>
           <button type="submit" class="btn btn-primary">Save Changes</button>
         </form>
@@ -261,7 +187,210 @@ async function renderClientView(container) {
     </div>
   `;
 
+  document.getElementById("admin-account-logout-btn").addEventListener("click", () => FidoAuth.logout());
+
+  const profForm = document.getElementById("admin-profile-form");
+  if (profForm) {
+    profForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await FidoDB.updateUser(currentUser.uid, {
+          name: document.getElementById("edit-admin-name").value.trim(),
+          phone: document.getElementById("edit-admin-phone").value.trim()
+        });
+        showToast("Profile updated successfully", "success");
+      } catch (err) {
+        showToast("Failed to update profile: " + err.message, "error");
+      }
+    });
+  }
+}
+
+// 2. Client Account Portal
+async function renderClientView(container) {
+  const clientProjects = await FidoDB.getProjects({ clientId: currentUser.uid });
+  const activeCount = clientProjects.filter(p => ["Approved", "Published", "In Progress", "Applications Open", "Submitted"].includes(p.status)).length;
+  const initials = (currentUser.businessName || currentUser.name || "Client").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+
+  container.innerHTML = `
+    <div class="account-dashboard-wrapper">
+      <!-- Profile Header -->
+      <div class="dashboard-profile-card">
+        <div class="dashboard-user-info">
+          <div class="dashboard-avatar">
+            ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" alt="${currentUser.name || "Client"}">` : initials}
+          </div>
+          <div class="dashboard-user-details">
+            <div class="dashboard-user-name-row">
+              <h2 class="dashboard-user-name">${currentUser.businessName || currentUser.name || "Client"}</h2>
+            </div>
+            <p class="dashboard-user-email">${currentUser.email}</p>
+            <div class="dashboard-badges-row">
+              <span class="role-badge role-badge-client">👤 Client Account</span>
+              <span class="badge badge-active">✓ Verified Client</span>
+            </div>
+          </div>
+        </div>
+        <div class="dashboard-header-actions">
+          <a href="post-work.html" class="btn btn-primary btn-sm">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Post a Work
+          </a>
+          <button id="client-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="dashboard-stats-grid dashboard-stats-grid-client">
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Account Role</span>
+          <span class="dashboard-stat-value" style="font-size:1.05rem;">Client / Business</span>
+          <span class="dashboard-stat-sub"><span class="stat-dot-active">●</span> Active account</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Total Projects</span>
+          <span class="dashboard-stat-value">${clientProjects.length}</span>
+          <span class="dashboard-stat-sub">${clientProjects.length === 1 ? "1 project posted" : `${clientProjects.length} total posted`}</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Active Work</span>
+          <span class="dashboard-stat-value" style="color:var(--color-accent);">${activeCount}</span>
+          <span class="dashboard-stat-sub">In progress or open</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Status</span>
+          <span class="dashboard-stat-value" style="color:#10b981;">Active</span>
+          <span class="dashboard-stat-sub">Good standing</span>
+        </div>
+      </div>
+
+      <!-- Account Navigation Cards -->
+      <div class="account-nav-grid account-nav-grid-client">
+        <div class="account-nav-card active" data-tab="client-projects-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">💼 My Projects</span>
+            <span class="account-nav-card-badge">${clientProjects.length}</span>
+          </div>
+          <p class="account-nav-card-desc">Track your submitted project requests</p>
+        </div>
+        <div class="account-nav-card" data-tab="client-profile-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">👤 Business Profile</span>
+          </div>
+          <p class="account-nav-card-desc">Organization and contact details</p>
+        </div>
+        <div class="account-nav-card" data-tab="client-settings-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">⚙️ Account Settings</span>
+          </div>
+          <p class="account-nav-card-desc">Manage account preferences</p>
+        </div>
+      </div>
+
+      <!-- Tab 1: My Projects -->
+      <div id="client-projects-tab" class="tab-pane active">
+        ${clientProjects.length === 0 ? `
+          <div class="card text-center" style="padding: 3rem 1rem;">
+            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <h4>No submitted projects yet</h4>
+            <p class="text-muted" style="margin: 0.4rem 0 1.25rem;">Have a website update, design, data entry, or business task you need done?</p>
+            <a href="post-work.html" class="btn btn-primary">Post Your First Project</a>
+          </div>
+        ` : `
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+            ${clientProjects.map(proj => `
+              <div class="card" style="padding: 1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                      <span class="project-id-badge">${proj.projectId || proj.id}</span>
+                      <span class="project-category-badge">${proj.category}</span>
+                      ${getStatusBadge(proj.status)}
+                    </div>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
+                    <p class="text-muted" style="font-size:0.88rem; line-height:1.5;">${proj.description}</p>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
+                  </div>
+                </div>
+                <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--text-muted); flex-wrap:wrap; gap:0.5rem;">
+                  <span>Agency Coordination: <em style="color:var(--color-primary);">${proj.agencyNotes || "Under review by FidoConnect"}</em></span>
+                  <span>Submitted: ${formatDate(proj.createdAt)}</span>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      </div>
+
+      <!-- Tab 2: Business Profile -->
+      <div id="client-profile-tab" class="tab-pane">
+        <div class="card" style="max-width: 640px;">
+          <h3 style="margin-bottom: 1.25rem;">Business & Contact Information</h3>
+          <form id="client-profile-form">
+            <div class="form-group">
+              <label class="form-label">Contact Name</label>
+              <input type="text" id="edit-client-name" class="form-control" value="${currentUser.name || ""}" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Business / Organization Name</label>
+              <input type="text" id="edit-client-business" class="form-control" value="${currentUser.businessName || ""}" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">WhatsApp / Phone Number</label>
+              <input type="text" id="edit-client-phone" class="form-control" value="${currentUser.phone || ""}" />
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab 3: Account Settings -->
+      <div id="client-settings-tab" class="tab-pane">
+        <div class="settings-section-card">
+          <h3 style="margin-bottom: 1rem;">Account Preferences</h3>
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Account Role</span>
+            <span class="settings-meta-val">Client / Work Poster</span>
+          </div>
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Primary Email</span>
+            <span class="settings-meta-val">${currentUser.email}</span>
+          </div>
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">User ID</span>
+            <span class="settings-meta-val font-mono" style="font-size:0.8rem;">${currentUser.uid}</span>
+          </div>
+        </div>
+
+        <div class="settings-section-card">
+          <h3 style="margin-bottom: 0.5rem;">Password & Security</h3>
+          <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Request a password reset link sent directly to your registered email address.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-send-reset-client">Send Password Reset Link</button>
+        </div>
+      </div>
+    </div>
+  `;
+
   document.getElementById("client-logout-btn").addEventListener("click", () => FidoAuth.logout());
+
+  const resetBtn = document.getElementById("btn-send-reset-client");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", async () => {
+      try {
+        await FidoAuth.resetPassword(currentUser.email);
+        showToast("Password reset link sent to " + currentUser.email, "success");
+      } catch (err) {
+        showToast(err.message || "Failed to send reset link", "error");
+      }
+    });
+  }
 
   const profForm = document.getElementById("client-profile-form");
   if (profForm) {
@@ -288,347 +417,451 @@ async function renderFreelancerView(container) {
   const isMemberActive = currentUser.membershipStatus === "active";
   const urlParams = new URLSearchParams(window.location.search);
   const returnProject = urlParams.get("return_project");
+  const initials = (currentUser.name || "Freelancer").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   container.innerHTML = `
-    <div style="margin-bottom: 2rem;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-        <div>
-          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.25rem;">
-            <h2 style="margin:0;">${currentUser.name}</h2>
-            <span class="role-badge role-badge-freelancer">🔗 Freelancer</span>
-            <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
-              ${isMemberActive ? `✓ ${currentUser.membershipPlan || "Active Member"}` : "○ Inactive Member"}
-            </span>
+    <div class="account-dashboard-wrapper">
+      <!-- 1. Profile Header -->
+      <div class="dashboard-profile-card">
+        <div class="dashboard-user-info">
+          <div class="dashboard-avatar">
+            ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" alt="${currentUser.name || "Freelancer"}">` : initials}
           </div>
-          <p class="text-muted" style="font-size:0.88rem; margin:0;">${currentUser.email}</p>
+          <div class="dashboard-user-details">
+            <div class="dashboard-user-name-row">
+              <h2 class="dashboard-user-name">${currentUser.name || "Freelancer"}</h2>
+            </div>
+            <p class="dashboard-user-email">${currentUser.email}</p>
+            <div class="dashboard-badges-row">
+              <span class="role-badge role-badge-freelancer">✓ Freelancer</span>
+              ${currentUser.inviteVerified ? `<span class="badge badge-active">✓ Verified</span>` : `<span class="badge badge-inactive">○ Unverified</span>`}
+              <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
+                ${isMemberActive ? `✓ ${currentUser.membershipPlan || "Selected Basic"}` : "○ Inactive Member"}
+              </span>
+            </div>
+          </div>
         </div>
-        <div class="account-header-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <div class="dashboard-header-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Edit Skills
+          </button>
           <button id="freelancer-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
         </div>
       </div>
-    </div>
 
-    <div class="tab-nav">
-      <button class="tab-btn active" data-tab="freelancer-apps-tab">My Applications (${applications.length})</button>
-      <button class="tab-btn" data-tab="freelancer-projects-tab">Assigned Projects (${activeProjects.length})</button>
-      <button class="tab-btn" data-tab="membership-tab">Membership Plans</button>
-      <button class="tab-btn" data-tab="freelancer-profile-tab">Profile & Skills</button>
-    </div>
-
-    <div id="freelancer-apps-tab" class="tab-pane active">
-      ${applications.length === 0 ? `
-        <div class="card text-center" style="padding: 3rem 1rem;">
-          <h4>No applications submitted yet</h4>
-          <p class="text-muted" style="margin: 0.4rem 0 1.25rem;">Browse available projects curated by FidoConnect and apply.</p>
-          <a href="find-work.html" class="btn btn-primary">Find Available Work</a>
+      <!-- 2. Account Summary & Quick Stats Area -->
+      <div class="dashboard-stats-grid">
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Membership</span>
+          <span class="dashboard-stat-value" style="font-size:1.05rem;">${isMemberActive ? (currentUser.membershipPlan || "Selected Basic") : "No Plan"}</span>
+          <span class="dashboard-stat-sub">
+            ${isMemberActive ? `<span class="stat-dot-active">●</span> Active` : `<span class="stat-dot-inactive">●</span> Inactive`}
+          </span>
         </div>
-      ` : `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          ${applications.map(app => {
-            const isActionable = !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(app.status);
-            return `
-              <div class="card" style="padding: 1.25rem;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
-                  <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
-                      <span class="project-id-badge">${app.projectId}</span>
-                      ${getStatusBadge(app.status)}
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Status</span>
+          <span class="dashboard-stat-value" style="${isMemberActive ? "color:#10b981;" : "color:var(--text-muted);"}">${isMemberActive ? "Active" : "Inactive"}</span>
+          <span class="dashboard-stat-sub">${isMemberActive ? "Member in good standing" : "Upgrade to apply"}</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Applications</span>
+          <span class="dashboard-stat-value" style="color:var(--color-accent);">${applications.length}</span>
+          <span class="dashboard-stat-sub">${applications.length === 1 ? "1 submitted" : `${applications.length} submitted`}</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Assigned Projects</span>
+          <span class="dashboard-stat-value">${activeProjects.length}</span>
+          <span class="dashboard-stat-sub">${activeProjects.length === 0 ? "None assigned" : `${activeProjects.length} in progress`}</span>
+        </div>
+        <div class="dashboard-stat-card">
+          <span class="dashboard-stat-label">Profile</span>
+          <span class="dashboard-stat-value" style="color:${currentUser.profileCompleted ? "#10b981" : "#f59e0b"};">${currentUser.profileCompleted ? "Verified" : "Incomplete"}</span>
+          <span class="dashboard-stat-sub">${currentUser.profileCompleted ? "✓ Skills mapped" : "Setup needed"}</span>
+        </div>
+      </div>
+
+      <!-- 3. Redesigned Account Navigation Cards -->
+      <div class="account-nav-grid">
+        <div class="account-nav-card active" data-tab="freelancer-apps-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">📋 My Applications</span>
+            <span class="account-nav-card-badge">${applications.length}</span>
+          </div>
+          <p class="account-nav-card-desc">Track your submitted applications</p>
+        </div>
+
+        <div class="account-nav-card" data-tab="freelancer-projects-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">💼 Assigned Projects</span>
+            <span class="account-nav-card-badge">${activeProjects.length}</span>
+          </div>
+          <p class="account-nav-card-desc">Projects currently assigned to you</p>
+        </div>
+
+        <div class="account-nav-card" data-tab="membership-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">⭐ Membership</span>
+            <span class="account-nav-card-badge">${isMemberActive ? "Active" : "Plans"}</span>
+          </div>
+          <p class="account-nav-card-desc">View your membership and plan</p>
+        </div>
+
+        <div class="account-nav-card" data-tab="freelancer-profile-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">👤 Profile & Skills</span>
+            <span class="account-nav-card-badge">${currentUser.profileCompleted ? "✓" : "!"}</span>
+          </div>
+          <p class="account-nav-card-desc">Your freelancer information</p>
+        </div>
+
+        <div class="account-nav-card" data-tab="freelancer-settings-tab">
+          <div class="account-nav-card-head">
+            <span class="account-nav-card-title">⚙️ Account Settings</span>
+          </div>
+          <p class="account-nav-card-desc">Manage account preferences</p>
+        </div>
+      </div>
+
+      <!-- 4. Section 1: My Applications Tab Pane -->
+      <div id="freelancer-apps-tab" class="tab-pane active">
+        ${applications.length === 0 ? `
+          <div class="card text-center" style="padding: 3rem 1rem;">
+            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <h4 style="margin-bottom:0.35rem;">No active applications</h4>
+            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Matching opportunities will appear in Find Work.</p>
+            <a href="find-work.html" class="btn btn-primary">Find Available Work</a>
+          </div>
+        ` : `
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+            ${applications.map(app => {
+              const isActionable = !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(app.status);
+              return `
+                <div class="card" style="padding: 1.25rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:0;">
+                      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                        <span class="project-id-badge">${app.projectId}</span>
+                        ${getStatusBadge(app.status)}
+                      </div>
+                      <p style="font-size:0.95rem; margin-top:0.3rem; line-height:1.5;">"${app.message}"</p>
+                      <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem;">
+                        Estimated Delivery: <strong>${app.deliveryDays}</strong>
+                      </div>
                     </div>
-                    <p style="font-size:0.95rem; margin-top:0.3rem;">"${app.message}"</p>
-                    <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem;">
-                      Estimated Delivery: <strong>${app.deliveryDays}</strong>
-                    </div>
-                  </div>
-                  <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
-                    <span style="font-size:0.8rem; color:var(--text-muted);">Applied: ${formatDate(app.createdAt)}</span>
-                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
-                      <a href="project-details.html?id=${app.projectId}" class="btn btn-secondary btn-sm">View Project</a>
-                      ${isActionable ? `
-                        <button type="button" class="btn btn-sm" style="color:var(--status-cancelled); border:1px solid var(--border-color); background:var(--bg-surface);" onclick="handleWithdrawApplication('${app.id}')">
-                          Withdraw
-                        </button>
-                      ` : ''}
+                    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+                      <span style="font-size:0.8rem; color:var(--text-muted);">Applied: ${formatDate(app.createdAt)}</span>
+                      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
+                        <a href="project-details.html?id=${app.projectId}" class="btn btn-secondary btn-sm">View Project</a>
+                        ${isActionable ? `
+                          <button type="button" class="btn btn-sm" style="color:var(--status-cancelled); border:1px solid var(--border-color); background:var(--bg-surface);" onclick="handleWithdrawApplication('${app.id}')">
+                            Withdraw
+                          </button>
+                        ` : ''}
+                      </div>
                     </div>
                   </div>
                 </div>
+              `;
+            }).join("")}
+          </div>
+        `}
+      </div>
+
+      <!-- 5. Section 2: Assigned Projects Tab Pane -->
+      <div id="freelancer-projects-tab" class="tab-pane">
+        ${activeProjects.length === 0 ? `
+          <div class="card text-center" style="padding: 3rem 1rem;">
+            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <h4 style="margin-bottom:0.35rem;">No assigned projects yet</h4>
+            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Selected projects matching your skills will appear here.</p>
+            <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
+          </div>
+        ` : `
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+            ${activeProjects.map(proj => `
+              <div class="card" style="padding: 1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                      <span class="project-id-badge">${proj.projectId || proj.id}</span>
+                      <span class="project-category-badge">${proj.category}</span>
+                      ${getStatusBadge(proj.status)}
+                    </div>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
+                    <p class="text-muted" style="font-size:0.88rem; line-height:1.5;">${proj.description}</p>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
+                  </div>
+                </div>
+                <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); font-size:0.82rem; color:var(--text-muted);">
+                  Agency Notes: <em style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</em>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      </div>
+
+      <!-- 6. Section 3: Membership Tab Pane -->
+      <div id="membership-tab" class="tab-pane">
+        <!-- Section Header -->
+        <div style="margin-bottom: 2rem;">
+          <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.4rem;">
+            <span style="width:8px; height:8px; border-radius:50%; background:var(--color-accent);"></span>
+            Selected Freelancer Program
+          </div>
+          <h2 style="font-size: 1.85rem; margin-bottom: 0.4rem;">Plans for Selected Members</h2>
+          <p class="text-muted" style="font-size: 1rem; max-width: 720px; line-height: 1.6; margin-bottom: 0.5rem;">
+            FidoConnect memberships are available to selected freelancers through our invite-only program.
+          </p>
+          <p style="font-size: 0.88rem; color: var(--color-primary-muted); max-width: 720px; line-height: 1.6;">
+            You reached this page through a FidoConnect invitation. Your skills have been reviewed and verified, giving you access to membership plans designed for selected freelancers.
+          </p>
+        </div>
+
+        <!-- Current Membership Banner / Project Return Prompt -->
+        ${isMemberActive ? `
+          <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 2rem; padding: 1.25rem 1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+              <div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-teal);"></span>
+                  <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--color-teal);">Current Active Membership</span>
+                </div>
+                <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-top:2px;">
+                  ${currentUser.membershipPlan || "Selected Basic"}
+                </div>
+                <div style="font-size:0.85rem; color:var(--color-primary-muted); margin-top:2px;">
+                  Active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.
+                </div>
+              </div>
+              ${returnProject ? `
+                <div>
+                  <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary">
+                    Return to Project (${returnProject}) & Complete Application &rarr;
+                  </a>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        ` : (returnProject ? `
+          <div class="notice-box notice-warning" style="margin-bottom: 2rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+              <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
+            </div>
+          </div>
+        ` : '')}
+
+        <!-- 3 Membership Tiers Grid -->
+        <div class="plans-grid">
+          ${Object.values(MEMBERSHIP_PLANS).map(plan => {
+            const isCurrentPlan = isMemberActive && (currentUser.membershipPlan === plan.name);
+            return `
+              <div class="plan-card ${plan.isRecommended ? "plan-card-recommended" : ""}">
+                ${plan.isRecommended ? `<div class="plan-badge-recommended">Recommended for New Members</div>` : ""}
+
+                <div class="plan-header">
+                  <span class="plan-tagline">${plan.tagline}</span>
+                  <h3 class="plan-title">${plan.name}</h3>
+                  <div class="plan-price-wrap">
+                    <span class="plan-price">${plan.priceDisplay}</span>
+                    <span class="plan-period">${plan.billingCycle}</span>
+                  </div>
+                  <p class="plan-desc">${plan.description}</p>
+                </div>
+
+                <ul class="plan-features-list">
+                  ${plan.features.map(f => `
+                    <li class="plan-feature-item">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                      <span>${f}</span>
+                    </li>
+                  `).join("")}
+                </ul>
+
+                <button 
+                  type="button" 
+                  id="btn-plan-${plan.id}" 
+                  class="btn ${plan.isRecommended ? "btn-primary" : "btn-secondary"} plan-cta-btn"
+                  onclick="handleActivatePlan('${plan.id}')"
+                  ${isCurrentPlan ? "disabled" : ""}
+                >
+                  ${isCurrentPlan ? "✓ Current Active Plan" : (isMemberActive ? 'Switch to ' + plan.name.replace('Selected ', '') : plan.buttonText)}
+                </button>
               </div>
             `;
           }).join("")}
         </div>
-      `}
-    </div>
 
-    <div id="freelancer-projects-tab" class="tab-pane">
-      ${activeProjects.length === 0 ? `
-        <div class="card text-center" style="padding: 3rem 1rem;">
-          <h4>No active assigned projects</h4>
-          <p class="text-muted" style="margin: 0.4rem 0 1.25rem;">When the FidoConnect agency assigns you to a project, it will appear here.</p>
-          <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
-        </div>
-      ` : `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          ${activeProjects.map(proj => `
-            <div class="card" style="padding: 1.25rem;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
-                    <span class="project-id-badge">${proj.projectId || proj.id}</span>
-                    <span class="project-category-badge">${proj.category}</span>
-                    ${getStatusBadge(proj.status)}
-                  </div>
-                  <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
-                  <p class="text-muted" style="font-size:0.88rem;">${proj.description}</p>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong>${proj.budget}</strong></div>
-                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
-                </div>
-              </div>
-              <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); font-size:0.82rem; color:var(--text-muted);">
-                Agency Notes: <em style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</em>
-              </div>
+        <!-- 4-Step Process Section -->
+        <div style="margin-top: 3.5rem; margin-bottom: 2.5rem;">
+          <h3 style="font-size: 1.35rem; margin-bottom: 0.4rem;">How FidoConnect Membership Works</h3>
+          <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1.25rem;">Our invite-only process connects verified professionals with vetted agency opportunities.</p>
+          
+          <div class="membership-steps-grid">
+            <div class="membership-step-card">
+              <div class="membership-step-number">1</div>
+              <div class="membership-step-title">Invited</div>
+              <p class="membership-step-desc">You receive an exclusive invitation to join our curated network.</p>
             </div>
-          `).join("")}
+            <div class="membership-step-card">
+              <div class="membership-step-number">2</div>
+              <div class="membership-step-title">Verified</div>
+              <p class="membership-step-desc">Your freelancer profile and skills are reviewed.</p>
+            </div>
+            <div class="membership-step-card">
+              <div class="membership-step-number">3</div>
+              <div class="membership-step-title">Selected</div>
+              <p class="membership-step-desc">You can access projects that match your verified skills.</p>
+            </div>
+            <div class="membership-step-card">
+              <div class="membership-step-number">4</div>
+              <div class="membership-step-title">Member</div>
+              <p class="membership-step-desc">Activate a membership to submit applications and participate in selected project opportunities.</p>
+            </div>
+          </div>
         </div>
-      `}
-    </div>
 
-    <div id="membership-tab" class="tab-pane">
-      <!-- Section Header -->
-      <div style="margin-bottom: 2rem;">
-        <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.4rem;">
-          <span style="width:8px; height:8px; border-radius:50%; background:var(--color-accent);"></span>
-          Selected Freelancer Program
+        <!-- Transparent Trust Section ("Before you join") -->
+        <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.5rem; max-width: 840px;">
+          <h4 style="font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--color-primary);">Before you join</h4>
+          <p style="font-size: 0.88rem; line-height: 1.6; color: var(--color-primary-muted); margin: 0;">
+            FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand, project requirements, skill match, and agency selection. Membership does not guarantee a specific project, income, or number of completed jobs.
+          </p>
         </div>
-        <h2 style="font-size: 1.85rem; margin-bottom: 0.4rem;">Plans for Selected Members</h2>
-        <p class="text-muted" style="font-size: 1rem; max-width: 720px; line-height: 1.6; margin-bottom: 0.5rem;">
-          FidoConnect memberships are available to selected freelancers through our invite-only program.
-        </p>
-        <p style="font-size: 0.88rem; color: var(--color-primary-muted); max-width: 720px; line-height: 1.6;">
-          You reached this page through a FidoConnect invitation. Your skills have been reviewed and verified, giving you access to membership plans designed for selected freelancers.
-        </p>
       </div>
 
-      <!-- Current Membership Banner / Project Return Prompt -->
-      ${isMemberActive ? `
-        <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 2rem; padding: 1.25rem 1.5rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+      <!-- 7. Section 4: Profile & Skills Tab Pane -->
+      <div id="freelancer-profile-tab" class="tab-pane">
+        <div class="card" style="max-width: 680px; margin-bottom: 1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
             <div>
-              <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-teal);"></span>
-                <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--color-teal);">Current Active Membership</span>
-              </div>
-              <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-top:2px;">
-                ${currentUser.membershipPlan || "Selected Basic"}
-              </div>
-              <div style="font-size:0.85rem; color:var(--color-primary-muted); margin-top:2px;">
-                Active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.
-              </div>
+              <h3 style="margin:0;">Verified Skill Profile & Services</h3>
+              <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Your verified skills determine which projects are unlocked for you in Find Work.</p>
             </div>
-            ${returnProject ? `
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
+              Edit Skills & Bio
+            </button>
+          </div>
+
+          ${currentUser.profileCompleted ? `
+            <div style="display:flex; flex-direction:column; gap:1rem; background:var(--bg-subtle); padding:1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
               <div>
-                <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary">
-                  Return to Project (${returnProject}) & Complete Application &rarr;
-                </a>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      ` : (returnProject ? `
-        <div class="notice-box notice-warning" style="margin-bottom: 2rem;">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <div>
-            <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
-          </div>
-        </div>
-      ` : '')}
-
-      <!-- 3 Membership Tiers Grid -->
-      <div class="plans-grid">
-        ${Object.values(MEMBERSHIP_PLANS).map(plan => {
-          const isCurrentPlan = isMemberActive && (currentUser.membershipPlan === plan.name);
-          return `
-            <div class="plan-card ${plan.isRecommended ? 'plan-card-recommended' : ''}">
-              ${plan.badge ? `<div class="plan-badge-recommended">${plan.badge}</div>` : ''}
-              
-              <div class="plan-header">
-                <div class="plan-tagline">${plan.tagline}</div>
-                <h3 class="plan-title">${plan.name}</h3>
-                <div class="plan-price-wrap">
-                  <span class="plan-price">${plan.priceDisplay}</span>
-                  <span class="plan-period">${plan.billingCycle}</span>
-                </div>
-                <p class="plan-desc">${plan.description}</p>
-              </div>
-
-              <ul class="plan-features-list">
-                ${plan.features.map(f => `
-                  <li class="plan-feature-item">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                    <span>${f}</span>
-                  </li>
-                `).join("")}
-              </ul>
-
-              <div>
-                ${isCurrentPlan ? `
-                  <button type="button" class="btn btn-secondary plan-cta-btn" disabled style="opacity:0.8; cursor:default;">
-                    ✓ Current Active Plan
-                  </button>
-                ` : `
-                  <button type="button" id="btn-plan-${plan.id}" class="btn ${plan.isRecommended ? 'btn-primary' : 'btn-secondary'} plan-cta-btn" onclick="handleActivatePlan('${plan.id}')">
-                    ${isMemberActive ? 'Switch to ' + plan.name.replace('Selected ', '') : plan.buttonText}
-                  </button>
-                `}
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-
-      <!-- How FidoConnect Membership Works Section -->
-      <div style="margin: 3rem 0 2rem;">
-        <h3 style="font-size: 1.35rem; margin-bottom: 0.35rem;">How FidoConnect Membership Works</h3>
-        <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 1.25rem;">Understanding our invite-only selected freelancer network.</p>
-
-        <div class="membership-steps-grid">
-          <div class="membership-step-card">
-            <div class="membership-step-number">1</div>
-            <div class="membership-step-title">Invited</div>
-            <p class="membership-step-desc">You were invited based on your skills and portfolio.</p>
-          </div>
-          <div class="membership-step-card">
-            <div class="membership-step-number">2</div>
-            <div class="membership-step-title">Verified</div>
-            <p class="membership-step-desc">Your freelancer profile and skills are reviewed.</p>
-          </div>
-          <div class="membership-step-card">
-            <div class="membership-step-number">3</div>
-            <div class="membership-step-title">Selected</div>
-            <p class="membership-step-desc">You can access projects that match your verified skills.</p>
-          </div>
-          <div class="membership-step-card">
-            <div class="membership-step-number">4</div>
-            <div class="membership-step-title">Member</div>
-            <p class="membership-step-desc">Activate a membership to submit applications and participate in selected project opportunities.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Transparent Trust Section ("Before you join") -->
-      <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.5rem; max-width: 840px;">
-        <h4 style="font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--color-primary);">Before you join</h4>
-        <p style="font-size: 0.88rem; line-height: 1.6; color: var(--color-primary-muted); margin: 0;">
-          FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand, project requirements, skill match, and agency selection. Membership does not guarantee a specific project, income, or number of completed jobs.
-        </p>
-      </div>
-    </div>
-
-    <div id="freelancer-profile-tab" class="tab-pane">
-      <div class="card" style="max-width: 680px; margin-bottom: 1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
-          <div>
-            <h3 style="margin:0;">Verified Skill Profile & Services</h3>
-            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Your verified skills determine which projects are unlocked for you in Find Work.</p>
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
-            Edit Skills & Bio
-          </button>
-        </div>
-
-        ${currentUser.profileCompleted ? `
-          <div style="display:flex; flex-direction:column; gap:1rem; background:var(--bg-subtle); padding:1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
-            <div>
-              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Primary Categories</div>
-              <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted">None selected</span>'}
-              </div>
-            </div>
-
-            ${(currentUser.subcategories && currentUser.subcategories.length > 0) ? `
-              <div>
-                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Skills & Tools</div>
+                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Primary Categories</div>
                 <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                  ${currentUser.subcategories.map(sub => `<span class="badge badge-inactive">${sub}</span>`).join("")}
+                  ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted">None selected</span>'}
                 </div>
               </div>
-            ` : ""}
 
-            ${currentUser.customSkills ? `
+              ${(currentUser.subcategories && currentUser.subcategories.length > 0) ? `
+                <div>
+                  <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Skills & Tools</div>
+                  <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                    ${currentUser.subcategories.map(sub => `<span class="badge badge-inactive">${sub}</span>`).join("")}
+                  </div>
+                </div>
+              ` : ""}
+
+              ${currentUser.customSkills ? `
+                <div>
+                  <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Custom Skills</div>
+                  <p style="font-size:0.88rem; margin:0;">${currentUser.customSkills}</p>
+                </div>
+              ` : ""}
+
               <div>
-                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Custom Skills</div>
-                <p style="font-size:0.88rem; margin:0;">${currentUser.customSkills}</p>
+                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">About You / Introduction</div>
+                <p style="font-size:0.88rem; line-height:1.55; margin:0; font-style:italic;">
+                  ${currentUser.bio ? `"${currentUser.bio}"` : '<span class="text-muted">No introduction provided yet.</span>'}
+                </p>
               </div>
-            ` : ""}
+            </div>
+          ` : `
+            <div class="notice-box notice-warning" style="margin-bottom:1rem;">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <div>
+                <strong>Skill profile incomplete:</strong> Complete your skill profile to unlock matching projects in Find Work.
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openSkillProfileModal()">
+              Complete Skill Profile Now
+            </button>
+          `}
+        </div>
 
-            <div>
-              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">About You / Introduction</div>
-              <p style="font-size:0.88rem; line-height:1.55; margin:0; font-style:italic;">
-                ${currentUser.bio ? `"${currentUser.bio}"` : '<span class="text-muted">No introduction provided yet.</span>'}
-              </p>
+        <div class="card" style="max-width: 680px;">
+          <h3 style="margin-bottom: 1.5rem;">Basic Contact Information</h3>
+          <form id="freelancer-profile-form">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" id="edit-free-name" class="form-control" value="${currentUser.name || ""}" required />
             </div>
-          </div>
-        ` : `
-          <div class="notice-box notice-warning" style="margin-bottom:1rem;">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <div>
-              <strong>Skill profile incomplete:</strong> Complete your skill profile to unlock matching projects in Find Work.
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
             </div>
-          </div>
-          <button type="button" class="btn btn-primary" onclick="openSkillProfileModal()">
-            Complete Skill Profile Now
-          </button>
-        `}
+            <div class="form-group">
+              <label class="form-label">WhatsApp / Phone</label>
+              <input type="text" id="edit-free-phone" class="form-control" value="${currentUser.phone || ""}" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Portfolio / GitHub / Dribbble Link</label>
+              <input type="url" id="edit-free-portfolio" class="form-control" placeholder="https://yourportfolio.com" value="${currentUser.portfolio || ""}" />
+            </div>
+            <button type="submit" class="btn btn-primary">Save Personal Details</button>
+          </form>
+        </div>
       </div>
 
-      <div class="card" style="max-width: 680px;">
-        <h3 style="margin-bottom: 1.5rem;">Basic Contact Information</h3>
-        <form id="freelancer-profile-form">
-          <div class="form-group">
-            <label class="form-label">Full Name</label>
-            <input type="text" id="edit-free-name" class="form-control" value="${currentUser.name || ""}" required />
+      <!-- 8. Section 5: Account Settings Tab Pane -->
+      <div id="freelancer-settings-tab" class="tab-pane">
+        <div class="settings-section-card">
+          <h3 style="margin-bottom: 1rem;">Account Preferences</h3>
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Account Role</span>
+            <span class="settings-meta-val">Selected Freelancer</span>
           </div>
-          <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Invite Verification</span>
+            <span class="settings-meta-val">${currentUser.inviteVerified ? "✓ Verified Member" : "Unverified"}</span>
           </div>
-          <div class="form-group">
-            <label class="form-label">WhatsApp / Phone</label>
-            <input type="text" id="edit-free-phone" class="form-control" value="${currentUser.phone || ""}" />
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Membership Status</span>
+            <span class="settings-meta-val">${isMemberActive ? `${currentUser.membershipPlan || "Active"} (Valid until ${formatDate(currentUser.membershipExpiry)})` : "Inactive"}</span>
           </div>
-          <div class="form-group">
-            <label class="form-label">Portfolio / GitHub / Dribbble Link</label>
-            <input type="url" id="edit-free-portfolio" class="form-control" placeholder="https://yourportfolio.com" value="${currentUser.portfolio || ""}" />
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Primary Email</span>
+            <span class="settings-meta-val">${currentUser.email}</span>
           </div>
-          <button type="submit" class="btn btn-primary">Save Personal Details</button>
-        </form>
+          <div class="settings-meta-item">
+            <span class="settings-meta-label">Freelancer ID</span>
+            <span class="settings-meta-val font-mono" style="font-size:0.8rem;">${currentUser.uid}</span>
+          </div>
+        </div>
+
+        <div class="settings-section-card">
+          <h3 style="margin-bottom: 0.5rem;">Password & Security</h3>
+          <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Request a password reset link sent directly to your registered email address.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-send-reset-free">Send Password Reset Link</button>
+        </div>
       </div>
     </div>
   `;
 
   document.getElementById("freelancer-logout-btn").addEventListener("click", () => FidoAuth.logout());
 
-  const redeemForm = document.getElementById("redeem-invite-code-form");
-  if (redeemForm) {
-    redeemForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const codeInput = document.getElementById("redeem-invite-input");
-      const btn = document.getElementById("redeem-invite-btn");
-      const codeStr = codeInput ? codeInput.value.trim() : "";
-
-      if (!codeStr) return;
-
-      btn.disabled = true;
-      btn.textContent = "Verifying...";
-
+  const resetBtn = document.getElementById("btn-send-reset-free");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", async () => {
       try {
-        await FidoAuth.verifyFreelancerInvite(codeStr);
-        showToast("Invite code verified! You now have full access to view project details and submit proposals.", "success");
-        await renderFreelancerView(container);
+        await FidoAuth.resetPassword(currentUser.email);
+        showToast("Password reset link sent to " + currentUser.email, "success");
       } catch (err) {
-        showToast(err.message || "Failed to redeem invite code.", "error");
-        btn.disabled = false;
-        btn.textContent = "Redeem Code";
+        showToast(err.message || "Failed to send reset link", "error");
       }
     });
   }
