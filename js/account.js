@@ -89,16 +89,16 @@ async function renderAdminAccountView(container) {
   const initials = (currentUser.name || "Admin").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   container.innerHTML = `
-    <div class="account-dashboard-wrapper">
-      <!-- Profile Header -->
+    <div>
+      <!-- 1. Profile Header Hero Banner -->
       <div class="dashboard-profile-card">
         <div class="dashboard-user-info">
-          <div class="dashboard-avatar">
+          <div class="dashboard-avatar" style="background: linear-gradient(135deg, #475569 0%, #0f172a 100%);">
             ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" alt="${currentUser.name || "Admin"}">` : initials}
           </div>
           <div class="dashboard-user-details">
             <div class="dashboard-user-name-row">
-              <h2 class="dashboard-user-name">${currentUser.name || "Administrator"}</h2>
+              <h1 class="dashboard-user-name">${currentUser.name || "Administrator"}</h1>
             </div>
             <p class="dashboard-user-email">${currentUser.email}</p>
             <div class="dashboard-badges-row">
@@ -108,11 +108,11 @@ async function renderAdminAccountView(container) {
           </div>
         </div>
         <div class="dashboard-header-actions">
-          <a href="admin.html" class="btn btn-primary btn-sm">
-            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          <a href="admin.html" class="btn btn-primary">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
             Admin Panel
           </a>
-          <button id="admin-account-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+          <button id="admin-account-logout-btn" class="btn btn-secondary">Sign Out</button>
         </div>
       </div>
 
@@ -146,20 +146,20 @@ async function renderAdminAccountView(container) {
       </div>
 
       <!-- Admin Panel Callout Card -->
-      <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 2rem; border-radius: var(--border-radius-lg); margin-bottom: 2rem; box-shadow: var(--shadow-md);">
+      <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 2.25rem 2rem; border-radius: var(--border-radius-lg); margin-bottom: 2rem; box-shadow: var(--shadow-md);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem;">
           <div>
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
               <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981;"></span>
-              <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:#93c5fd;">System Control</span>
+              <span style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:#93c5fd;">System Control</span>
             </div>
-            <h3 style="color:white; font-size:1.5rem; margin-bottom:0.35rem;">FidoConnect Admin Console</h3>
-            <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0;">
+            <h3 style="color:white; font-size:1.6rem; font-weight:750; margin-bottom:0.35rem;">FidoConnect Admin Console</h3>
+            <p style="color:#cbd5e1; font-size:0.95rem; max-width:580px; margin:0; line-height:1.5;">
               Manage all 12 agency modules: project requests, approvals, proposals, network members, payments, reviews, invite codes, and client communication.
             </p>
           </div>
           <div>
-            <a href="admin.html" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
+            <a href="admin.html" class="btn btn-primary btn-lg" style="box-shadow: 0 4px 14px rgba(37,99,235,0.35);">
               Open Full Console &rarr;
             </a>
           </div>
@@ -167,8 +167,8 @@ async function renderAdminAccountView(container) {
       </div>
 
       <!-- Admin Account Settings -->
-      <div class="card" style="max-width: 600px;">
-        <h3 style="margin-bottom: 1.25rem;">Administrator Profile</h3>
+      <div class="card" style="max-width: 680px; padding: 2rem 2.25rem; border-radius: var(--border-radius-lg);">
+        <h3 style="margin-bottom: 1.25rem; font-size:1.35rem; font-weight:750;">Administrator Profile</h3>
         <form id="admin-profile-form">
           <div class="form-group">
             <label class="form-label">Name</label>
@@ -214,8 +214,8 @@ async function renderClientView(container) {
   const initials = (currentUser.businessName || currentUser.name || "Client").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   container.innerHTML = `
-    <div class="account-dashboard-wrapper">
-      <!-- 1. Profile Header -->
+    <div>
+      <!-- 1. Profile Header Hero Banner -->
       <div class="dashboard-profile-card">
         <div class="dashboard-user-info">
           <div class="dashboard-avatar">
@@ -223,7 +223,7 @@ async function renderClientView(container) {
           </div>
           <div class="dashboard-user-details">
             <div class="dashboard-user-name-row">
-              <h2 class="dashboard-user-name">${currentUser.businessName || currentUser.name || "Client"}</h2>
+              <h1 class="dashboard-user-name">${currentUser.businessName || currentUser.name || "Client"}</h1>
             </div>
             <p class="dashboard-user-email">${currentUser.email}</p>
             <div class="dashboard-badges-row">
@@ -233,11 +233,11 @@ async function renderClientView(container) {
           </div>
         </div>
         <div class="dashboard-header-actions">
-          <a href="post-work.html" class="btn btn-primary btn-sm">
-            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <a href="post-work.html" class="btn btn-primary">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             Post a Work
           </a>
-          <button id="client-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+          <button id="client-logout-btn" class="btn btn-secondary">Sign Out</button>
         </div>
       </div>
 
@@ -249,9 +249,9 @@ async function renderClientView(container) {
               <span class="account-action-card-title">💼 My Projects</span>
               <span class="account-action-card-badge">${clientProjects.length}</span>
             </div>
-            <p class="account-action-card-desc">View submitted project requests and status</p>
+            <p class="account-action-card-desc">View submitted project requests and live milestone tracking.</p>
           </div>
-          <div class="account-action-card-arrow">View Projects ↗</div>
+          <div class="account-action-card-arrow">View Projects &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-client-profile')">
@@ -259,9 +259,9 @@ async function renderClientView(container) {
             <div class="account-action-card-head">
               <span class="account-action-card-title">👤 Business Profile</span>
             </div>
-            <p class="account-action-card-desc">Manage organization & contact details</p>
+            <p class="account-action-card-desc">Manage organization details and contact preferences.</p>
           </div>
-          <div class="account-action-card-arrow">Edit Profile ↗</div>
+          <div class="account-action-card-arrow">Edit Profile &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-client-settings')">
@@ -269,9 +269,9 @@ async function renderClientView(container) {
             <div class="account-action-card-head">
               <span class="account-action-card-title">⚙️ Account Settings</span>
             </div>
-            <p class="account-action-card-desc">Preferences, security & password reset</p>
+            <p class="account-action-card-desc">Account credentials, preferences, and password recovery.</p>
           </div>
-          <div class="account-action-card-arrow">Settings ↗</div>
+          <div class="account-action-card-arrow">Settings &rarr;</div>
         </div>
       </div>
 
@@ -279,7 +279,7 @@ async function renderClientView(container) {
       <div class="dashboard-stats-grid dashboard-stats-grid-client">
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Account Role</span>
-          <span class="dashboard-stat-value" style="font-size:1.05rem;">Client / Business</span>
+          <span class="dashboard-stat-value" style="font-size:1.25rem;">Client</span>
           <span class="dashboard-stat-sub"><span class="stat-dot-active">●</span> Active account</span>
         </div>
         <div class="dashboard-stat-card">
@@ -293,47 +293,47 @@ async function renderClientView(container) {
           <span class="dashboard-stat-sub">In progress or open</span>
         </div>
         <div class="dashboard-stat-card">
-          <span class="dashboard-stat-label">Status</span>
+          <span class="dashboard-stat-label">Account Status</span>
           <span class="dashboard-stat-value" style="color:#10b981;">Active</span>
           <span class="dashboard-stat-sub">Good standing</span>
         </div>
       </div>
 
       <!-- 4. Client Dashboard Overview Card -->
-      <div class="card" style="margin-top: 1rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+      <div class="card" style="margin-top: 0.5rem; padding: 2rem 2.25rem; border-radius: var(--border-radius-lg);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem; margin-bottom:1.5rem;">
           <div>
-            <h3 style="margin:0; font-size:1.15rem;">Project Activity Overview</h3>
-            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Summary of your recent project coordination with FidoConnect.</p>
+            <h3 style="margin:0; font-size:1.35rem; font-weight:750; color:var(--color-primary);">Project Activity Overview</h3>
+            <p class="text-muted" style="font-size:0.95rem; margin-top:4px;">Summary of your recent project coordination with FidoConnect.</p>
           </div>
-          <div style="display:flex; gap:0.5rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('modal-client-projects')">View All Projects (${clientProjects.length})</button>
-            <a href="post-work.html" class="btn btn-primary btn-sm">+ Post New Project</a>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="openModal('modal-client-projects')">View All Projects (${clientProjects.length})</button>
+            <a href="post-work.html" class="btn btn-primary">+ Post New Project</a>
           </div>
         </div>
 
         ${clientProjects.length === 0 ? `
-          <div class="text-center" style="padding: 2rem 1rem; background:var(--bg-subtle); border-radius:var(--border-radius-md);">
-            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 0.75rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            <h4 style="font-size:1rem; margin-bottom:0.25rem;">No submitted projects yet</h4>
-            <p class="text-muted" style="margin:0 0 1rem; font-size:0.85rem;">Post your website update, design, documents, or custom business task to get started.</p>
-            <a href="post-work.html" class="btn btn-primary btn-sm">Post a Work</a>
+          <div class="text-center" style="padding: 3rem 1.5rem; background:var(--bg-subtle); border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
+            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <h4 style="font-size:1.15rem; margin-bottom:0.35rem;">No submitted projects yet</h4>
+            <p class="text-muted" style="margin:0 0 1.25rem; font-size:0.92rem;">Post your website update, design, documents, or custom business task to get started.</p>
+            <a href="post-work.html" class="btn btn-primary">Post a Work</a>
           </div>
         ` : `
-          <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div style="display:flex; flex-direction:column; gap:0.85rem;">
             ${clientProjects.slice(0, 3).map(proj => `
-              <div style="padding: 0.9rem 1rem; background:var(--bg-subtle); border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+              <div style="padding: 1.15rem 1.35rem; background:var(--bg-subtle); border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:1.25rem; flex-wrap:wrap;">
                 <div style="flex:1; min-width:0;">
-                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
                     <span class="project-id-badge">${proj.projectId || proj.id}</span>
                     <span class="project-category-badge">${proj.category}</span>
                     ${getStatusBadge(proj.status)}
                   </div>
-                  <strong style="font-size:0.95rem; color:var(--color-primary);">${proj.title}</strong>
+                  <strong style="font-size:1.05rem; color:var(--color-primary);">${proj.title}</strong>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-size:0.82rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
-                  <div style="font-size:0.78rem; color:var(--text-muted);">Submitted: ${formatDate(proj.createdAt)}</div>
+                  <div style="font-size:0.9rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                  <div style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">Submitted: ${formatDate(proj.createdAt)}</div>
                 </div>
               </div>
             `).join("")}
@@ -358,33 +358,33 @@ async function renderClientView(container) {
         </div>
 
         ${clientProjects.length === 0 ? `
-          <div class="text-center" style="padding: 3rem 1rem;">
-            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            <h4 style="margin-bottom:0.35rem;">No submitted projects yet</h4>
-            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Have a website update, design, data entry, or business task you need done?</p>
+          <div class="text-center" style="padding: 3.5rem 1.5rem; background: var(--bg-subtle); border-radius: var(--border-radius-md); border: 1px solid var(--border-color);">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1.25rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">No submitted projects yet</h3>
+            <p class="text-muted" style="margin: 0 0 1.5rem; font-size:0.95rem; max-width:440px; margin-left:auto; margin-right:auto;">Have a website update, design, data entry, or business task you need done?</p>
             <a href="post-work.html" class="btn btn-primary">Post Your First Project</a>
           </div>
         ` : `
-          <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div style="display:flex; flex-direction:column; gap:1.25rem;">
             ${clientProjects.map(proj => `
-              <div class="card" style="padding: 1.25rem; border:1px solid var(--border-color);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+              <div class="card" style="padding: 1.5rem; border:1px solid var(--border-color); border-radius:var(--border-radius-md);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
                   <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                      <span class="project-id-badge">${proj.projectId || proj.id}</span>
-                      <span class="project-category-badge">${proj.category}</span>
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                      <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.projectId || proj.id}</span>
+                      <span class="project-category-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.category}</span>
                       ${getStatusBadge(proj.status)}
                     </div>
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
-                    <p class="text-muted" style="font-size:0.88rem; line-height:1.5;">${proj.description}</p>
+                    <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.35rem; color:var(--color-primary);">${proj.title}</h3>
+                    <p class="text-muted" style="font-size:0.95rem; line-height:1.55;">${proj.description}</p>
                   </div>
                   <div style="text-align:right;">
-                    <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
-                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
+                    <div style="font-size:0.95rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                    <div style="font-size:0.85rem; color:var(--text-muted); margin-top:3px;">Deadline: ${formatDate(proj.deadline)}</div>
                   </div>
                 </div>
-                <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--text-muted); flex-wrap:wrap; gap:0.5rem;">
-                  <span>Agency Coordination: <em style="color:var(--color-primary);">${proj.agencyNotes || "Under review by FidoConnect"}</em></span>
+                <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:0.88rem; color:var(--text-muted); flex-wrap:wrap; gap:0.5rem;">
+                  <span>Agency Coordination: <strong style="color:var(--color-primary);">${proj.agencyNotes || "Under review by FidoConnect"}</strong></span>
                   <span>Submitted: ${formatDate(proj.createdAt)}</span>
                 </div>
               </div>
@@ -447,8 +447,8 @@ async function renderClientView(container) {
           </div>
         </div>
 
-        <div class="settings-section-card" style="margin-bottom:1rem;">
-          <h4 style="margin-bottom: 0.75rem; font-size:1rem;">Account Information</h4>
+        <div class="settings-section-card" style="margin-bottom:1.5rem;">
+          <h4 style="margin-bottom: 1rem; font-size:1.15rem; font-weight:750; color:var(--color-primary);">Account Information</h4>
           <div class="settings-meta-item">
             <span class="settings-meta-label">Account Role</span>
             <span class="settings-meta-val">Client / Work Poster</span>
@@ -459,14 +459,14 @@ async function renderClientView(container) {
           </div>
           <div class="settings-meta-item">
             <span class="settings-meta-label">User ID</span>
-            <span class="settings-meta-val font-mono" style="font-size:0.8rem;">${currentUser.uid}</span>
+            <span class="settings-meta-val font-mono" style="font-size:0.88rem;">${currentUser.uid}</span>
           </div>
         </div>
 
         <div class="settings-section-card">
-          <h4 style="margin-bottom: 0.35rem; font-size:1rem;">Password Reset</h4>
-          <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Send a secure password reset link to your registered email address.</p>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-send-reset-client">Send Password Reset Link</button>
+          <h4 style="margin-bottom: 0.4rem; font-size:1.15rem; font-weight:750; color:var(--color-primary);">Password Reset</h4>
+          <p class="text-muted" style="font-size:0.92rem; margin-bottom:1.25rem;">Send a secure password reset link to your registered email address.</p>
+          <button type="button" class="btn btn-secondary" id="btn-send-reset-client">Send Password Reset Link</button>
         </div>
 
         <div class="modal-footer-bar">
@@ -520,8 +520,8 @@ async function renderFreelancerView(container) {
   const initials = (currentUser.name || "Freelancer").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   container.innerHTML = `
-    <div class="account-dashboard-wrapper">
-      <!-- 1. Profile Header -->
+    <div>
+      <!-- 1. Profile Header Hero Banner -->
       <div class="dashboard-profile-card">
         <div class="dashboard-user-info">
           <div class="dashboard-avatar">
@@ -529,24 +529,24 @@ async function renderFreelancerView(container) {
           </div>
           <div class="dashboard-user-details">
             <div class="dashboard-user-name-row">
-              <h2 class="dashboard-user-name">${currentUser.name || "Freelancer"}</h2>
+              <h1 class="dashboard-user-name">${currentUser.name || "Freelancer"}</h1>
             </div>
             <p class="dashboard-user-email">${currentUser.email}</p>
             <div class="dashboard-badges-row">
               <span class="role-badge role-badge-freelancer">✓ Freelancer</span>
-              ${currentUser.inviteVerified ? `<span class="badge badge-active">✓ Verified</span>` : `<span class="badge badge-inactive">○ Unverified</span>`}
+              ${currentUser.inviteVerified ? `<span class="badge badge-active">✓ Verified Member</span>` : `<span class="badge badge-inactive">○ Unverified</span>`}
               <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
-                ${isMemberActive ? `✓ ${currentUser.membershipPlan || "Selected Basic"}` : "○ Inactive Member"}
+                ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "○ Inactive Membership"}
               </span>
             </div>
           </div>
         </div>
         <div class="dashboard-header-actions">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
-            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          <button type="button" class="btn btn-secondary" onclick="openSkillProfileModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             Edit Skills & Bio
           </button>
-          <button id="freelancer-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+          <button id="freelancer-logout-btn" class="btn btn-secondary">Sign Out</button>
         </div>
       </div>
 
@@ -558,9 +558,9 @@ async function renderFreelancerView(container) {
               <span class="account-action-card-title">📋 My Applications</span>
               <span class="account-action-card-badge">${applications.length}</span>
             </div>
-            <p class="account-action-card-desc">View submitted proposals & status</p>
+            <p class="account-action-card-desc">Track submitted proposals and live review status.</p>
           </div>
-          <div class="account-action-card-arrow">View Applications ↗</div>
+          <div class="account-action-card-arrow">View Applications &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-freelancer-projects')">
@@ -569,9 +569,9 @@ async function renderFreelancerView(container) {
               <span class="account-action-card-title">💼 Assigned Projects</span>
               <span class="account-action-card-badge">${activeProjects.length}</span>
             </div>
-            <p class="account-action-card-desc">Projects currently assigned to you</p>
+            <p class="account-action-card-desc">Active client tasks currently assigned to you.</p>
           </div>
-          <div class="account-action-card-arrow">View Projects ↗</div>
+          <div class="account-action-card-arrow">View Projects &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-membership')">
@@ -580,9 +580,9 @@ async function renderFreelancerView(container) {
               <span class="account-action-card-title">⭐ Membership</span>
               <span class="account-action-card-badge">${isMemberActive ? "Active" : "Plans"}</span>
             </div>
-            <p class="account-action-card-desc">View your membership and tier</p>
+            <p class="account-action-card-desc">Manage your Selected Freelancer membership plan.</p>
           </div>
-          <div class="account-action-card-arrow">Manage Plan ↗</div>
+          <div class="account-action-card-arrow">Manage Plan &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-freelancer-profile')">
@@ -591,9 +591,9 @@ async function renderFreelancerView(container) {
               <span class="account-action-card-title">👤 Profile & Skills</span>
               <span class="account-action-card-badge">${currentUser.profileCompleted ? "✓" : "!"}</span>
             </div>
-            <p class="account-action-card-desc">Your verified information & contact</p>
+            <p class="account-action-card-desc">Your verified categories, tools, and contact info.</p>
           </div>
-          <div class="account-action-card-arrow">View Profile ↗</div>
+          <div class="account-action-card-arrow">View Profile &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-freelancer-settings')">
@@ -601,9 +601,9 @@ async function renderFreelancerView(container) {
             <div class="account-action-card-head">
               <span class="account-action-card-title">⚙️ Account Settings</span>
             </div>
-            <p class="account-action-card-desc">Preferences, security & password</p>
+            <p class="account-action-card-desc">Account credentials, preferences, and password.</p>
           </div>
-          <div class="account-action-card-arrow">Settings ↗</div>
+          <div class="account-action-card-arrow">Settings &rarr;</div>
         </div>
       </div>
 
@@ -611,81 +611,83 @@ async function renderFreelancerView(container) {
       <div class="dashboard-stats-grid">
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Membership</span>
-          <span class="dashboard-stat-value" style="font-size:1.05rem;">${isMemberActive ? (currentUser.membershipPlan || "Selected Basic") : "No Plan"}</span>
+          <span class="dashboard-stat-value" style="font-size:1.25rem;">${isMemberActive ? (currentUser.membershipPlan || "Selected Basic") : "No Plan"}</span>
           <span class="dashboard-stat-sub">
-            ${isMemberActive ? `<span class="stat-dot-active">●</span> Active` : `<span class="stat-dot-inactive">●</span> Inactive`}
+            ${isMemberActive ? `<span class="stat-dot-active">●</span> Active membership` : `<span class="stat-dot-inactive">●</span> Inactive membership`}
           </span>
         </div>
         <div class="dashboard-stat-card">
-          <span class="dashboard-stat-label">Status</span>
+          <span class="dashboard-stat-label">Member Status</span>
           <span class="dashboard-stat-value" style="${isMemberActive ? "color:#10b981;" : "color:var(--text-muted);"}">${isMemberActive ? "Active" : "Inactive"}</span>
-          <span class="dashboard-stat-sub">${isMemberActive ? "Member in good standing" : "Upgrade to apply"}</span>
+          <span class="dashboard-stat-sub">${isMemberActive ? "Eligible to apply" : "Upgrade to apply"}</span>
         </div>
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Applications</span>
           <span class="dashboard-stat-value" style="color:var(--color-accent);">${applications.length}</span>
-          <span class="dashboard-stat-sub">${applications.length === 1 ? "1 submitted" : `${applications.length} submitted`}</span>
+          <span class="dashboard-stat-sub">${applications.length === 1 ? "1 proposal submitted" : `${applications.length} proposals submitted`}</span>
         </div>
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Assigned Projects</span>
           <span class="dashboard-stat-value">${activeProjects.length}</span>
-          <span class="dashboard-stat-sub">${activeProjects.length === 0 ? "None assigned" : `${activeProjects.length} in progress`}</span>
+          <span class="dashboard-stat-sub">${activeProjects.length === 0 ? "No active jobs" : `${activeProjects.length} in execution`}</span>
         </div>
         <div class="dashboard-stat-card">
-          <span class="dashboard-stat-label">Profile</span>
+          <span class="dashboard-stat-label">Skill Profile</span>
           <span class="dashboard-stat-value" style="color:${currentUser.profileCompleted ? "#10b981" : "#f59e0b"};">${currentUser.profileCompleted ? "Verified" : "Incomplete"}</span>
-          <span class="dashboard-stat-sub">${currentUser.profileCompleted ? "✓ Skills mapped" : "Setup needed"}</span>
+          <span class="dashboard-stat-sub">${currentUser.profileCompleted ? "✓ Skills unlocked" : "Setup required"}</span>
         </div>
       </div>
 
-      <!-- 4. Freelancer Dashboard Overview & Skill Preview Card -->
-      <div class="card" style="margin-top: 1rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
+      <!-- 4. Freelancer Dashboard Overview & Activity Card -->
+      <div class="card" style="margin-top: 0.5rem; padding: 2rem 2.25rem; border-radius: var(--border-radius-lg);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem; margin-bottom:1.5rem;">
           <div>
-            <h3 style="margin:0; font-size:1.15rem;">Selected Freelancer Status</h3>
-            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Your verified skills match eligible opportunities on FidoConnect.</p>
+            <h3 style="margin:0; font-size:1.35rem; font-weight:750; color:var(--color-primary);">Selected Freelancer Status</h3>
+            <p class="text-muted" style="font-size:0.95rem; margin-top:4px;">Your verified skills match eligible opportunities on FidoConnect.</p>
           </div>
-          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('modal-freelancer-apps')">
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="openModal('modal-freelancer-apps')">
               My Applications (${applications.length})
             </button>
-            <a href="find-work.html" class="btn btn-primary btn-sm">
+            <a href="find-work.html" class="btn btn-primary">
               Find Matching Work &rarr;
             </a>
           </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+        <div class="grid-2" style="gap:1.5rem;">
           <!-- Skill Summary Preview -->
-          <div style="background:var(--bg-subtle); padding:1rem 1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-              <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Verified Categories</span>
-              <button type="button" class="btn btn-link btn-sm" style="padding:0; font-size:0.78rem; text-decoration:underline;" onclick="openSkillProfileModal()">Edit</button>
-            </div>
-            <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.75rem;">
-              ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted" style="font-size:0.85rem;">No categories selected yet</span>'}
-            </div>
-            ${currentUser.bio ? `
-              <div style="font-size:0.82rem; color:var(--color-primary-muted); line-height:1.45; font-style:italic;">
-                "${currentUser.bio.length > 120 ? currentUser.bio.slice(0, 120) + '...' : currentUser.bio}"
+          <div style="background:var(--bg-subtle); padding:1.5rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; letter-spacing:0.05em; color:var(--text-muted);">Verified Categories</span>
+                <button type="button" class="btn btn-link btn-sm" style="padding:0; font-size:0.85rem; font-weight:600; color:var(--color-accent); text-decoration:none; cursor:pointer;" onclick="openSkillProfileModal()">Edit Skills &rarr;</button>
               </div>
-            ` : ''}
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.85rem;">
+                ${(currentUser.categories || []).map(cat => `<span class="badge badge-active" style="padding:0.35rem 0.75rem; font-size:0.85rem;">${cat}</span>`).join("") || '<span class="text-muted" style="font-size:0.9rem;">No categories selected yet</span>'}
+              </div>
+              ${currentUser.bio ? `
+                <div style="font-size:0.88rem; color:var(--color-primary-muted); line-height:1.5; font-style:italic; border-top:1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;">
+                  "${currentUser.bio.length > 140 ? currentUser.bio.slice(0, 140) + '...' : currentUser.bio}"
+                </div>
+              ` : ''}
+            </div>
           </div>
 
           <!-- Membership Plan Preview -->
-          <div style="background:var(--bg-subtle); padding:1rem 1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="background:var(--bg-subtle); padding:1.5rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
             <div>
-              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem;">Membership Overview</div>
-              <div style="font-size:1.1rem; font-weight:750; color:var(--color-primary); margin-bottom:0.25rem;">
+              <div style="font-size:0.8rem; text-transform:uppercase; font-weight:700; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:0.5rem;">Membership Overview</div>
+              <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-bottom:0.35rem;">
                 ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "No Active Membership"}
               </div>
-              <p style="font-size:0.82rem; color:var(--text-muted); margin:0; line-height:1.4;">
+              <p style="font-size:0.9rem; color:var(--color-primary-muted); margin:0; line-height:1.5;">
                 ${isMemberActive ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` : "Activate a membership plan to unlock application submission for matching projects."}
               </p>
             </div>
-            <div style="margin-top:0.75rem;">
-              <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="openModal('modal-membership')">
-                ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan'}
+            <div style="margin-top:1.25rem;">
+              <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'}" onclick="openModal('modal-membership')">
+                ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan &rarr;'}
               </button>
             </div>
           </div>
@@ -704,40 +706,40 @@ async function renderFreelancerView(container) {
         <div class="modal-header-bar">
           <div>
             <div class="modal-header-title">📋 My Submitted Applications (${applications.length})</div>
-            <div class="modal-header-sub">Track the status of all project proposals you have submitted.</div>
+            <div class="modal-header-sub">Track the status and timeline of all project proposals you have submitted.</div>
           </div>
         </div>
 
         ${applications.length === 0 ? `
-          <div class="text-center" style="padding: 3rem 1rem;">
-            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <h4 style="margin-bottom:0.35rem;">No active applications</h4>
-            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Matching opportunities will appear in Find Work.</p>
+          <div class="text-center" style="padding: 3.5rem 1.5rem; background: var(--bg-subtle); border-radius: var(--border-radius-md); border: 1px solid var(--border-color);">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1.25rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">No active applications</h3>
+            <p class="text-muted" style="margin: 0 0 1.5rem; font-size:0.95rem; max-width:440px; margin-left:auto; margin-right:auto;">Matching client opportunities will appear in Find Work as they are vetted by our agency.</p>
             <a href="find-work.html" class="btn btn-primary">Find Available Work</a>
           </div>
         ` : `
-          <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div style="display:flex; flex-direction:column; gap:1.25rem;">
             ${applications.map(app => {
               const isActionable = !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(app.status);
               return `
-                <div class="card" style="padding: 1.25rem; border:1px solid var(--border-color);">
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                <div class="card" style="padding: 1.5rem; border:1px solid var(--border-color); border-radius:var(--border-radius-md);">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
                     <div style="flex:1; min-width:0;">
-                      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                        <span class="project-id-badge">${app.projectId}</span>
+                      <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                        <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${app.projectId}</span>
                         ${getStatusBadge(app.status)}
                       </div>
-                      <p style="font-size:0.95rem; margin-top:0.3rem; line-height:1.5;">"${app.message}"</p>
-                      <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem;">
-                        Estimated Delivery: <strong>${app.deliveryDays}</strong>
+                      <p style="font-size:1rem; margin-top:0.5rem; line-height:1.55; color:var(--text-main);">"${app.message}"</p>
+                      <div style="font-size:0.9rem; color:var(--text-muted); margin-top:0.6rem;">
+                        Estimated Delivery: <strong style="color:var(--color-primary);">${app.deliveryDays}</strong>
                       </div>
                     </div>
-                    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
-                      <span style="font-size:0.8rem; color:var(--text-muted);">Applied: ${formatDate(app.createdAt)}</span>
-                      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
-                        <a href="project-details.html?id=${app.projectId}" class="btn btn-secondary btn-sm">View Project</a>
+                    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.75rem;">
+                      <span style="font-size:0.85rem; color:var(--text-muted);">Applied: ${formatDate(app.createdAt)}</span>
+                      <div style="display:flex; gap:0.6rem; flex-wrap:wrap; justify-content:flex-end;">
+                        <a href="project-details.html?id=${app.projectId}" class="btn btn-secondary">View Project</a>
                         ${isActionable ? `
-                          <button type="button" class="btn btn-sm" style="color:var(--status-cancelled); border:1px solid var(--border-color); background:var(--bg-surface);" onclick="handleWithdrawApplication('${app.id}')">
+                          <button type="button" class="btn" style="color:var(--status-cancelled); border:1px solid var(--border-color); background:var(--bg-surface);" onclick="handleWithdrawApplication('${app.id}')">
                             Withdraw
                           </button>
                         ` : ''}
@@ -764,38 +766,38 @@ async function renderFreelancerView(container) {
         <div class="modal-header-bar">
           <div>
             <div class="modal-header-title">💼 Assigned Projects (${activeProjects.length})</div>
-            <div class="modal-header-sub">Projects currently assigned to you for execution.</div>
+            <div class="modal-header-sub">Projects currently assigned to you for execution with FidoConnect coordination.</div>
           </div>
         </div>
 
         ${activeProjects.length === 0 ? `
-          <div class="text-center" style="padding: 3rem 1rem;">
-            <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            <h4 style="margin-bottom:0.35rem;">No assigned projects yet</h4>
-            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Selected projects matching your verified skills will appear here.</p>
+          <div class="text-center" style="padding: 3.5rem 1.5rem; background: var(--bg-subtle); border-radius: var(--border-radius-md); border: 1px solid var(--border-color);">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1.25rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">No assigned projects yet</h3>
+            <p class="text-muted" style="margin: 0 0 1.5rem; font-size:0.95rem; max-width:440px; margin-left:auto; margin-right:auto;">Selected projects matching your verified skills will appear here once approved by our agency team.</p>
             <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
           </div>
         ` : `
-          <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div style="display:flex; flex-direction:column; gap:1.25rem;">
             ${activeProjects.map(proj => `
-              <div class="card" style="padding: 1.25rem; border:1px solid var(--border-color);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+              <div class="card" style="padding: 1.5rem; border:1px solid var(--border-color); border-radius:var(--border-radius-md);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
                   <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                      <span class="project-id-badge">${proj.projectId || proj.id}</span>
-                      <span class="project-category-badge">${proj.category}</span>
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                      <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.projectId || proj.id}</span>
+                      <span class="project-category-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.category}</span>
                       ${getStatusBadge(proj.status)}
                     </div>
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">${proj.title}</h3>
-                    <p class="text-muted" style="font-size:0.88rem; line-height:1.5;">${proj.description}</p>
+                    <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.35rem; color:var(--color-primary);">${proj.title}</h3>
+                    <p class="text-muted" style="font-size:0.95rem; line-height:1.55;">${proj.description}</p>
                   </div>
                   <div style="text-align:right;">
-                    <div style="font-size:0.85rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
-                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Deadline: ${formatDate(proj.deadline)}</div>
+                    <div style="font-size:0.95rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                    <div style="font-size:0.85rem; color:var(--text-muted); margin-top:3px;">Deadline: ${formatDate(proj.deadline)}</div>
                   </div>
                 </div>
-                <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border-color); font-size:0.82rem; color:var(--text-muted);">
-                  Agency Notes: <em style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</em>
+                <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid var(--border-color); font-size:0.88rem; color:var(--text-muted);">
+                  Agency Notes: <strong style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</strong>
                 </div>
               </div>
             `).join("")}
@@ -817,8 +819,8 @@ async function renderFreelancerView(container) {
         <!-- Modal Header -->
         <div class="modal-header-bar">
           <div>
-            <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.2rem;">
-              <span style="width:7px; height:7px; border-radius:50%; background:var(--color-accent);"></span>
+            <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.35rem;">
+              <span style="width:8px; height:8px; border-radius:50%; background:var(--color-accent);"></span>
               Selected Freelancer Program
             </div>
             <div class="modal-header-title">⭐ Plans for Selected Members</div>
@@ -828,23 +830,23 @@ async function renderFreelancerView(container) {
 
         <!-- Current Membership Banner / Project Return Prompt -->
         ${isMemberActive ? `
-          <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 1.5rem; padding: 1.25rem 1.5rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 1.75rem; padding: 1.5rem 1.75rem; border-radius:var(--border-radius-lg);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
               <div>
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                   <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-teal);"></span>
-                  <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--color-teal);">Current Active Membership</span>
+                  <span style="font-size:0.85rem; text-transform:uppercase; font-weight:750; color:var(--color-teal); letter-spacing:0.04em;">Current Active Membership</span>
                 </div>
-                <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-top:2px;">
+                <div style="font-size:1.5rem; font-weight:800; color:var(--color-primary); margin-top:4px;">
                   ${currentUser.membershipPlan || "Selected Basic"}
                 </div>
-                <div style="font-size:0.85rem; color:var(--color-primary-muted); margin-top:2px;">
+                <div style="font-size:0.92rem; color:var(--color-primary-muted); margin-top:4px;">
                   Active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.
                 </div>
               </div>
               ${returnProject ? `
                 <div>
-                  <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary">
+                  <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary btn-lg">
                     Return to Project (${returnProject}) & Complete Application &rarr;
                   </a>
                 </div>
@@ -852,9 +854,9 @@ async function renderFreelancerView(container) {
             </div>
           </div>
         ` : (returnProject ? `
-          <div class="notice-box notice-warning" style="margin-bottom: 1.5rem;">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <div>
+          <div class="notice-box notice-warning" style="margin-bottom: 1.75rem; padding: 1.25rem 1.5rem;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px; height:24px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div style="font-size:0.95rem;">
               <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
             </div>
           </div>
@@ -902,9 +904,9 @@ async function renderFreelancerView(container) {
         </div>
 
         <!-- 4-Step Process Section -->
-        <div style="margin-top: 2rem; margin-bottom: 1.5rem;">
-          <h4 style="font-size: 1.15rem; margin-bottom: 0.35rem;">How FidoConnect Membership Works</h4>
-          <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">Our invite-only process connects verified professionals with vetted agency opportunities.</p>
+        <div style="margin-top: 2.5rem; margin-bottom: 2rem;">
+          <h4 style="font-size: 1.3rem; font-weight:750; margin-bottom: 0.4rem; color:var(--color-primary);">How FidoConnect Membership Works</h4>
+          <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 1.25rem;">Our invite-only process connects verified professionals with vetted agency opportunities.</p>
           
           <div class="membership-steps-grid">
             <div class="membership-step-card">
@@ -931,9 +933,9 @@ async function renderFreelancerView(container) {
         </div>
 
         <!-- Transparent Trust Section ("Before you join") -->
-        <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.25rem;">
-          <h5 style="font-size: 0.95rem; margin-bottom: 0.3rem; color: var(--color-primary);">Before you join</h5>
-          <p style="font-size: 0.84rem; line-height: 1.55; color: var(--color-primary-muted); margin: 0;">
+        <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.5rem; border-radius:var(--border-radius-md);">
+          <h5 style="font-size: 1.05rem; font-weight:750; margin-bottom: 0.4rem; color: var(--color-primary);">Before you join</h5>
+          <p style="font-size: 0.92rem; line-height: 1.6; color: var(--color-primary-muted); margin: 0;">
             FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand, project requirements, skill match, and agency selection. Membership does not guarantee a specific project, income, or number of completed jobs.
           </p>
         </div>
@@ -955,61 +957,61 @@ async function renderFreelancerView(container) {
           </div>
         </div>
 
-        <div class="card" style="border:1px solid var(--border-color); margin-bottom: 1.25rem; padding: 1.25rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; flex-wrap:wrap; gap:0.5rem;">
-            <strong style="font-size:0.95rem;">Skills & Services</strong>
+        <div class="card" style="border:1px solid var(--border-color); margin-bottom: 1.5rem; padding: 1.5rem; border-radius:var(--border-radius-md);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.75rem;">
+            <strong style="font-size:1.1rem; color:var(--color-primary);">Skills & Services</strong>
             <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
               Edit Skills & Bio
             </button>
           </div>
 
           ${currentUser.profileCompleted ? `
-            <div style="display:flex; flex-direction:column; gap:0.85rem; background:var(--bg-subtle); padding:1rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
+            <div style="display:flex; flex-direction:column; gap:1rem; background:var(--bg-subtle); padding:1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
               <div>
-                <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">Primary Categories</div>
-                <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                  ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted">None selected</span>'}
+                <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; letter-spacing:0.04em; color:var(--text-muted); margin-bottom:0.4rem;">Primary Categories</div>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  ${(currentUser.categories || []).map(cat => `<span class="badge badge-active" style="font-size:0.85rem; padding:0.3rem 0.75rem;">${cat}</span>`).join("") || '<span class="text-muted">None selected</span>'}
                 </div>
               </div>
 
               ${(currentUser.subcategories && currentUser.subcategories.length > 0) ? `
                 <div>
-                  <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">Skills & Tools</div>
-                  <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                    ${currentUser.subcategories.map(sub => `<span class="badge badge-inactive">${sub}</span>`).join("")}
+                  <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; letter-spacing:0.04em; color:var(--text-muted); margin-bottom:0.4rem;">Skills & Tools</div>
+                  <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    ${currentUser.subcategories.map(sub => `<span class="badge badge-inactive" style="font-size:0.82rem; padding:0.25rem 0.65rem;">${sub}</span>`).join("")}
                   </div>
                 </div>
               ` : ""}
 
               ${currentUser.customSkills ? `
                 <div>
-                  <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">Custom Skills</div>
-                  <p style="font-size:0.85rem; margin:0;">${currentUser.customSkills}</p>
+                  <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; letter-spacing:0.04em; color:var(--text-muted); margin-bottom:0.4rem;">Custom Skills</div>
+                  <p style="font-size:0.92rem; margin:0; color:var(--color-primary);">${currentUser.customSkills}</p>
                 </div>
               ` : ""}
 
               <div>
-                <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">About You / Introduction</div>
-                <p style="font-size:0.85rem; line-height:1.5; margin:0; font-style:italic;">
+                <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; letter-spacing:0.04em; color:var(--text-muted); margin-bottom:0.4rem;">About You / Introduction</div>
+                <p style="font-size:0.92rem; line-height:1.55; margin:0; font-style:italic; color:var(--color-primary-muted);">
                   ${currentUser.bio ? `"${currentUser.bio}"` : '<span class="text-muted">No introduction provided yet.</span>'}
                 </p>
               </div>
             </div>
           ` : `
-            <div class="notice-box notice-warning" style="margin-bottom:1rem;">
+            <div class="notice-box notice-warning" style="margin-bottom:1.25rem;">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               <div>
                 <strong>Skill profile incomplete:</strong> Complete your skill profile to unlock matching projects in Find Work.
               </div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openSkillProfileModal()">
+            <button type="button" class="btn btn-primary" onclick="openSkillProfileModal()">
               Complete Skill Profile Now
             </button>
           `}
         </div>
 
         <form id="freelancer-profile-form">
-          <h4 style="font-size:1rem; margin-bottom: 1rem;">Contact Information</h4>
+          <h4 style="font-size:1.15rem; font-weight:750; margin-bottom: 1.25rem; color:var(--color-primary);">Contact Information</h4>
           <div class="form-group">
             <label class="form-label">Full Name</label>
             <input type="text" id="edit-free-name" class="form-control" value="${currentUser.name || ""}" required />
@@ -1045,8 +1047,8 @@ async function renderFreelancerView(container) {
           </div>
         </div>
 
-        <div class="settings-section-card" style="margin-bottom:1rem;">
-          <h4 style="margin-bottom: 0.75rem; font-size:1rem;">Account Preferences</h4>
+        <div class="settings-section-card" style="margin-bottom:1.5rem;">
+          <h4 style="margin-bottom: 1rem; font-size:1.15rem; font-weight:750; color:var(--color-primary);">Account Preferences</h4>
           <div class="settings-meta-item">
             <span class="settings-meta-label">Account Role</span>
             <span class="settings-meta-val">Selected Freelancer</span>
@@ -1065,14 +1067,14 @@ async function renderFreelancerView(container) {
           </div>
           <div class="settings-meta-item">
             <span class="settings-meta-label">Freelancer ID</span>
-            <span class="settings-meta-val font-mono" style="font-size:0.8rem;">${currentUser.uid}</span>
+            <span class="settings-meta-val font-mono" style="font-size:0.88rem;">${currentUser.uid}</span>
           </div>
         </div>
 
         <div class="settings-section-card">
-          <h4 style="margin-bottom: 0.35rem; font-size:1rem;">Password & Security</h4>
-          <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Request a password reset link sent directly to your registered email address.</p>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-send-reset-free">Send Password Reset Link</button>
+          <h4 style="margin-bottom: 0.4rem; font-size:1.15rem; font-weight:750; color:var(--color-primary);">Password & Security</h4>
+          <p class="text-muted" style="font-size:0.92rem; margin-bottom:1.25rem;">Request a password reset link sent directly to your registered email address.</p>
+          <button type="button" class="btn btn-secondary" id="btn-send-reset-free">Send Password Reset Link</button>
         </div>
 
         <div class="modal-footer-bar">
