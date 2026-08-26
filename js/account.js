@@ -28,39 +28,40 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function setupEventListeners() {
-  const switchTab = (target) => {
-    document.querySelectorAll(".account-nav-card, .tab-btn").forEach(b => {
-      if (b.getAttribute("data-tab") === target) {
-        b.classList.add("active");
-      } else {
-        b.classList.remove("active");
+  // Backdrop click listener to close modals
+  document.querySelectorAll(".modal-overlay").forEach(overlay => {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay && !overlay.classList.contains("modal-mandatory")) {
+        closeModal(overlay.id);
       }
-    });
-    document.querySelectorAll(".tab-pane").forEach(p => {
-      if (p.id === target) {
-        p.classList.add("active");
-      } else {
-        p.classList.remove("active");
-      }
-    });
-  };
-
-  document.querySelectorAll(".account-nav-card, .tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const target = btn.getAttribute("data-tab");
-      if (target) switchTab(target);
     });
   });
 
+  // Auto-open modal based on URL params or hash
   const urlParams = new URLSearchParams(window.location.search);
   const tabParam = urlParams.get("tab") || (urlParams.get("return_project") ? "membership" : "");
-  if (tabParam) {
-    const tabName = tabParam.endsWith("-tab") ? tabParam : `${tabParam}-tab`;
-    switchTab(tabName);
+  
+  if (tabParam === "membership") {
+    openModal("modal-membership");
+  } else if (tabParam === "apps" || tabParam === "applications" || tabParam === "freelancer-apps") {
+    openModal("modal-freelancer-apps");
+  } else if (tabParam === "projects" || tabParam === "freelancer-projects" || tabParam === "client-projects") {
+    openModal(currentUser && currentUser.role === "client" ? "modal-client-projects" : "modal-freelancer-projects");
+  } else if (tabParam === "profile" || tabParam === "freelancer-profile" || tabParam === "client-profile") {
+    openModal(currentUser && currentUser.role === "client" ? "modal-client-profile" : "modal-freelancer-profile");
+  } else if (tabParam === "settings" || tabParam === "freelancer-settings" || tabParam === "client-settings") {
+    openModal(currentUser && currentUser.role === "client" ? "modal-client-settings" : "modal-freelancer-settings");
   } else if (window.location.hash) {
-    const hash = window.location.hash.replace("#", "");
-    const tabName = hash.endsWith("-tab") ? hash : `${hash}-tab`;
-    switchTab(tabName);
+    const hash = window.location.hash.replace("#", "").replace("-tab", "");
+    if (hash === "membership") openModal("modal-membership");
+    else if (hash === "apps" || hash === "freelancer-apps") openModal("modal-freelancer-apps");
+    else if (hash === "projects" || hash === "freelancer-projects" || hash === "client-projects") {
+      openModal(currentUser && currentUser.role === "client" ? "modal-client-projects" : "modal-freelancer-projects");
+    } else if (hash === "profile" || hash === "freelancer-profile" || hash === "client-profile") {
+      openModal(currentUser && currentUser.role === "client" ? "modal-client-profile" : "modal-freelancer-profile");
+    } else if (hash === "settings" || hash === "freelancer-settings" || hash === "client-settings") {
+      openModal(currentUser && currentUser.role === "client" ? "modal-client-settings" : "modal-freelancer-settings");
+    }
   }
 }
 
@@ -78,7 +79,7 @@ async function renderAccountView() {
     await renderClientView(container);
   }
 
-  // Re-attach tab switching after every dynamic render
+  // Re-attach modal & form event listeners
   setupEventListeners();
 }
 
@@ -214,7 +215,7 @@ async function renderClientView(container) {
 
   container.innerHTML = `
     <div class="account-dashboard-wrapper">
-      <!-- Profile Header -->
+      <!-- 1. Profile Header -->
       <div class="dashboard-profile-card">
         <div class="dashboard-user-info">
           <div class="dashboard-avatar">
@@ -240,7 +241,41 @@ async function renderClientView(container) {
         </div>
       </div>
 
-      <!-- Quick Stats -->
+      <!-- 2. Account Action Buttons Grid (Sitting Above Stats) -->
+      <div class="account-action-grid account-action-grid-client">
+        <div class="account-action-card" onclick="openModal('modal-client-projects')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">💼 My Projects</span>
+              <span class="account-action-card-badge">${clientProjects.length}</span>
+            </div>
+            <p class="account-action-card-desc">View submitted project requests and status</p>
+          </div>
+          <div class="account-action-card-arrow">View Projects ↗</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-client-profile')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">👤 Business Profile</span>
+            </div>
+            <p class="account-action-card-desc">Manage organization & contact details</p>
+          </div>
+          <div class="account-action-card-arrow">Edit Profile ↗</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-client-settings')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">⚙️ Account Settings</span>
+            </div>
+            <p class="account-action-card-desc">Preferences, security & password reset</p>
+          </div>
+          <div class="account-action-card-arrow">Settings ↗</div>
+        </div>
+      </div>
+
+      <!-- 3. Quick Stats Area (Sitting Below Action Buttons) -->
       <div class="dashboard-stats-grid dashboard-stats-grid-client">
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Account Role</span>
@@ -264,42 +299,75 @@ async function renderClientView(container) {
         </div>
       </div>
 
-      <!-- Account Navigation Cards -->
-      <div class="account-nav-grid account-nav-grid-client">
-        <div class="account-nav-card active" data-tab="client-projects-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">💼 My Projects</span>
-            <span class="account-nav-card-badge">${clientProjects.length}</span>
+      <!-- 4. Client Dashboard Overview Card -->
+      <div class="card" style="margin-top: 1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem;">Project Activity Overview</h3>
+            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Summary of your recent project coordination with FidoConnect.</p>
           </div>
-          <p class="account-nav-card-desc">Track your submitted project requests</p>
-        </div>
-        <div class="account-nav-card" data-tab="client-profile-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">👤 Business Profile</span>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('modal-client-projects')">View All Projects (${clientProjects.length})</button>
+            <a href="post-work.html" class="btn btn-primary btn-sm">+ Post New Project</a>
           </div>
-          <p class="account-nav-card-desc">Organization and contact details</p>
         </div>
-        <div class="account-nav-card" data-tab="client-settings-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">⚙️ Account Settings</span>
-          </div>
-          <p class="account-nav-card-desc">Manage account preferences</p>
-        </div>
-      </div>
 
-      <!-- Tab 1: My Projects -->
-      <div id="client-projects-tab" class="tab-pane active">
         ${clientProjects.length === 0 ? `
-          <div class="card text-center" style="padding: 3rem 1rem;">
+          <div class="text-center" style="padding: 2rem 1rem; background:var(--bg-subtle); border-radius:var(--border-radius-md);">
+            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 0.75rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <h4 style="font-size:1rem; margin-bottom:0.25rem;">No submitted projects yet</h4>
+            <p class="text-muted" style="margin:0 0 1rem; font-size:0.85rem;">Post your website update, design, documents, or custom business task to get started.</p>
+            <a href="post-work.html" class="btn btn-primary btn-sm">Post a Work</a>
+          </div>
+        ` : `
+          <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            ${clientProjects.slice(0, 3).map(proj => `
+              <div style="padding: 0.9rem 1rem; background:var(--bg-subtle); border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; flex-wrap:wrap;">
+                    <span class="project-id-badge">${proj.projectId || proj.id}</span>
+                    <span class="project-category-badge">${proj.category}</span>
+                    ${getStatusBadge(proj.status)}
+                  </div>
+                  <strong style="font-size:0.95rem; color:var(--color-primary);">${proj.title}</strong>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.82rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">Submitted: ${formatDate(proj.createdAt)}</div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- CLIENT POP-UP MODALS WITH CLOSE BUTTONS -->
+    <!-- ============================================== -->
+
+    <!-- Modal 1: Client Projects -->
+    <div id="modal-client-projects" class="modal-overlay">
+      <div class="modal-card modal-card-lg">
+        <button class="modal-close-btn" onclick="closeModal('modal-client-projects')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">💼 My Submitted Projects (${clientProjects.length})</div>
+            <div class="modal-header-sub">Track the progress and agency coordination for all your posted tasks.</div>
+          </div>
+        </div>
+
+        ${clientProjects.length === 0 ? `
+          <div class="text-center" style="padding: 3rem 1rem;">
             <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            <h4>No submitted projects yet</h4>
-            <p class="text-muted" style="margin: 0.4rem 0 1.25rem;">Have a website update, design, data entry, or business task you need done?</p>
+            <h4 style="margin-bottom:0.35rem;">No submitted projects yet</h4>
+            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Have a website update, design, data entry, or business task you need done?</p>
             <a href="post-work.html" class="btn btn-primary">Post Your First Project</a>
           </div>
         ` : `
           <div style="display:flex; flex-direction:column; gap:1rem;">
             ${clientProjects.map(proj => `
-              <div class="card" style="padding: 1.25rem;">
+              <div class="card" style="padding: 1.25rem; border:1px solid var(--border-color);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
                   <div style="flex:1; min-width:0;">
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
@@ -323,38 +391,64 @@ async function renderClientView(container) {
             `).join("")}
           </div>
         `}
-      </div>
 
-      <!-- Tab 2: Business Profile -->
-      <div id="client-profile-tab" class="tab-pane">
-        <div class="card" style="max-width: 640px;">
-          <h3 style="margin-bottom: 1.25rem;">Business & Contact Information</h3>
-          <form id="client-profile-form">
-            <div class="form-group">
-              <label class="form-label">Contact Name</label>
-              <input type="text" id="edit-client-name" class="form-control" value="${currentUser.name || ""}" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Business / Organization Name</label>
-              <input type="text" id="edit-client-business" class="form-control" value="${currentUser.businessName || ""}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Email Address</label>
-              <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">WhatsApp / Phone Number</label>
-              <input type="text" id="edit-client-phone" class="form-control" value="${currentUser.phone || ""}" />
-            </div>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-          </form>
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-client-projects')">Close</button>
+          <a href="post-work.html" class="btn btn-primary">+ Post Another Project</a>
         </div>
       </div>
+    </div>
 
-      <!-- Tab 3: Account Settings -->
-      <div id="client-settings-tab" class="tab-pane">
-        <div class="settings-section-card">
-          <h3 style="margin-bottom: 1rem;">Account Preferences</h3>
+    <!-- Modal 2: Client Profile -->
+    <div id="modal-client-profile" class="modal-overlay">
+      <div class="modal-card modal-card-md">
+        <button class="modal-close-btn" onclick="closeModal('modal-client-profile')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">👤 Business Profile & Contact</div>
+            <div class="modal-header-sub">Update your organization and communication details.</div>
+          </div>
+        </div>
+
+        <form id="client-profile-form">
+          <div class="form-group">
+            <label class="form-label">Contact Name</label>
+            <input type="text" id="edit-client-name" class="form-control" value="${currentUser.name || ""}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Business / Organization Name</label>
+            <input type="text" id="edit-client-business" class="form-control" value="${currentUser.businessName || ""}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp / Phone Number</label>
+            <input type="text" id="edit-client-phone" class="form-control" value="${currentUser.phone || ""}" />
+          </div>
+          
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-client-profile')">Close</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 3: Client Settings -->
+    <div id="modal-client-settings" class="modal-overlay">
+      <div class="modal-card modal-card-md">
+        <button class="modal-close-btn" onclick="closeModal('modal-client-settings')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">⚙️ Account Settings & Security</div>
+            <div class="modal-header-sub">Manage your security settings and password recovery.</div>
+          </div>
+        </div>
+
+        <div class="settings-section-card" style="margin-bottom:1rem;">
+          <h4 style="margin-bottom: 0.75rem; font-size:1rem;">Account Information</h4>
           <div class="settings-meta-item">
             <span class="settings-meta-label">Account Role</span>
             <span class="settings-meta-val">Client / Work Poster</span>
@@ -370,9 +464,13 @@ async function renderClientView(container) {
         </div>
 
         <div class="settings-section-card">
-          <h3 style="margin-bottom: 0.5rem;">Password & Security</h3>
-          <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Request a password reset link sent directly to your registered email address.</p>
+          <h4 style="margin-bottom: 0.35rem; font-size:1rem;">Password Reset</h4>
+          <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Send a secure password reset link to your registered email address.</p>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-send-reset-client">Send Password Reset Link</button>
+        </div>
+
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-client-settings')">Close</button>
         </div>
       </div>
     </div>
@@ -403,6 +501,8 @@ async function renderClientView(container) {
           phone: document.getElementById("edit-client-phone").value.trim()
         });
         showToast("Profile updated successfully", "success");
+        closeModal("modal-client-profile");
+        await renderClientView(container);
       } catch (err) {
         showToast("Failed to update profile: " + err.message, "error");
       }
@@ -444,13 +544,70 @@ async function renderFreelancerView(container) {
         <div class="dashboard-header-actions">
           <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
             <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-            Edit Skills
+            Edit Skills & Bio
           </button>
           <button id="freelancer-logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
         </div>
       </div>
 
-      <!-- 2. Account Summary & Quick Stats Area -->
+      <!-- 2. Account Action Buttons Grid (Sitting ABOVE Stats) -->
+      <div class="account-action-grid">
+        <div class="account-action-card" onclick="openModal('modal-freelancer-apps')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">📋 My Applications</span>
+              <span class="account-action-card-badge">${applications.length}</span>
+            </div>
+            <p class="account-action-card-desc">View submitted proposals & status</p>
+          </div>
+          <div class="account-action-card-arrow">View Applications ↗</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-freelancer-projects')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">💼 Assigned Projects</span>
+              <span class="account-action-card-badge">${activeProjects.length}</span>
+            </div>
+            <p class="account-action-card-desc">Projects currently assigned to you</p>
+          </div>
+          <div class="account-action-card-arrow">View Projects ↗</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-membership')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">⭐ Membership</span>
+              <span class="account-action-card-badge">${isMemberActive ? "Active" : "Plans"}</span>
+            </div>
+            <p class="account-action-card-desc">View your membership and tier</p>
+          </div>
+          <div class="account-action-card-arrow">Manage Plan ↗</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-freelancer-profile')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">👤 Profile & Skills</span>
+              <span class="account-action-card-badge">${currentUser.profileCompleted ? "✓" : "!"}</span>
+            </div>
+            <p class="account-action-card-desc">Your verified information & contact</p>
+          </div>
+          <div class="account-action-card-arrow">View Profile ↗</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-freelancer-settings')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">⚙️ Account Settings</span>
+            </div>
+            <p class="account-action-card-desc">Preferences, security & password</p>
+          </div>
+          <div class="account-action-card-arrow">Settings ↗</div>
+        </div>
+      </div>
+
+      <!-- 3. Quick Stats Area (Sitting BELOW Buttons) -->
       <div class="dashboard-stats-grid">
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Membership</span>
@@ -481,52 +638,78 @@ async function renderFreelancerView(container) {
         </div>
       </div>
 
-      <!-- 3. Redesigned Account Navigation Cards -->
-      <div class="account-nav-grid">
-        <div class="account-nav-card active" data-tab="freelancer-apps-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">📋 My Applications</span>
-            <span class="account-nav-card-badge">${applications.length}</span>
+      <!-- 4. Freelancer Dashboard Overview & Skill Preview Card -->
+      <div class="card" style="margin-top: 1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem;">Selected Freelancer Status</h3>
+            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Your verified skills match eligible opportunities on FidoConnect.</p>
           </div>
-          <p class="account-nav-card-desc">Track your submitted applications</p>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('modal-freelancer-apps')">
+              My Applications (${applications.length})
+            </button>
+            <a href="find-work.html" class="btn btn-primary btn-sm">
+              Find Matching Work &rarr;
+            </a>
+          </div>
         </div>
 
-        <div class="account-nav-card" data-tab="freelancer-projects-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">💼 Assigned Projects</span>
-            <span class="account-nav-card-badge">${activeProjects.length}</span>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+          <!-- Skill Summary Preview -->
+          <div style="background:var(--bg-subtle); padding:1rem 1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Verified Categories</span>
+              <button type="button" class="btn btn-link btn-sm" style="padding:0; font-size:0.78rem; text-decoration:underline;" onclick="openSkillProfileModal()">Edit</button>
+            </div>
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+              ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted" style="font-size:0.85rem;">No categories selected yet</span>'}
+            </div>
+            ${currentUser.bio ? `
+              <div style="font-size:0.82rem; color:var(--color-primary-muted); line-height:1.45; font-style:italic;">
+                "${currentUser.bio.length > 120 ? currentUser.bio.slice(0, 120) + '...' : currentUser.bio}"
+              </div>
+            ` : ''}
           </div>
-          <p class="account-nav-card-desc">Projects currently assigned to you</p>
-        </div>
 
-        <div class="account-nav-card" data-tab="membership-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">⭐ Membership</span>
-            <span class="account-nav-card-badge">${isMemberActive ? "Active" : "Plans"}</span>
+          <!-- Membership Plan Preview -->
+          <div style="background:var(--bg-subtle); padding:1rem 1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem;">Membership Overview</div>
+              <div style="font-size:1.1rem; font-weight:750; color:var(--color-primary); margin-bottom:0.25rem;">
+                ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "No Active Membership"}
+              </div>
+              <p style="font-size:0.82rem; color:var(--text-muted); margin:0; line-height:1.4;">
+                ${isMemberActive ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` : "Activate a membership plan to unlock application submission for matching projects."}
+              </p>
+            </div>
+            <div style="margin-top:0.75rem;">
+              <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="openModal('modal-membership')">
+                ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan'}
+              </button>
+            </div>
           </div>
-          <p class="account-nav-card-desc">View your membership and plan</p>
-        </div>
-
-        <div class="account-nav-card" data-tab="freelancer-profile-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">👤 Profile & Skills</span>
-            <span class="account-nav-card-badge">${currentUser.profileCompleted ? "✓" : "!"}</span>
-          </div>
-          <p class="account-nav-card-desc">Your freelancer information</p>
-        </div>
-
-        <div class="account-nav-card" data-tab="freelancer-settings-tab">
-          <div class="account-nav-card-head">
-            <span class="account-nav-card-title">⚙️ Account Settings</span>
-          </div>
-          <p class="account-nav-card-desc">Manage account preferences</p>
         </div>
       </div>
+    </div>
 
-      <!-- 4. Section 1: My Applications Tab Pane -->
-      <div id="freelancer-apps-tab" class="tab-pane active">
+    <!-- ============================================== -->
+    <!-- FREELANCER POP-UP MODALS WITH CLOSE BUTTONS -->
+    <!-- ============================================== -->
+
+    <!-- Modal 1: My Applications -->
+    <div id="modal-freelancer-apps" class="modal-overlay">
+      <div class="modal-card modal-card-lg">
+        <button class="modal-close-btn" onclick="closeModal('modal-freelancer-apps')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">📋 My Submitted Applications (${applications.length})</div>
+            <div class="modal-header-sub">Track the status of all project proposals you have submitted.</div>
+          </div>
+        </div>
+
         ${applications.length === 0 ? `
-          <div class="card text-center" style="padding: 3rem 1rem;">
+          <div class="text-center" style="padding: 3rem 1rem;">
             <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <h4 style="margin-bottom:0.35rem;">No active applications</h4>
             <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Matching opportunities will appear in Find Work.</p>
@@ -537,7 +720,7 @@ async function renderFreelancerView(container) {
             ${applications.map(app => {
               const isActionable = !["Rejected", "Withdrawn", "Closed", "Completed", "Cancelled"].includes(app.status);
               return `
-                <div class="card" style="padding: 1.25rem;">
+                <div class="card" style="padding: 1.25rem; border:1px solid var(--border-color);">
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
                     <div style="flex:1; min-width:0;">
                       <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
@@ -566,21 +749,36 @@ async function renderFreelancerView(container) {
             }).join("")}
           </div>
         `}
-      </div>
 
-      <!-- 5. Section 2: Assigned Projects Tab Pane -->
-      <div id="freelancer-projects-tab" class="tab-pane">
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-apps')">Close</button>
+          <a href="find-work.html" class="btn btn-primary">Find Available Work</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Assigned Projects -->
+    <div id="modal-freelancer-projects" class="modal-overlay">
+      <div class="modal-card modal-card-lg">
+        <button class="modal-close-btn" onclick="closeModal('modal-freelancer-projects')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">💼 Assigned Projects (${activeProjects.length})</div>
+            <div class="modal-header-sub">Projects currently assigned to you for execution.</div>
+          </div>
+        </div>
+
         ${activeProjects.length === 0 ? `
-          <div class="card text-center" style="padding: 3rem 1rem;">
+          <div class="text-center" style="padding: 3rem 1rem;">
             <svg width="42" height="42" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <h4 style="margin-bottom:0.35rem;">No assigned projects yet</h4>
-            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Selected projects matching your skills will appear here.</p>
+            <p class="text-muted" style="margin: 0 0 1.25rem; font-size:0.9rem;">Selected projects matching your verified skills will appear here.</p>
             <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
           </div>
         ` : `
           <div style="display:flex; flex-direction:column; gap:1rem;">
             ${activeProjects.map(proj => `
-              <div class="card" style="padding: 1.25rem;">
+              <div class="card" style="padding: 1.25rem; border:1px solid var(--border-color);">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
                   <div style="flex:1; min-width:0;">
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
@@ -603,28 +801,34 @@ async function renderFreelancerView(container) {
             `).join("")}
           </div>
         `}
-      </div>
 
-      <!-- 6. Section 3: Membership Tab Pane -->
-      <div id="membership-tab" class="tab-pane">
-        <!-- Section Header -->
-        <div style="margin-bottom: 2rem;">
-          <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.4rem;">
-            <span style="width:8px; height:8px; border-radius:50%; background:var(--color-accent);"></span>
-            Selected Freelancer Program
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-projects')">Close</button>
+          <a href="find-work.html" class="btn btn-primary">Browse Open Projects</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: Membership Plans -->
+    <div id="modal-membership" class="modal-overlay">
+      <div class="modal-card modal-card-lg">
+        <button class="modal-close-btn" onclick="closeModal('modal-membership')">&times;</button>
+        
+        <!-- Modal Header -->
+        <div class="modal-header-bar">
+          <div>
+            <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent); margin-bottom:0.2rem;">
+              <span style="width:7px; height:7px; border-radius:50%; background:var(--color-accent);"></span>
+              Selected Freelancer Program
+            </div>
+            <div class="modal-header-title">⭐ Plans for Selected Members</div>
+            <div class="modal-header-sub">FidoConnect memberships are available to selected freelancers through our invite-only program.</div>
           </div>
-          <h2 style="font-size: 1.85rem; margin-bottom: 0.4rem;">Plans for Selected Members</h2>
-          <p class="text-muted" style="font-size: 1rem; max-width: 720px; line-height: 1.6; margin-bottom: 0.5rem;">
-            FidoConnect memberships are available to selected freelancers through our invite-only program.
-          </p>
-          <p style="font-size: 0.88rem; color: var(--color-primary-muted); max-width: 720px; line-height: 1.6;">
-            You reached this page through a FidoConnect invitation. Your skills have been reviewed and verified, giving you access to membership plans designed for selected freelancers.
-          </p>
         </div>
 
         <!-- Current Membership Banner / Project Return Prompt -->
         ${isMemberActive ? `
-          <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 2rem; padding: 1.25rem 1.5rem;">
+          <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 1.5rem; padding: 1.25rem 1.5rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
               <div>
                 <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -648,7 +852,7 @@ async function renderFreelancerView(container) {
             </div>
           </div>
         ` : (returnProject ? `
-          <div class="notice-box notice-warning" style="margin-bottom: 2rem;">
+          <div class="notice-box notice-warning" style="margin-bottom: 1.5rem;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <div>
               <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
@@ -698,9 +902,9 @@ async function renderFreelancerView(container) {
         </div>
 
         <!-- 4-Step Process Section -->
-        <div style="margin-top: 3.5rem; margin-bottom: 2.5rem;">
-          <h3 style="font-size: 1.35rem; margin-bottom: 0.4rem;">How FidoConnect Membership Works</h3>
-          <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1.25rem;">Our invite-only process connects verified professionals with vetted agency opportunities.</p>
+        <div style="margin-top: 2rem; margin-bottom: 1.5rem;">
+          <h4 style="font-size: 1.15rem; margin-bottom: 0.35rem;">How FidoConnect Membership Works</h4>
+          <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">Our invite-only process connects verified professionals with vetted agency opportunities.</p>
           
           <div class="membership-steps-grid">
             <div class="membership-step-card">
@@ -727,31 +931,42 @@ async function renderFreelancerView(container) {
         </div>
 
         <!-- Transparent Trust Section ("Before you join") -->
-        <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.5rem; max-width: 840px;">
-          <h4 style="font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--color-primary);">Before you join</h4>
-          <p style="font-size: 0.88rem; line-height: 1.6; color: var(--color-primary-muted); margin: 0;">
+        <div class="card" style="background-color: var(--bg-subtle); border-left: 4px solid var(--color-accent); padding: 1.25rem;">
+          <h5 style="font-size: 0.95rem; margin-bottom: 0.3rem; color: var(--color-primary);">Before you join</h5>
+          <p style="font-size: 0.84rem; line-height: 1.55; color: var(--color-primary-muted); margin: 0;">
             FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand, project requirements, skill match, and agency selection. Membership does not guarantee a specific project, income, or number of completed jobs.
           </p>
         </div>
-      </div>
 
-      <!-- 7. Section 4: Profile & Skills Tab Pane -->
-      <div id="freelancer-profile-tab" class="tab-pane">
-        <div class="card" style="max-width: 680px; margin-bottom: 1.5rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.5rem;">
-            <div>
-              <h3 style="margin:0;">Verified Skill Profile & Services</h3>
-              <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Your verified skills determine which projects are unlocked for you in Find Work.</p>
-            </div>
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-membership')">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Profile & Skills -->
+    <div id="modal-freelancer-profile" class="modal-overlay">
+      <div class="modal-card modal-card-md">
+        <button class="modal-close-btn" onclick="closeModal('modal-freelancer-profile')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">👤 Verified Skill Profile & Contact</div>
+            <div class="modal-header-sub">Your verified skills determine which projects are unlocked in Find Work.</div>
+          </div>
+        </div>
+
+        <div class="card" style="border:1px solid var(--border-color); margin-bottom: 1.25rem; padding: 1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; flex-wrap:wrap; gap:0.5rem;">
+            <strong style="font-size:0.95rem;">Skills & Services</strong>
             <button type="button" class="btn btn-secondary btn-sm" onclick="openSkillProfileModal()">
               Edit Skills & Bio
             </button>
           </div>
 
           ${currentUser.profileCompleted ? `
-            <div style="display:flex; flex-direction:column; gap:1rem; background:var(--bg-subtle); padding:1.25rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
+            <div style="display:flex; flex-direction:column; gap:0.85rem; background:var(--bg-subtle); padding:1rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color);">
               <div>
-                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Primary Categories</div>
+                <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">Primary Categories</div>
                 <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                   ${(currentUser.categories || []).map(cat => `<span class="badge badge-active">${cat}</span>`).join("") || '<span class="text-muted">None selected</span>'}
                 </div>
@@ -759,7 +974,7 @@ async function renderFreelancerView(container) {
 
               ${(currentUser.subcategories && currentUser.subcategories.length > 0) ? `
                 <div>
-                  <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Skills & Tools</div>
+                  <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">Skills & Tools</div>
                   <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                     ${currentUser.subcategories.map(sub => `<span class="badge badge-inactive">${sub}</span>`).join("")}
                   </div>
@@ -768,14 +983,14 @@ async function renderFreelancerView(container) {
 
               ${currentUser.customSkills ? `
                 <div>
-                  <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">Custom Skills</div>
-                  <p style="font-size:0.88rem; margin:0;">${currentUser.customSkills}</p>
+                  <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">Custom Skills</div>
+                  <p style="font-size:0.85rem; margin:0;">${currentUser.customSkills}</p>
                 </div>
               ` : ""}
 
               <div>
-                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">About You / Introduction</div>
-                <p style="font-size:0.88rem; line-height:1.55; margin:0; font-style:italic;">
+                <div style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">About You / Introduction</div>
+                <p style="font-size:0.85rem; line-height:1.5; margin:0; font-style:italic;">
                   ${currentUser.bio ? `"${currentUser.bio}"` : '<span class="text-muted">No introduction provided yet.</span>'}
                 </p>
               </div>
@@ -787,40 +1002,51 @@ async function renderFreelancerView(container) {
                 <strong>Skill profile incomplete:</strong> Complete your skill profile to unlock matching projects in Find Work.
               </div>
             </div>
-            <button type="button" class="btn btn-primary" onclick="openSkillProfileModal()">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openSkillProfileModal()">
               Complete Skill Profile Now
             </button>
           `}
         </div>
 
-        <div class="card" style="max-width: 680px;">
-          <h3 style="margin-bottom: 1.5rem;">Basic Contact Information</h3>
-          <form id="freelancer-profile-form">
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input type="text" id="edit-free-name" class="form-control" value="${currentUser.name || ""}" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Email Address</label>
-              <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">WhatsApp / Phone</label>
-              <input type="text" id="edit-free-phone" class="form-control" value="${currentUser.phone || ""}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Portfolio / GitHub / Dribbble Link</label>
-              <input type="url" id="edit-free-portfolio" class="form-control" placeholder="https://yourportfolio.com" value="${currentUser.portfolio || ""}" />
-            </div>
+        <form id="freelancer-profile-form">
+          <h4 style="font-size:1rem; margin-bottom: 1rem;">Contact Information</h4>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="edit-free-name" class="form-control" value="${currentUser.name || ""}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" value="${currentUser.email || ""}" disabled style="background:#f1f5f9;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp / Phone</label>
+            <input type="text" id="edit-free-phone" class="form-control" value="${currentUser.phone || ""}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Portfolio / GitHub / Dribbble Link</label>
+            <input type="url" id="edit-free-portfolio" class="form-control" placeholder="https://yourportfolio.com" value="${currentUser.portfolio || ""}" />
+          </div>
+          <div class="modal-footer-bar">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-profile')">Close</button>
             <button type="submit" class="btn btn-primary">Save Personal Details</button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
+    </div>
 
-      <!-- 8. Section 5: Account Settings Tab Pane -->
-      <div id="freelancer-settings-tab" class="tab-pane">
-        <div class="settings-section-card">
-          <h3 style="margin-bottom: 1rem;">Account Preferences</h3>
+    <!-- Modal 5: Account Settings -->
+    <div id="modal-freelancer-settings" class="modal-overlay">
+      <div class="modal-card modal-card-md">
+        <button class="modal-close-btn" onclick="closeModal('modal-freelancer-settings')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">⚙️ Account Settings & Security</div>
+            <div class="modal-header-sub">Manage your account preferences and security options.</div>
+          </div>
+        </div>
+
+        <div class="settings-section-card" style="margin-bottom:1rem;">
+          <h4 style="margin-bottom: 0.75rem; font-size:1rem;">Account Preferences</h4>
           <div class="settings-meta-item">
             <span class="settings-meta-label">Account Role</span>
             <span class="settings-meta-val">Selected Freelancer</span>
@@ -844,9 +1070,13 @@ async function renderFreelancerView(container) {
         </div>
 
         <div class="settings-section-card">
-          <h3 style="margin-bottom: 0.5rem;">Password & Security</h3>
+          <h4 style="margin-bottom: 0.35rem; font-size:1rem;">Password & Security</h4>
           <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Request a password reset link sent directly to your registered email address.</p>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-send-reset-free">Send Password Reset Link</button>
+        </div>
+
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-settings')">Close</button>
         </div>
       </div>
     </div>
@@ -877,16 +1107,12 @@ async function renderFreelancerView(container) {
           portfolio: document.getElementById("edit-free-portfolio").value.trim()
         });
         showToast("Profile updated successfully", "success");
+        closeModal("modal-freelancer-profile");
+        await renderFreelancerView(container);
       } catch (err) {
         showToast("Failed to update profile: " + err.message, "error");
       }
     });
-  }
-
-  // Restore active tab if requested in URL or hash
-  if (returnProject || urlParams.get("tab") === "membership") {
-    const memTabBtn = document.querySelector(`[data-tab="membership-tab"]`);
-    if (memTabBtn) memTabBtn.click();
   }
 }
 
