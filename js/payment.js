@@ -1,8 +1,9 @@
 /**
  * FidoConnect - Payment Checkout Controller
  * 
- * Manages manual UPI checkout, dynamic plan pricing, QR code rendering,
- * UPI intent launch, duplicate UTR validation, and submission for admin verification.
+ * Manages manual UPI checkout, dynamic plan pricing, interactive plan switching,
+ * QR code rendering, UPI intent launch, duplicate UTR validation, target project
+ * context, live verification status checking, and submission for admin verification.
  */
 
 import { FidoAuth } from "./auth.js";
@@ -10,7 +11,9 @@ import { FidoDB, DEFAULT_UPI_CONFIG } from "./db.js";
 
 let currentUser = null;
 let currentPlan = null;
+let allPublishedPlans = [];
 let returnProject = null;
+let targetProjectData = null;
 let upiConfig = DEFAULT_UPI_CONFIG;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -23,13 +26,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Check mandatory profile completion
+    if (!FidoAuth.isProfileComplete(currentUser)) {
+      const currentUrl = window.location.pathname + window.location.search;
+      window.location.href = `auth.html?redirect=${encodeURIComponent(currentUrl)}&complete_profile=true`;
+      return;
+    }
+
     try {
       upiConfig = await FidoDB.getUPIConfig();
     } catch (e) {
       upiConfig = DEFAULT_UPI_CONFIG;
     }
 
-    initPaymentPage();
+    await initPaymentPage();
   });
 });
 
@@ -50,20 +60,46 @@ async function initPaymentPage() {
   const { planKey, returnProject: retProj, retry } = getQueryParams();
   returnProject = retProj;
 
-  // 1. Try to load requested plan from Firestore
+  // 1. Role-specific handling: Client accounts do not need freelancer memberships
+  if (currentUser.role === "client" && !FidoAuth.isAdmin()) {
+    renderClientView(container);
+    return;
+  }
+
+  // 2. Unverified freelancer handling: Must have verified invite code first
+  if (currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
+    renderUnverifiedFreelancerView(container);
+    return;
+  }
+
+  // 3. Load target project context if return_project is provided
+  if (returnProject) {
+    try {
+      const projects = await FidoDB.getProjects();
+      targetProjectData = projects.find(p => (p.projectId || p.id) === returnProject || p.id === returnProject) || null;
+    } catch (e) {
+      console.warn("Could not load target project details:", e);
+    }
+  }
+
+  // 4. Load all published plans from Firestore
+  try {
+    allPublishedPlans = await FidoDB.getMembershipPlans(false);
+  } catch (e) {
+    allPublishedPlans = [];
+  }
+
+  // 5. Resolve requested plan from Firestore
   if (planKey) {
     currentPlan = await FidoDB.getMembershipPlanById(planKey);
   }
 
-  // 2. If no plan specified or not found, fall back to first active/recommended published plan
-  if (!currentPlan) {
-    const published = await FidoDB.getMembershipPlans(false);
-    if (published && published.length > 0) {
-      currentPlan = published.find(p => p.isRecommended) || published[0];
-    }
+  // 6. If no plan specified or not found, fall back to recommended or first active plan
+  if (!currentPlan && allPublishedPlans.length > 0) {
+    currentPlan = allPublishedPlans.find(p => p.isRecommended) || allPublishedPlans[0];
   }
 
-  // 3. If still no plan found (database has 0 active plans)
+  // 7. If still no plan found in database
   if (!currentPlan) {
     container.innerHTML = `
       <div class="card text-center" style="padding: 3rem 2rem; max-width: 600px; margin: 0 auto; border-radius: var(--border-radius-lg);">
@@ -76,19 +112,10 @@ async function initPaymentPage() {
     return;
   }
 
-  // Update back link if returning to a project
-  const backLink = document.getElementById("payment-back-link");
-  if (backLink) {
-    if (returnProject) {
-      backLink.href = `account.html?tab=membership&return_project=${encodeURIComponent(returnProject)}`;
-      backLink.innerHTML = `&larr; Back to Membership Plans (Project ${returnProject})`;
-    } else {
-      backLink.href = "account.html?tab=membership";
-      backLink.innerHTML = `&larr; Back to Membership Plans`;
-    }
-  }
+  // Update back link
+  updateBackLink();
 
-  // 1. Check if user already has an active pending payment
+  // 8. Check if user already has an active pending payment
   if (!retry) {
     const pendingPayment = await FidoDB.getUserPendingMembershipPayment(currentUser.uid);
     if (pendingPayment) {
@@ -97,14 +124,14 @@ async function initPaymentPage() {
     }
   }
 
-  // 2. Check if user is already an active member on the SAME plan
+  // 9. Check if user is already an active member on the SAME plan
   const isMemberActive = currentUser.membershipStatus === "active";
   if (isMemberActive && currentUser.membershipPlan === currentPlan.name && !retry) {
     renderAlreadyActiveState(container);
     return;
   }
 
-  // 3. Check for recently rejected payment
+  // 10. Check for recently rejected payment
   if (!retry) {
     const latestPayment = await FidoDB.getUserLatestMembershipPayment(currentUser.uid);
     if (latestPayment && latestPayment.status === "rejected") {
@@ -113,9 +140,40 @@ async function initPaymentPage() {
     }
   }
 
-  // 4. Render Checkout Form
+  // 11. Render Checkout Form
   renderCheckoutForm(container);
 }
+
+function updateBackLink() {
+  const backLink = document.getElementById("payment-back-link");
+  if (!backLink) return;
+
+  if (returnProject) {
+    backLink.href = `account.html?tab=membership&return_project=${encodeURIComponent(returnProject)}`;
+    backLink.innerHTML = `&larr; Back to Membership Plans (Project ${returnProject})`;
+  } else {
+    backLink.href = "account.html?tab=membership";
+    backLink.innerHTML = `&larr; Back to Membership Plans`;
+  }
+}
+
+// Interactive plan switcher
+window.switchPaymentPlan = async function(planId) {
+  const plan = allPublishedPlans.find(p => p.id === planId) || await FidoDB.getMembershipPlanById(planId);
+  if (!plan) return;
+
+  currentPlan = plan;
+
+  // Update URL without page reload
+  const url = new URL(window.location);
+  url.searchParams.set("plan", plan.id || plan.name.toLowerCase());
+  window.history.replaceState({}, "", url);
+
+  const container = document.getElementById("payment-checkout-container");
+  if (container) {
+    renderCheckoutForm(container);
+  }
+};
 
 function renderCheckoutForm(container) {
   const planPrice = Number(currentPlan.price !== undefined ? currentPlan.price : currentPlan.priceAmount) || 0;
@@ -124,6 +182,7 @@ function renderCheckoutForm(container) {
   const planQrAsset = currentPlan.qrImageUrl || upiConfig.qrAsset || "images/fido-upi-qr.svg";
   const planUpiId = currentPlan.upiId || upiConfig.upiId || "fidoconnect@okaxis";
   const planMerchantName = currentPlan.merchantName || upiConfig.merchantName || "FidoConnect";
+  const isAdminUser = FidoAuth.isAdmin();
 
   // UPI Intent URI format: upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...
   const intentNote = `FidoConnect ${currentPlan.name} Membership`;
@@ -131,10 +190,10 @@ function renderCheckoutForm(container) {
 
   container.innerHTML = `
     <!-- Header -->
-    <div style="margin-bottom: 2rem;">
+    <div style="margin-bottom: 1.75rem;">
       <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
         <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-        <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent);">Manual UPI Checkout (India)</span>
+        <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent);">Selected Freelancer Program (India)</span>
       </div>
       <h1 style="font-size: 2rem; font-weight: 750; margin-bottom: 0.5rem; color: var(--color-primary); letter-spacing: -0.02em;">Complete Membership Payment</h1>
       <p class="text-muted" style="font-size: 1rem; margin: 0; line-height: 1.5;">
@@ -142,13 +201,61 @@ function renderCheckoutForm(container) {
       </p>
     </div>
 
+    <!-- Admin Preview Banner (if admin) -->
+    ${isAdminUser ? `
+      <div class="card" style="background:#f0fdf4; border:1px solid #bbf7d0; padding:1rem 1.25rem; margin-bottom:1.5rem; border-radius:var(--border-radius-md);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+          <div style="display:flex; align-items:center; gap:0.6rem; font-size:0.88rem; color:#166534;">
+            <span style="font-size:1.1rem;">👑</span>
+            <span><strong>Admin Mode:</strong> Viewing freelancer payment checkout. You can test submissions or manage incoming payments.</span>
+          </div>
+          <a href="admin.html#sec-payments" class="btn btn-secondary btn-sm" style="background:#ffffff; border-color:#86efac; color:#166534;">
+            Go to Admin Payment Verifications &rarr;
+          </a>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Return to Project Contextual Banner -->
     ${returnProject ? `
-      <div class="card" style="background: var(--color-accent-soft); border: 1px solid var(--color-accent-border); padding: 1.25rem 1.5rem; margin-bottom: 1.75rem; border-radius: var(--border-radius-md);">
+      <div class="card" style="background: var(--color-accent-soft); border: 1px solid var(--color-accent-border); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; border-radius: var(--border-radius-md);">
         <div style="display:flex; align-items:flex-start; gap:0.75rem;">
           <svg width="22" height="22" fill="none" stroke="var(--color-accent)" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           <div style="font-size: 0.92rem; color: var(--color-primary); line-height: 1.5;">
-            <strong>Application Pending for Project ${returnProject}:</strong> Completing this membership payment will enable final submission of your prepared proposal once verified.
+            <strong>Application Pending for Project ${returnProject}${targetProjectData ? `: ${targetProjectData.title || ''}` : ''}</strong><br/>
+            Completing this membership payment will enable final submission and client review of your prepared proposal once verified.
+            <div style="margin-top:0.35rem;">
+              <a href="project-details.html?id=${encodeURIComponent(returnProject)}" style="color:var(--color-accent); font-weight:600; text-decoration:none; font-size:0.85rem;">
+                View Project Details & Draft &rarr;
+              </a>
+            </div>
           </div>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Interactive Plan Switcher Pills (If multiple plans available) -->
+    ${allPublishedPlans.length > 1 ? `
+      <div style="margin-bottom: 1.25rem;">
+        <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:0.5rem;">
+          Select Membership Plan:
+        </div>
+        <div class="payment-plan-switcher">
+          ${allPublishedPlans.map(plan => {
+            const isSelected = plan.id === currentPlan.id || (plan.name && plan.name.toLowerCase() === currentPlan.name.toLowerCase());
+            const priceNum = Number(plan.price !== undefined ? plan.price : plan.priceAmount) || 0;
+            return `
+              <button 
+                type="button" 
+                class="payment-plan-pill ${isSelected ? 'active' : ''}" 
+                onclick="switchPaymentPlan('${plan.id}')"
+              >
+                <span>${plan.name}</span>
+                <span class="pill-price">₹${priceNum.toLocaleString("en-IN")}</span>
+                ${plan.isRecommended ? `<span style="font-size:0.75rem;">★</span>` : ''}
+              </button>
+            `;
+          }).join("")}
         </div>
       </div>
     ` : ''}
@@ -156,7 +263,7 @@ function renderCheckoutForm(container) {
     <div style="display: grid; grid-template-columns: 1fr; gap: 1.75rem;">
       
       <!-- 1. Selected Plan Details Card -->
-      <div class="card" style="padding: 1.75rem; border-radius: var(--border-radius-lg); border: 1px solid var(--border-color);">
+      <div class="payment-checkout-card">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom: 1.25rem;">
           <div>
             <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
@@ -173,33 +280,54 @@ function renderCheckoutForm(container) {
           </div>
         </div>
 
+        ${Array.isArray(currentPlan.features) && currentPlan.features.length > 0 ? `
+          <div style="background:var(--bg-subtle); border-radius:var(--border-radius-md); padding:0.85rem 1rem; margin-bottom:1rem;">
+            <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:0.4rem;">Plan Includes:</div>
+            <ul style="list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.4rem; font-size:0.85rem; color:var(--color-primary);">
+              ${currentPlan.features.map(f => `
+                <li style="display:flex; align-items:center; gap:6px;">
+                  <span style="color:var(--color-teal); font-weight:bold;">✓</span>
+                  <span>${f}</span>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        ` : ''}
+
         <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; display:flex; justify-content:space-between; align-items:center; font-size:0.88rem; flex-wrap:wrap; gap:0.5rem;">
           <span class="text-muted">Freelancer Account: <strong style="color:var(--color-primary);">${currentUser.name || currentUser.email}</strong></span>
-          <a href="account.html?tab=membership" style="color:var(--color-accent); font-weight:600; text-decoration:none;">Change Plan &rarr;</a>
+          <a href="account.html?tab=membership${returnProject ? '&return_project=' + encodeURIComponent(returnProject) : ''}" style="color:var(--color-accent); font-weight:600; text-decoration:none;">
+            Compare All Plans &rarr;
+          </a>
         </div>
       </div>
 
       <!-- 2. Pay using UPI Section Card -->
-      <div class="card" style="padding: 2rem; border-radius: var(--border-radius-lg); border: 1px solid var(--border-color);">
+      <div class="payment-checkout-card">
         <h3 style="font-size: 1.3rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.4rem;">
-          Pay using UPI
+          Step 1: Pay using UPI
         </h3>
         <p class="text-muted" style="font-size: 0.92rem; margin-bottom: 1.75rem;">
-          Scan the QR code using any UPI app (Google Pay, PhonePe, Paytm, BHIM) and complete the exact payment of <strong>${planPriceDisplay}</strong>.
+          Scan the QR code with any UPI application (Google Pay, PhonePe, Paytm, BHIM, Bank Apps) and transfer exactly <strong>${planPriceDisplay}</strong>.
         </p>
 
         <!-- Centered QR Container -->
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 2rem;">
           
           <!-- QR Card -->
-          <div style="background: #ffffff; padding: 1.25rem; border-radius: var(--border-radius-lg); border: 2px solid var(--border-color); box-shadow: var(--shadow-md); max-width: 280px; width: 100%; text-align: center;">
-            <img src="${planQrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; max-height: 240px; height: auto; display: block; border-radius: 8px; margin: 0 auto 0.75rem; object-fit: contain;" onerror="this.onerror=null; this.src='images/fido-upi-qr.svg';" />
-            <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">Scan to Pay ${planPriceDisplay}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Recipient: ${planMerchantName}</div>
+          <div class="upi-qr-card">
+            <img 
+              src="${planQrAsset}" 
+              alt="FidoConnect UPI QR Code" 
+              style="width: 100%; max-height: 240px; height: auto; display: block; border-radius: 8px; margin: 0 auto 0.75rem; object-fit: contain;" 
+              onerror="this.onerror=null; this.src='images/fido-upi-qr.svg';" 
+            />
+            <div style="font-size: 0.88rem; font-weight: 750; color: var(--color-primary);">Scan to Pay ${planPriceDisplay}</div>
+            <div style="font-size: 0.76rem; color: var(--text-muted); margin-top:2px;">Recipient: <strong>${planMerchantName}</strong></div>
           </div>
 
           <!-- UPI ID Copy Box -->
-          <div style="margin-top: 1.25rem; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 380px; width: 100%;">
+          <div class="upi-copy-box" style="margin-top: 1.25rem;">
             <div>
               <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">UPI ID</div>
               <div id="upi-id-text" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--color-primary);">${planUpiId}</div>
@@ -220,21 +348,32 @@ function renderCheckoutForm(container) {
             </span>
           </div>
 
+          <!-- Accepted Apps Badges -->
+          <div class="accepted-apps-grid">
+            <span class="accepted-app-tag">Google Pay</span>
+            <span class="accepted-app-tag">PhonePe</span>
+            <span class="accepted-app-tag">Paytm</span>
+            <span class="accepted-app-tag">BHIM</span>
+            <span class="accepted-app-tag">Cred</span>
+            <span class="accepted-app-tag">Amazon Pay</span>
+            <span class="accepted-app-tag">Any Bank UPI</span>
+          </div>
+
         </div>
 
         <!-- 3. Payment Confirmation Section -->
         <div style="border-top: 2px dashed var(--border-color); padding-top: 2rem;">
-          <h4 style="font-size: 1.15rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.35rem;">
-            Payment completed?
+          <h4 style="font-size: 1.2rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.35rem;">
+            Step 2: Submit Transaction ID / UTR
           </h4>
           <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1.25rem;">
-            Enter the 12-digit UPI Reference Number / UTR from your payment confirmation screen to submit for verification.
+            Once you complete the payment in your UPI app, copy the 12-digit UPI Reference Number / UTR from your receipt and paste it below.
           </p>
 
           <form id="payment-verification-form">
             <div class="form-group" style="margin-bottom: 1.25rem;">
               <label for="payment-utr-input" class="form-label form-label-required" style="font-weight: 700;">
-                Transaction ID / UTR
+                Transaction ID / UPI Ref Number / UTR
               </label>
               <input 
                 type="text" 
@@ -246,7 +385,7 @@ function renderCheckoutForm(container) {
                 style="font-size: 1.05rem; padding: 0.75rem 1rem;"
               />
               <span class="form-hint" style="margin-top: 0.35rem; display:block;">
-                Found under payment details in your UPI app receipt (Google Pay, PhonePe, Paytm, BHIM, Bank App).
+                Found in payment receipt details in Google Pay, PhonePe, Paytm, BHIM, or your bank app.
               </span>
             </div>
 
@@ -258,8 +397,8 @@ function renderCheckoutForm(container) {
 
             <!-- Explanation & Disclaimer -->
             <div style="background: var(--bg-subtle); border-radius: var(--border-radius-md); padding: 1rem 1.25rem; font-size: 0.84rem; color: var(--text-muted); line-height: 1.55;">
-              <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 0.25rem;">Important Note:</div>
-              Your membership will be activated after FidoConnect verifies your payment receipt against our bank records. Verification typically takes a few hours during standard business hours.
+              <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 0.25rem;">Verification Timeline:</div>
+              Your membership will be activated after FidoConnect verifies the transaction reference against our bank records. Verification typically takes a few hours during standard business hours.
               <div style="margin-top: 0.4rem; font-size: 0.78rem;">
                 FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand and verified skill match. Membership does not guarantee specific projects or income.
               </div>
@@ -337,29 +476,29 @@ function renderPendingState(container, payment) {
       </div>
 
       <div style="display:inline-block; margin-bottom: 0.75rem;">
-        <span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.85rem; padding: 0.35rem 0.85rem;">
+        <span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.85rem; padding: 0.35rem 0.85rem; border:1px solid #fde68a;">
           🟡 Verification Pending
         </span>
       </div>
 
       <h2 style="font-size: 1.65rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">
-        Payment Submitted
+        Payment Submitted for Verification
       </h2>
       <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.5;">
-        Your payment details have been submitted for manual verification. Our team will verify the transaction against our account records.
+        Your payment reference has been submitted. Our team is verifying the transaction against our account records.
       </p>
 
       <!-- Details Summary Box -->
-      <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1.5rem; text-align: left; margin-bottom: 2rem;">
+      <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1.5rem; text-align: left; margin-bottom: 1.75rem;">
         
         <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem; font-size:0.9rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
           <span class="text-muted">Selected Plan</span>
-          <strong style="color:var(--color-primary);">${payment.planName || currentPlan.name}</strong>
+          <strong style="color:var(--color-primary);">${payment.planName || (currentPlan && currentPlan.name) || "Membership"}</strong>
         </div>
 
         <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem; font-size:0.9rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
           <span class="text-muted">Amount</span>
-          <strong style="color:var(--color-accent); font-size:1.05rem;">₹${payment.amount || currentPlan.priceAmount}</strong>
+          <strong style="color:var(--color-accent); font-size:1.05rem;">₹${payment.amount || (currentPlan && (currentPlan.price || currentPlan.priceAmount)) || 0}</strong>
         </div>
 
         <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem; font-size:0.9rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
@@ -367,17 +506,32 @@ function renderPendingState(container, payment) {
           <strong class="font-mono" style="color:var(--color-primary);">${payment.transactionId}</strong>
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; ${payment.returnProject ? 'padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);' : ''}">
           <span class="text-muted">Submitted Date</span>
           <span style="color:var(--color-primary);">${formatDate(payment.submittedAt || payment.createdAt)}</span>
         </div>
 
+        ${payment.returnProject ? `
+          <div style="display:flex; justify-content:space-between; font-size:0.9rem; padding-top:0.75rem;">
+            <span class="text-muted">Prepared Proposal</span>
+            <strong style="color:var(--color-primary);">Project ${payment.returnProject}</strong>
+          </div>
+        ` : ''}
+
+      </div>
+
+      <!-- Live Status Check Button -->
+      <div style="margin-bottom: 1.75rem;">
+        <button type="button" id="btn-check-status" class="btn btn-secondary btn-sm" onclick="checkLivePaymentStatus('${payment.id}')" style="display:inline-flex; align-items:center; gap:6px;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>Check Verification Status</span>
+        </button>
       </div>
 
       <!-- Trust Note -->
-      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--border-radius-md); padding: 1rem 1.25rem; font-size: 0.88rem; color: #1e40af; margin-bottom: 2rem; line-height: 1.5;">
-        <strong>Your membership will be activated after payment verification.</strong><br/>
-        Once verified by an administrator, your Selected Freelancer privileges will be enabled immediately.
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--border-radius-md); padding: 1rem 1.25rem; font-size: 0.88rem; color: #1e40af; margin-bottom: 2rem; line-height: 1.5; text-align: left;">
+        <strong>Your membership will be activated automatically once verified.</strong><br/>
+        You will receive full access to apply for matching project opportunities as soon as the transaction is confirmed.
       </div>
 
       <!-- Actions -->
@@ -399,6 +553,55 @@ function renderPendingState(container, payment) {
   `;
 }
 
+window.checkLivePaymentStatus = async function(paymentId) {
+  const btn = document.getElementById("btn-check-status");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="preloader-spinner" style="width:14px; height:14px; margin:0; display:inline-block; vertical-align:middle;"></span> Checking...`;
+  }
+
+  try {
+    // Refresh user profile
+    const updatedUser = await FidoAuth.waitForAuth();
+    currentUser = updatedUser;
+
+    const pendingPayment = await FidoDB.getUserPendingMembershipPayment(currentUser.uid);
+    const container = document.getElementById("payment-checkout-container");
+
+    if (!pendingPayment) {
+      // Payment might be verified or rejected!
+      if (currentUser.membershipStatus === "active") {
+        showToast("🎉 Payment verified! Your membership is active.", "success");
+        if (container) renderAlreadyActiveState(container);
+      } else {
+        const latest = await FidoDB.getUserLatestMembershipPayment(currentUser.uid);
+        if (latest && latest.status === "rejected") {
+          showToast("Payment verification was not approved.", "error");
+          if (container) renderRejectedState(container, latest);
+        } else {
+          showToast("No active payment found.", "info");
+          if (container) renderCheckoutForm(container);
+        }
+      }
+    } else {
+      showToast("Payment is currently still under verification.", "info");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>Check Verification Status</span>
+        `;
+      }
+    }
+  } catch (err) {
+    showToast("Error checking status: " + err.message, "error");
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>Check Verification Status</span>`;
+    }
+  }
+};
+
 function renderAlreadyActiveState(container) {
   container.innerHTML = `
     <div class="card text-center" style="padding: 3rem 2rem; border-radius: var(--border-radius-lg); border: 1px solid var(--border-color); max-width: 640px; margin: 0 auto;">
@@ -414,12 +617,20 @@ function renderAlreadyActiveState(container) {
         ${currentUser.membershipPlan || "Membership"} is Active
       </h2>
       <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.5;">
-        Your membership is already active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You have full access to apply for eligible project opportunities.
+        Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You have full access to apply for eligible project opportunities.
       </p>
 
       <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        ${returnProject ? `
+          <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary btn-lg">
+            Return to Project ${returnProject} & Submit Proposal &rarr;
+          </a>
+        ` : ''}
         <a href="find-work.html" class="btn btn-primary btn-lg">Find & Apply for Work &rarr;</a>
         <a href="account.html" class="btn btn-secondary">Go to Account Dashboard</a>
+        <a href="payment.html?plan=${(currentPlan && currentPlan.id) || 'basic'}&retry=true${returnProject ? '&return_project=' + encodeURIComponent(returnProject) : ''}" class="btn btn-link btn-sm" style="color:var(--text-muted); margin-top:0.5rem;">
+          Upgrade / Extend Membership &rarr;
+        </a>
       </div>
     </div>
   `;
@@ -440,7 +651,7 @@ function renderRejectedState(container, payment) {
         Payment Verification Unsuccessful
       </h2>
       <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5;">
-        Your previous payment submission (Txn ID: <strong>${payment.transactionId}</strong>) could not be verified.
+        Your previous payment submission (Txn ID: <strong>${payment.transactionId}</strong>) could not be verified against our bank statement.
       </p>
 
       ${payment.adminNote ? `
@@ -454,8 +665,60 @@ function renderRejectedState(container, payment) {
           Start New Payment Attempt &rarr;
         </a>
         <a href="account.html" class="btn btn-secondary">
-          Return to Account
+          Return to Account Dashboard
         </a>
+      </div>
+    </div>
+  `;
+}
+
+function renderClientView(container) {
+  container.innerHTML = `
+    <div class="card text-center" style="padding: 3rem 2rem; border-radius: var(--border-radius-lg); border: 1px solid var(--border-color); max-width: 640px; margin: 0 auto;">
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; color: var(--color-accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem;">
+        💼
+      </div>
+
+      <span class="badge badge-proposal" style="font-size:0.85rem; padding: 0.35rem 0.85rem; margin-bottom: 0.75rem;">
+        Client Account
+      </span>
+
+      <h2 style="font-size: 1.65rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">
+        Client Account Detected
+      </h2>
+      <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.6;">
+        FidoConnect membership plans are for <strong>Freelancers</strong> to access curated project applications. As a Client, posting projects and collaborating with verified specialists is completely free with zero subscription fees!
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <a href="post-work.html" class="btn btn-primary btn-lg">Post a Work (Free) &rarr;</a>
+        <a href="account.html" class="btn btn-secondary">Go to Client Dashboard</a>
+      </div>
+    </div>
+  `;
+}
+
+function renderUnverifiedFreelancerView(container) {
+  container.innerHTML = `
+    <div class="card text-center" style="padding: 3rem 2rem; border-radius: var(--border-radius-lg); border: 1px solid var(--border-color); max-width: 640px; margin: 0 auto;">
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem;">
+        🔐
+      </div>
+
+      <span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.85rem; padding: 0.35rem 0.85rem; margin-bottom: 0.75rem;">
+        Invite-Only Access
+      </span>
+
+      <h2 style="font-size: 1.65rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">
+        Freelancer Access is Invite-Only
+      </h2>
+      <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.6;">
+        You must verify an official FidoConnect invitation code before selecting a membership tier and unlocking project proposals.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <a href="account.html" class="btn btn-primary btn-lg">Go to Account & Enter Invite Code &rarr;</a>
+        <a href="find-work.html" class="btn btn-secondary">Browse Public Preview</a>
       </div>
     </div>
   `;

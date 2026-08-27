@@ -707,7 +707,7 @@ async function renderFreelancerView(container) {
             </div>
             <div style="margin-top:1.25rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
               ${pendingPayment ? `
-                <a href="payment.html" class="btn btn-primary btn-sm">View Payment Status &rarr;</a>
+                <a href="payment.html${(pendingPayment.returnProject || returnProject) ? '?return_project=' + encodeURIComponent(pendingPayment.returnProject || returnProject) : ''}" class="btn btn-primary btn-sm">View Payment Status &rarr;</a>
               ` : `
                 <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'}" onclick="openModal('modal-membership')">
                   ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan &rarr;'}
@@ -869,7 +869,7 @@ async function renderFreelancerView(container) {
                 </div>
               </div>
               <div>
-                <a href="payment.html" class="btn btn-primary btn-lg">
+                <a href="payment.html${(pendingPayment.returnProject || returnProject) ? '?return_project=' + encodeURIComponent(pendingPayment.returnProject || returnProject) : ''}" class="btn btn-primary btn-lg">
                   View Payment Status &rarr;
                 </a>
               </div>

@@ -169,7 +169,7 @@ class AuthService {
       const href = link.getAttribute("href") || link.getAttribute("data-href");
       if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
 
-      const protectedPages = ["post-work.html", "find-work.html", "project-details.html", "account.html", "admin.html"];
+      const protectedPages = ["post-work.html", "find-work.html", "project-details.html", "account.html", "admin.html", "payment.html"];
       const isProtected = protectedPages.some(page => href.split("?")[0].endsWith(page) || href.startsWith(page));
 
       if (isProtected) {

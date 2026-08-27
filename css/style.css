@@ -2117,6 +2117,58 @@ textarea.form-control {
   margin-bottom: 1.5rem;
 }
 
+@media (max-width: 640px) {
+  .payment-checkout-card {
+    padding: 1.25rem 1rem;
+  }
+}
+
+.payment-plan-switcher {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.payment-plan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--border-radius-full);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--color-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.payment-plan-pill:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.payment-plan-pill.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+.payment-plan-pill.active .pill-price {
+  color: #38bdf8;
+}
+
+.payment-plan-pill .pill-price {
+  font-weight: 750;
+  color: var(--color-accent);
+}
+
 .upi-qr-card {
   background: #ffffff;
   padding: 1.25rem;
@@ -2156,4 +2208,55 @@ textarea.form-control {
 
 .stat-dot-pending {
   color: #d97706;
+}
+
+.accepted-apps-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.accepted-app-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  padding: 3px 8px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.payment-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.payment-details-table tr {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.payment-details-table tr:last-child {
+  border-bottom: none;
+}
+
+.payment-details-table td {
+  padding: 0.75rem 0;
+  font-size: 0.92rem;
+}
+
+.payment-details-table td:first-child {
+  color: var(--text-muted);
+}
+
+.payment-details-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: var(--color-primary);
 }
