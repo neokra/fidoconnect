@@ -16,31 +16,14 @@ let returnProject = null;
 let targetProjectData = null;
 let upiConfig = DEFAULT_UPI_CONFIG;
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Auth observer
-  FidoAuth.onAuthChange(async (user) => {
-    currentUser = user;
-    if (!currentUser) {
-      const currentUrl = window.location.pathname + window.location.search;
-      window.location.href = `auth.html?redirect=${encodeURIComponent(currentUrl)}`;
-      return;
-    }
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    upiConfig = await FidoDB.getUPIConfig();
+  } catch (e) {
+    upiConfig = DEFAULT_UPI_CONFIG;
+  }
 
-    // Check mandatory profile completion
-    if (!FidoAuth.isProfileComplete(currentUser)) {
-      const currentUrl = window.location.pathname + window.location.search;
-      window.location.href = `auth.html?redirect=${encodeURIComponent(currentUrl)}&complete_profile=true`;
-      return;
-    }
-
-    try {
-      upiConfig = await FidoDB.getUPIConfig();
-    } catch (e) {
-      upiConfig = DEFAULT_UPI_CONFIG;
-    }
-
-    await initPaymentPage();
-  });
+  await initPaymentPage();
 });
 
 function getQueryParams() {
@@ -60,19 +43,7 @@ async function initPaymentPage() {
   const { planKey, returnProject: retProj, retry } = getQueryParams();
   returnProject = retProj;
 
-  // 1. Role-specific handling: Client accounts do not need freelancer memberships
-  if (currentUser.role === "client" && !FidoAuth.isAdmin()) {
-    renderClientView(container);
-    return;
-  }
-
-  // 2. Unverified freelancer handling: Must have verified invite code first
-  if (currentUser.role === "freelancer" && !FidoAuth.isFreelancerVerified(currentUser)) {
-    renderUnverifiedFreelancerView(container);
-    return;
-  }
-
-  // 3. Load target project context if return_project is provided
+  // 1. Load target project context if return_project is provided
   if (returnProject) {
     try {
       const projects = await FidoDB.getProjects();
@@ -82,24 +53,24 @@ async function initPaymentPage() {
     }
   }
 
-  // 4. Load all published plans from Firestore
+  // 2. Load all published plans from Firestore
   try {
     allPublishedPlans = await FidoDB.getMembershipPlans(false);
   } catch (e) {
     allPublishedPlans = [];
   }
 
-  // 5. Resolve requested plan from Firestore
+  // 3. Resolve requested plan from Firestore
   if (planKey) {
     currentPlan = await FidoDB.getMembershipPlanById(planKey);
   }
 
-  // 6. If no plan specified or not found, fall back to recommended or first active plan
+  // 4. If no plan specified or not found, fall back to recommended or first active plan
   if (!currentPlan && allPublishedPlans.length > 0) {
     currentPlan = allPublishedPlans.find(p => p.isRecommended) || allPublishedPlans[0];
   }
 
-  // 7. If still no plan found in database
+  // 5. If still no plan found in database
   if (!currentPlan) {
     container.innerHTML = `
       <div class="card text-center" style="padding: 3rem 2rem; max-width: 600px; margin: 0 auto; border-radius: var(--border-radius-lg);">
@@ -115,32 +86,33 @@ async function initPaymentPage() {
   // Update back link
   updateBackLink();
 
-  // 8. Check if user already has an active pending payment
-  if (!retry) {
-    const pendingPayment = await FidoDB.getUserPendingMembershipPayment(currentUser.uid);
-    if (pendingPayment) {
-      renderPendingState(container, pendingPayment);
-      return;
+  // 6. If user happens to be logged in, check existing payment/membership state
+  currentUser = FidoAuth.getCurrentUser();
+  if (currentUser && !retry) {
+    try {
+      const pendingPayment = await FidoDB.getUserPendingMembershipPayment(currentUser.uid);
+      if (pendingPayment) {
+        renderPendingState(container, pendingPayment);
+        return;
+      }
+
+      const isMemberActive = currentUser.membershipStatus === "active";
+      if (isMemberActive && currentUser.membershipPlan === currentPlan.name) {
+        renderAlreadyActiveState(container);
+        return;
+      }
+
+      const latestPayment = await FidoDB.getUserLatestMembershipPayment(currentUser.uid);
+      if (latestPayment && latestPayment.status === "rejected") {
+        renderRejectedState(container, latestPayment);
+        return;
+      }
+    } catch (e) {
+      console.warn("Could not check user payment status:", e);
     }
   }
 
-  // 9. Check if user is already an active member on the SAME plan
-  const isMemberActive = currentUser.membershipStatus === "active";
-  if (isMemberActive && currentUser.membershipPlan === currentPlan.name && !retry) {
-    renderAlreadyActiveState(container);
-    return;
-  }
-
-  // 10. Check for recently rejected payment
-  if (!retry) {
-    const latestPayment = await FidoDB.getUserLatestMembershipPayment(currentUser.uid);
-    if (latestPayment && latestPayment.status === "rejected") {
-      renderRejectedState(container, latestPayment);
-      return;
-    }
-  }
-
-  // 11. Render Checkout Form
+  // 7. Render Checkout Form
   renderCheckoutForm(container);
 }
 
@@ -437,8 +409,21 @@ async function handlePaymentSubmit(e) {
   }
 
   if (errorBox) errorBox.style.display = "none";
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Submitting for verification...";
+  currentUser = currentUser || FidoAuth.getCurrentUser();
+  if (!currentUser) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Payment for Verification →";
+    if (errorBox) {
+      errorBox.textContent = "Please log in to submit your payment transaction ID for verification.";
+      errorBox.style.display = "block";
+    }
+    showToast("Please log in to submit your transaction ID.", "info");
+    const currentUrl = window.location.pathname + window.location.search;
+    setTimeout(() => {
+      window.location.href = `auth.html?redirect=${encodeURIComponent(currentUrl)}`;
+    }, 1200);
+    return;
+  }
 
   try {
     const payment = await FidoDB.submitMembershipPayment({
