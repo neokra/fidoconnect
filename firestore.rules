@@ -108,7 +108,17 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 7. Memberships Collection (Legacy compatibility)
+    // 7. Membership Plans Collection (Database-driven plans)
+    //    - Anyone can read published membership plans.
+    //    - Only admin can create, update, or delete membership plans.
+    // =========================================================================
+    match /membershipPlans/{planId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // =========================================================================
+    // 7b. Memberships Collection (Legacy compatibility)
     //    - Membership state is primarily stored inside the user document.
     //      This collection is kept for backward compatibility.
     //    - Owner or admin can create / update records.

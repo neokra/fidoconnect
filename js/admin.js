@@ -17,6 +17,7 @@ let allAdminPayments = [];
 let allAdminReviews = [];
 let allAdminMessages = [];
 let allAdminInviteCodes = [];
+let allAdminPlans = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth(["admin"]);
@@ -168,6 +169,68 @@ function setupModalForms() {
     });
   }
 
+  // Plan Editor Form (Database-Driven Plans)
+  const planForm = document.getElementById("plan-editor-form");
+  if (planForm) {
+    planForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById("btn-save-plan");
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving Plan...";
+      }
+
+      try {
+        const planId = document.getElementById("planEditId") ? document.getElementById("planEditId").value.trim() : "";
+        const name = document.getElementById("planEditName").value.trim();
+        const tagline = document.getElementById("planEditTagline") ? document.getElementById("planEditTagline").value.trim() : "";
+        const price = Number(document.getElementById("planEditPrice").value) || 0;
+        const duration = document.getElementById("planEditDuration").value.trim() || "1 Month";
+        const durationDays = Number(document.getElementById("planEditDurationDays").value) || 30;
+        const description = document.getElementById("planEditDescription") ? document.getElementById("planEditDescription").value.trim() : "";
+        const featuresText = document.getElementById("planEditFeatures") ? document.getElementById("planEditFeatures").value : "";
+        const qrImageUrl = document.getElementById("planEditQrUrl") ? document.getElementById("planEditQrUrl").value.trim() : "";
+        const upiId = document.getElementById("planEditUpiId") ? document.getElementById("planEditUpiId").value.trim() : "";
+        const merchantName = document.getElementById("planEditMerchantName") ? document.getElementById("planEditMerchantName").value.trim() : "";
+        const buttonText = document.getElementById("planEditButtonText") ? document.getElementById("planEditButtonText").value.trim() : "";
+        const sortOrder = Number(document.getElementById("planEditSortOrder") ? document.getElementById("planEditSortOrder").value : 0) || 0;
+        const published = document.getElementById("planEditPublished") ? document.getElementById("planEditPublished").checked : true;
+        const isRecommended = document.getElementById("planEditRecommended") ? document.getElementById("planEditRecommended").checked : false;
+
+        const features = featuresText.split("\n").map(s => s.trim()).filter(Boolean);
+
+        await FidoDB.saveMembershipPlan({
+          id: planId || undefined,
+          name,
+          tagline,
+          price,
+          duration,
+          durationDays,
+          description,
+          features,
+          qrImageUrl: qrImageUrl || undefined,
+          upiId: upiId || undefined,
+          merchantName: merchantName || undefined,
+          buttonText: buttonText || undefined,
+          sortOrder,
+          published,
+          isRecommended
+        });
+
+        closeModal("modal-plan-editor");
+        showToast(`Plan "${name}" saved successfully!`, "success");
+        await loadAdminData();
+      } catch (err) {
+        showToast(err.message || "Failed to save membership plan.", "error");
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save Plan";
+        }
+      }
+    });
+  }
+
   // Generate Random Code Button
   const genBtn = document.getElementById("btn-generate-random-code");
   if (genBtn) {
@@ -183,7 +246,7 @@ function setupModalForms() {
 
 async function loadAdminData() {
   try {
-    const [projects, apps, users, payments, reviews, messages, stats, inviteCodes] = await Promise.all([
+    const [projects, apps, users, payments, reviews, messages, stats, inviteCodes, plans] = await Promise.all([
       FidoDB.getProjects({}),
       FidoDB.getApplications({}),
       FidoDB.getUsers(),
@@ -191,7 +254,8 @@ async function loadAdminData() {
       FidoDB.getReviews(),
       FidoDB.getMessages(),
       FidoDB.getDashboardStats(),
-      FidoDB.getInviteCodes()
+      FidoDB.getInviteCodes(),
+      FidoDB.getMembershipPlans(true)
     ]);
 
     allAdminProjects = projects;
@@ -203,6 +267,7 @@ async function loadAdminData() {
     allAdminReviews = reviews;
     allAdminMessages = messages;
     allAdminInviteCodes = inviteCodes;
+    allAdminPlans = plans;
 
     renderOverviewStats(stats);
     renderProjectsTable();
@@ -210,6 +275,7 @@ async function loadAdminData() {
     renderUsersTable();
     renderFreelancersTable();
     renderClientsTable();
+    renderMembershipPlansTable();
     renderMembershipsTable();
     renderPaymentsTable();
     renderReviewsTable();
@@ -536,7 +602,144 @@ function renderClientsTable() {
   }).join("");
 }
 
-// 7. Memberships Table
+// 7a. Database-Driven Membership Plans Table
+function renderMembershipPlansTable() {
+  const container = document.getElementById("admin-plans-tbody");
+  if (!container) return;
+
+  if (!allAdminPlans || allAdminPlans.length === 0) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No membership plans in database. Click <strong>+ Add New Plan</strong> to create one.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = allAdminPlans.map(p => {
+    const isPub = p.published !== false;
+    const priceDisplay = p.priceDisplay || `₹${(p.price || p.priceAmount || 0).toLocaleString("en-IN")}`;
+    const durationLabel = p.duration || `${p.durationDays || 30} Days`;
+    const featuresCount = Array.isArray(p.features) ? p.features.length : 0;
+    
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:750; color:var(--color-primary); display:flex; align-items:center; gap:0.4rem;">
+            ${p.name}
+            ${p.isRecommended ? '<span class="badge badge-proposal" style="font-size:0.7rem;">Recommended</span>' : ''}
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${p.tagline || (p.description ? p.description.substring(0, 45) + '...' : 'No tagline')}</div>
+        </td>
+        <td>
+          <div style="font-weight:750; color:var(--color-accent); font-size:1.05rem;">${priceDisplay}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${durationLabel} (${p.durationDays || 30}d)</div>
+        </td>
+        <td>
+          <div style="font-family:var(--font-mono); font-size:0.82rem; color:var(--color-primary);">${p.upiId || "Default UPI"}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${p.merchantName || "FidoConnect"} &bull; <a href="${p.qrImageUrl || 'images/fido-upi-qr.svg'}" target="_blank" style="color:var(--color-accent); text-decoration:none;">View QR &nearr;</a></div>
+        </td>
+        <td>
+          <span class="badge badge-approved" title="${(p.features || []).join(', ')}">${featuresCount} features</span>
+        </td>
+        <td>
+          <span class="badge ${isPub ? 'badge-active' : 'badge-inactive'}">
+            ${isPub ? '✓ Published' : 'Draft / Hidden'}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openEditPlanModal('${p.id}')" title="Edit Plan">
+              Edit
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="handleTogglePlanPublish('${p.id}', ${isPub})" title="${isPub ? 'Hide from public' : 'Publish publicly'}">
+              ${isPub ? 'Unpublish' : 'Publish'}
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="handleDeletePlan('${p.id}')" title="Delete Plan">
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+window.openAddPlanModal = function() {
+  document.getElementById("plan-editor-title").textContent = "Add Membership Plan";
+  document.getElementById("planEditId").value = "";
+  document.getElementById("planEditName").value = "";
+  document.getElementById("planEditTagline").value = "";
+  document.getElementById("planEditPrice").value = "";
+  document.getElementById("planEditDuration").value = "1 Month";
+  document.getElementById("planEditDurationDays").value = "30";
+  document.getElementById("planEditDescription").value = "";
+  document.getElementById("planEditFeatures").value = "Access to selected FidoConnect project opportunities\nApply to matching projects\nVerified freelancer profile badge\nProject performance record";
+  document.getElementById("planEditQrUrl").value = "images/fido-upi-qr.svg";
+  document.getElementById("planEditUpiId").value = "fidoconnect@okaxis";
+  document.getElementById("planEditMerchantName").value = "FidoConnect";
+  document.getElementById("planEditButtonText").value = "";
+  document.getElementById("planEditSortOrder").value = allAdminPlans.length + 1;
+  document.getElementById("planEditPublished").checked = true;
+  document.getElementById("planEditRecommended").checked = false;
+
+  openModal("modal-plan-editor");
+};
+
+window.openEditPlanModal = function(planId) {
+  const plan = allAdminPlans.find(p => p.id === planId);
+  if (!plan) {
+    showToast("Plan not found.", "error");
+    return;
+  }
+
+  document.getElementById("plan-editor-title").textContent = `Edit Plan: ${plan.name}`;
+  document.getElementById("planEditId").value = plan.id;
+  document.getElementById("planEditName").value = plan.name || "";
+  document.getElementById("planEditTagline").value = plan.tagline || "";
+  document.getElementById("planEditPrice").value = plan.price !== undefined ? plan.price : (plan.priceAmount || 0);
+  document.getElementById("planEditDuration").value = plan.duration || "1 Month";
+  document.getElementById("planEditDurationDays").value = plan.durationDays || 30;
+  document.getElementById("planEditDescription").value = plan.description || "";
+  
+  const featuresText = Array.isArray(plan.features) ? plan.features.join("\n") : (plan.features || "");
+  document.getElementById("planEditFeatures").value = featuresText;
+  
+  document.getElementById("planEditQrUrl").value = plan.qrImageUrl || "images/fido-upi-qr.svg";
+  document.getElementById("planEditUpiId").value = plan.upiId || "fidoconnect@okaxis";
+  document.getElementById("planEditMerchantName").value = plan.merchantName || "FidoConnect";
+  document.getElementById("planEditButtonText").value = plan.buttonText || "";
+  document.getElementById("planEditSortOrder").value = plan.sortOrder !== undefined ? plan.sortOrder : 0;
+  document.getElementById("planEditPublished").checked = plan.published !== false;
+  document.getElementById("planEditRecommended").checked = Boolean(plan.isRecommended);
+
+  openModal("modal-plan-editor");
+};
+
+window.handleTogglePlanPublish = async function(planId, currentPublished) {
+  try {
+    const nextState = !currentPublished;
+    await FidoDB.togglePlanPublish(planId, nextState);
+    showToast(`Plan ${nextState ? "published" : "unpublished"} successfully!`, "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast(err.message || "Failed to update plan status.", "error");
+  }
+};
+
+window.handleDeletePlan = async function(planId) {
+  const plan = allAdminPlans.find(p => p.id === planId);
+  const planName = plan ? plan.name : planId;
+  if (!confirm(`Are you sure you want to delete the plan "${planName}"? This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    await FidoDB.deleteMembershipPlan(planId);
+    showToast(`Plan "${planName}" deleted.`, "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast(err.message || "Failed to delete plan.", "error");
+  }
+};
+
+// 7b. Memberships Table
 function renderMembershipsTable() {
   const container = document.getElementById("admin-memberships-tbody");
   if (!container) return;

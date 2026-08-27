@@ -71,12 +71,21 @@ export const SKILL_TAXONOMY = {
   ]
 };
 
+export const DEFAULT_UPI_CONFIG = {
+  upiId: "fidoconnect@okaxis",
+  merchantName: "FidoConnect",
+  qrAsset: "images/fido-upi-qr.svg"
+};
+
 export const MEMBERSHIP_PLANS = {
   basic: {
     id: "basic",
     name: "Selected Basic",
-    priceDisplay: "₹499",
+    price: 499,
     priceAmount: 499,
+    priceDisplay: "₹499",
+    duration: "1 Month",
+    durationDays: 30,
     billingCycle: "/ month",
     badge: "Recommended for New Members",
     isRecommended: true,
@@ -92,15 +101,23 @@ export const MEMBERSHIP_PLANS = {
       "FidoConnect project coordination",
       "Project performance record"
     ],
-    buttonText: "Choose Basic"
+    qrImageUrl: "images/fido-upi-qr.svg",
+    upiId: "fidoconnect@okaxis",
+    merchantName: "FidoConnect",
+    buttonText: "Choose Basic",
+    published: true,
+    sortOrder: 1
   },
   pro: {
     id: "pro",
     name: "Selected Pro",
-    priceDisplay: "₹1,999",
+    price: 1999,
     priceAmount: 1999,
+    priceDisplay: "₹1,999",
+    duration: "1 Month",
+    durationDays: 30,
     billingCycle: "/ month",
-    badge: null,
+    badge: "",
     isRecommended: false,
     tagline: "For active freelancers",
     description: "For freelancers ready to take on more selected opportunities through FidoConnect.",
@@ -114,15 +131,23 @@ export const MEMBERSHIP_PLANS = {
       "Performance history",
       "Priority agency review"
     ],
-    buttonText: "Choose Pro"
+    qrImageUrl: "images/fido-upi-qr.svg",
+    upiId: "fidoconnect@okaxis",
+    merchantName: "FidoConnect",
+    buttonText: "Choose Pro",
+    published: true,
+    sortOrder: 2
   },
   premium: {
     id: "premium",
     name: "Selected Premium",
-    priceDisplay: "₹4,999",
+    price: 4999,
     priceAmount: 4999,
+    priceDisplay: "₹4,999",
+    duration: "1 Month",
+    durationDays: 30,
     billingCycle: "/ month",
-    badge: null,
+    badge: "",
     isRecommended: false,
     tagline: "For experienced freelancers",
     description: "For experienced verified freelancers who are ready for higher-value opportunities.",
@@ -137,14 +162,13 @@ export const MEMBERSHIP_PLANS = {
       "Priority support/coordination",
       "Consideration for larger or more specialized projects"
     ],
-    buttonText: "Choose Premium"
+    qrImageUrl: "images/fido-upi-qr.svg",
+    upiId: "fidoconnect@okaxis",
+    merchantName: "FidoConnect",
+    buttonText: "Choose Premium",
+    published: true,
+    sortOrder: 3
   }
-};
-
-export const DEFAULT_UPI_CONFIG = {
-  upiId: "fidoconnect@okaxis",
-  merchantName: "FidoConnect",
-  qrAsset: "images/fido-upi-qr.svg"
 };
 
 export const FidoDB = {
@@ -689,6 +713,169 @@ export const FidoDB = {
     }
   },
 
+  // =========================================================================
+  // --- Membership Plans (Database-Driven) ---
+  // =========================================================================
+  async getMembershipPlans(includeUnpublished = false) {
+    try {
+      const plansRef = collection(db, "membershipPlans");
+      const snapshot = await getDocs(plansRef);
+      let plans = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        plans.push({ id: docSnap.id, ...data });
+      });
+
+      // If database collection is empty, seed defaults and return them
+      if (plans.length === 0) {
+        plans = Object.values(MEMBERSHIP_PLANS);
+        this.seedDefaultMembershipPlans().catch(err => {
+          console.log("Auto-seeding default plans notice:", err.message);
+        });
+      }
+
+      if (!includeUnpublished) {
+        plans = plans.filter(p => p.published !== false);
+      }
+
+      plans.sort((a, b) => {
+        if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+          return a.sortOrder - b.sortOrder;
+        }
+        return (Number(a.price || a.priceAmount || 0)) - (Number(b.price || b.priceAmount || 0));
+      });
+
+      return plans;
+    } catch (e) {
+      console.warn("Could not fetch membership plans from database, falling back to defaults:", e);
+      let fallback = Object.values(MEMBERSHIP_PLANS);
+      if (!includeUnpublished) {
+        fallback = fallback.filter(p => p.published !== false);
+      }
+      return fallback;
+    }
+  },
+
+  async getMembershipPlanById(planId) {
+    if (!planId) return MEMBERSHIP_PLANS.basic;
+    const cleanId = String(planId).trim();
+    try {
+      const docRef = doc(db, "membershipPlans", cleanId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        const priceNum = Number(data.price !== undefined ? data.price : data.priceAmount || 0);
+        return {
+          id: snap.id,
+          ...data,
+          price: priceNum,
+          priceAmount: priceNum,
+          priceDisplay: data.priceDisplay || `₹${priceNum.toLocaleString("en-IN")}`,
+          duration: data.duration || "1 Month",
+          durationDays: Number(data.durationDays) || 30,
+          billingCycle: data.billingCycle || `/ ${data.duration || "month"}`,
+          qrImageUrl: data.qrImageUrl || DEFAULT_UPI_CONFIG.qrAsset,
+          upiId: data.upiId || DEFAULT_UPI_CONFIG.upiId,
+          merchantName: data.merchantName || DEFAULT_UPI_CONFIG.merchantName,
+          buttonText: data.buttonText || `Choose ${data.name || "Plan"}`
+        };
+      }
+    } catch (e) {
+      console.warn("Error fetching plan doc by id:", e);
+    }
+
+    // Check lowercase key in fallback dictionary
+    const fallbackKey = cleanId.toLowerCase();
+    if (MEMBERSHIP_PLANS[fallbackKey]) {
+      return MEMBERSHIP_PLANS[fallbackKey];
+    }
+
+    // Check by name or id in all plans from database
+    const all = await this.getMembershipPlans(true);
+    const found = all.find(p => p.id === cleanId || p.name.toLowerCase() === cleanId.toLowerCase());
+    return found || MEMBERSHIP_PLANS.basic;
+  },
+
+  async saveMembershipPlan(planData) {
+    const isNew = !planData.id;
+    const planId = planData.id || String(planData.name || "plan").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `plan_${Date.now()}`;
+    const priceNum = Number(planData.price !== undefined ? planData.price : planData.priceAmount) || 0;
+    const durationDays = Number(planData.durationDays) || 30;
+
+    let featuresArray = [];
+    if (Array.isArray(planData.features)) {
+      featuresArray = planData.features;
+    } else if (typeof planData.features === "string") {
+      featuresArray = planData.features.split("\n").map(s => s.trim()).filter(Boolean);
+    }
+
+    const cleanPlan = {
+      name: String(planData.name || "Custom Plan").trim(),
+      price: priceNum,
+      priceAmount: priceNum,
+      priceDisplay: planData.priceDisplay || `₹${priceNum.toLocaleString("en-IN")}`,
+      duration: planData.duration || `${durationDays} Days`,
+      durationDays: durationDays,
+      billingCycle: planData.billingCycle || `/ ${planData.duration || "month"}`,
+      tagline: String(planData.tagline || "").trim(),
+      description: String(planData.description || "").trim(),
+      features: featuresArray,
+      qrImageUrl: String(planData.qrImageUrl || DEFAULT_UPI_CONFIG.qrAsset).trim(),
+      upiId: String(planData.upiId || DEFAULT_UPI_CONFIG.upiId).trim(),
+      merchantName: String(planData.merchantName || DEFAULT_UPI_CONFIG.merchantName).trim(),
+      buttonText: String(planData.buttonText || `Choose ${planData.name || "Plan"}`).trim(),
+      isRecommended: Boolean(planData.isRecommended),
+      badge: planData.isRecommended ? (planData.badge || "Recommended for New Members") : "",
+      published: planData.published !== false,
+      sortOrder: Number(planData.sortOrder) || 0,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (isNew) {
+      cleanPlan.createdAt = new Date().toISOString();
+    }
+
+    const docRef = doc(db, "membershipPlans", planId);
+    await setDoc(docRef, cleanPlan, { merge: true });
+    return { id: planId, ...cleanPlan };
+  },
+
+  async deleteMembershipPlan(planId) {
+    if (!planId) throw new Error("Plan ID is required for deletion.");
+    const docRef = doc(db, "membershipPlans", planId);
+    await deleteDoc(docRef);
+    return { success: true, planId };
+  },
+
+  async togglePlanPublish(planId, published) {
+    if (!planId) throw new Error("Plan ID is required.");
+    const docRef = doc(db, "membershipPlans", planId);
+    const updates = {
+      published: Boolean(published),
+      updatedAt: new Date().toISOString()
+    };
+    await updateDoc(docRef, updates);
+    return { id: planId, ...updates };
+  },
+
+  async seedDefaultMembershipPlans() {
+    for (const [key, plan] of Object.entries(MEMBERSHIP_PLANS)) {
+      try {
+        const docRef = doc(db, "membershipPlans", key);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) {
+          await setDoc(docRef, {
+            ...plan,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } catch (e) {
+        console.warn("Could not seed plan:", key, e);
+      }
+    }
+  },
+
   // Submit manual UPI membership payment for admin verification
   async submitMembershipPayment({ userId, userEmail, userName, planId, transactionId, returnProject }) {
     if (!userId) throw new Error("Authenticated user ID is required.");
@@ -713,9 +900,14 @@ export const FidoDB = {
       throw new Error(`You already have a pending payment verification (Txn ID: ${existingPending.transactionId}). Please wait for admin approval.`);
     }
 
-    // 3. Resolve plan securely from server definitions (DO NOT trust arbitrary client amounts)
-    const planKey = (planId || "basic").toLowerCase();
-    const plan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
+    // 3. Resolve plan securely from Firestore (Single source of truth)
+    const plan = await this.getMembershipPlanById(planId);
+    if (!plan) {
+      throw new Error("Selected membership plan not found.");
+    }
+
+    const planPrice = Number(plan.price !== undefined ? plan.price : plan.priceAmount) || 0;
+    const planDurationDays = Number(plan.durationDays) || 30;
 
     const paymentsRef = collection(db, "payments");
     const nowIso = new Date().toISOString();
@@ -729,9 +921,14 @@ export const FidoDB = {
       freelancerName: userName || "Freelancer",
       planId: plan.id,
       planName: plan.name,
-      amount: plan.priceAmount,
-      amountDisplay: plan.priceDisplay,
+      amount: planPrice,
+      amountDisplay: plan.priceDisplay || `₹${planPrice.toLocaleString("en-IN")}`,
+      duration: plan.duration || `${planDurationDays} Days`,
+      durationDays: planDurationDays,
       currency: "INR",
+      qrImageUrl: plan.qrImageUrl || DEFAULT_UPI_CONFIG.qrAsset,
+      upiId: plan.upiId || DEFAULT_UPI_CONFIG.upiId,
+      merchantName: plan.merchantName || DEFAULT_UPI_CONFIG.merchantName,
       transactionId: cleanTxnId,
       paymentMethod: "UPI (Manual)",
       type: "membership",
@@ -766,10 +963,11 @@ export const FidoDB = {
 
     await updateDoc(docRef, updates);
 
-    // Activate membership for the freelancer
+    // Activate membership for the freelancer using actual plan data & durationDays from payment record
     const targetUserId = payment.userId || payment.freelancerId;
     const planName = payment.planName || "Selected Basic";
-    await this.updateMembership(targetUserId, "active", planName, 30);
+    const durationDays = Number(payment.durationDays) || 30;
+    await this.updateMembership(targetUserId, "active", planName, durationDays);
 
     return { id: paymentId, ...payment, ...updates };
   },

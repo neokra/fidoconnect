@@ -5,7 +5,8 @@
  */
 
 import { FidoAuth } from "./auth.js";
-import { FidoDB, SKILL_TAXONOMY, MEMBERSHIP_PLANS } from "./db.js";
+import { FidoDB, SKILL_TAXONOMY } from "./db.js";
+import { showToast, formatDate } from "./ui.js";
 
 let currentUser = null;
 let selectedModalCategories = new Set();
@@ -515,6 +516,7 @@ async function renderFreelancerView(container) {
   const applications = await FidoDB.getApplications({ freelancerId: currentUser.uid });
   const activeProjects = await FidoDB.getProjects({ assignedFreelancerId: currentUser.uid });
   const pendingPayment = await FidoDB.getUserPendingMembershipPayment(currentUser.uid);
+  const publishedPlans = await FidoDB.getMembershipPlans(false);
   const isMemberActive = currentUser.membershipStatus === "active";
   const urlParams = new URLSearchParams(window.location.search);
   const returnProject = urlParams.get("return_project");
@@ -907,26 +909,35 @@ async function renderFreelancerView(container) {
           </div>
         ` : ''))}
 
-        <!-- 3 Membership Tiers Grid -->
+        <!-- Database-Driven Membership Plans Grid -->
         <div class="plans-grid">
-          ${Object.values(MEMBERSHIP_PLANS).map(plan => {
+          ${publishedPlans.length === 0 ? `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
+              No membership plans are currently published. Please check back shortly.
+            </div>
+          ` : publishedPlans.map(plan => {
             const isCurrentPlan = isMemberActive && (currentUser.membershipPlan === plan.name);
+            const priceDisplay = plan.priceDisplay || `₹${(plan.price || plan.priceAmount || 0).toLocaleString("en-IN")}`;
+            const durationDisplay = plan.billingCycle || `/ ${plan.duration || "month"}`;
+            const features = Array.isArray(plan.features) ? plan.features : [];
+            const buttonText = plan.buttonText || `Choose ${plan.name.replace('Selected ', '')}`;
+
             return `
               <div class="plan-card ${plan.isRecommended ? "plan-card-recommended" : ""}">
-                ${plan.isRecommended ? `<div class="plan-badge-recommended">Recommended for New Members</div>` : ""}
+                ${plan.isRecommended ? `<div class="plan-badge-recommended">${plan.badge || "Recommended for New Members"}</div>` : ""}
 
                 <div class="plan-header">
-                  <span class="plan-tagline">${plan.tagline}</span>
+                  <span class="plan-tagline">${plan.tagline || ""}</span>
                   <h3 class="plan-title">${plan.name}</h3>
                   <div class="plan-price-wrap">
-                    <span class="plan-price">${plan.priceDisplay}</span>
-                    <span class="plan-period">${plan.billingCycle}</span>
+                    <span class="plan-price">${priceDisplay}</span>
+                    <span class="plan-period">${durationDisplay}</span>
                   </div>
-                  <p class="plan-desc">${plan.description}</p>
+                  <p class="plan-desc">${plan.description || ""}</p>
                 </div>
 
                 <ul class="plan-features-list">
-                  ${plan.features.map(f => `
+                  ${features.map(f => `
                     <li class="plan-feature-item">
                       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
                       <span>${f}</span>
@@ -941,7 +952,7 @@ async function renderFreelancerView(container) {
                   onclick="handleActivatePlan('${plan.id}')"
                   ${isCurrentPlan ? "disabled" : ""}
                 >
-                  ${isCurrentPlan ? "✓ Current Active Plan" : (isMemberActive ? 'Switch to ' + plan.name.replace('Selected ', '') : plan.buttonText)}
+                  ${isCurrentPlan ? "✓ Current Active Plan" : (isMemberActive ? 'Switch to ' + plan.name.replace('Selected ', '') : buttonText)}
                 </button>
               </div>
             `;

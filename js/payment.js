@@ -1,4 +1,4 @@
-﻿/**
+/**
  * FidoConnect - Payment Checkout Controller
  * 
  * Manages manual UPI checkout, dynamic plan pricing, QR code rendering,
@@ -6,7 +6,7 @@
  */
 
 import { FidoAuth } from "./auth.js";
-import { FidoDB, MEMBERSHIP_PLANS, DEFAULT_UPI_CONFIG } from "./db.js";
+import { FidoDB, DEFAULT_UPI_CONFIG } from "./db.js";
 import { showToast, formatDate } from "./ui.js";
 
 let currentUser = null;
@@ -59,8 +59,20 @@ async function initPaymentPage() {
   const { planKey, returnProject: retProj, retry } = getQueryParams();
   returnProject = retProj;
 
-  // Validate plan against known definitions (Never trust client pricing)
-  currentPlan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
+  // Validate and load plan dynamically from Firestore (Single source of truth)
+  currentPlan = await FidoDB.getMembershipPlanById(planKey);
+
+  if (!currentPlan) {
+    container.innerHTML = `
+      <div class="card text-center" style="padding: 3rem 2rem; max-width: 600px; margin: 0 auto;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚠️</div>
+        <h2 style="font-size: 1.5rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">Plan Not Found</h2>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">The selected membership plan does not exist or has been disabled.</p>
+        <a href="account.html?tab=membership" class="btn btn-primary">View Available Membership Plans &rarr;</a>
+      </div>
+    `;
+    return;
+  }
 
   // Update back link if returning to a project
   const backLink = document.getElementById("payment-back-link");
@@ -104,9 +116,16 @@ async function initPaymentPage() {
 }
 
 function renderCheckoutForm(container) {
+  const planPrice = Number(currentPlan.price !== undefined ? currentPlan.price : currentPlan.priceAmount) || 0;
+  const planPriceDisplay = currentPlan.priceDisplay || `₹${planPrice.toLocaleString("en-IN")}`;
+  const planDuration = currentPlan.duration || `${currentPlan.durationDays || 30} Days`;
+  const planQrAsset = currentPlan.qrImageUrl || upiConfig.qrAsset || "images/fido-upi-qr.svg";
+  const planUpiId = currentPlan.upiId || upiConfig.upiId || "fidoconnect@okaxis";
+  const planMerchantName = currentPlan.merchantName || upiConfig.merchantName || "FidoConnect";
+
   // UPI Intent URI format: upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...
   const intentNote = `FidoConnect ${currentPlan.name} Membership`;
-  const upiIntentUri = `upi://pay?pa=${encodeURIComponent(upiConfig.upiId)}&pn=${encodeURIComponent(upiConfig.merchantName)}&am=${currentPlan.priceAmount}&cu=INR&tn=${encodeURIComponent(intentNote)}`;
+  const upiIntentUri = `upi://pay?pa=${encodeURIComponent(planUpiId)}&pn=${encodeURIComponent(planMerchantName)}&am=${planPrice}&cu=INR&tn=${encodeURIComponent(intentNote)}`;
 
   container.innerHTML = `
     <!-- Header -->
@@ -140,15 +159,15 @@ function renderCheckoutForm(container) {
           <div>
             <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
               <span class="badge ${currentPlan.isRecommended ? 'badge-active' : 'badge-proposal'}" style="font-size:0.75rem;">Selected Plan</span>
-              ${currentPlan.isRecommended ? '<span style="font-size:0.78rem; font-weight:700; color:var(--color-accent);">★ Recommended for New Members</span>' : ''}
+              ${currentPlan.isRecommended ? `<span style="font-size:0.78rem; font-weight:700; color:var(--color-accent);">★ ${currentPlan.badge || 'Recommended'}</span>` : ''}
             </div>
             <h2 style="font-size: 1.5rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.25rem;">${currentPlan.name}</h2>
-            <p class="text-muted" style="font-size: 0.9rem; margin: 0;">${currentPlan.description}</p>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0;">${currentPlan.description || 'Access to selected freelancer opportunities.'}</p>
           </div>
           
           <div style="text-align: right; min-width: 140px;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--color-accent); line-height: 1;">${currentPlan.priceDisplay}</div>
-            <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; margin-top: 4px;">${currentPlan.billingCycle} (30 Days)</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--color-accent); line-height: 1;">${planPriceDisplay}</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; margin-top: 4px;">${currentPlan.billingCycle || '/ ' + planDuration} (${currentPlan.durationDays || 30} Days)</div>
           </div>
         </div>
 
@@ -164,7 +183,7 @@ function renderCheckoutForm(container) {
           Pay using UPI
         </h3>
         <p class="text-muted" style="font-size: 0.92rem; margin-bottom: 1.75rem;">
-          Scan the QR code using any UPI app (Google Pay, PhonePe, Paytm, BHIM) and complete the exact payment of <strong>${currentPlan.priceDisplay}</strong>.
+          Scan the QR code using any UPI app (Google Pay, PhonePe, Paytm, BHIM) and complete the exact payment of <strong>${planPriceDisplay}</strong>.
         </p>
 
         <!-- Centered QR Container -->
@@ -172,16 +191,16 @@ function renderCheckoutForm(container) {
           
           <!-- QR Card -->
           <div style="background: #ffffff; padding: 1.25rem; border-radius: var(--border-radius-lg); border: 2px solid var(--border-color); box-shadow: var(--shadow-md); max-width: 280px; width: 100%; text-align: center;">
-            <img src="${upiConfig.qrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; height: auto; display: block; border-radius: 8px; margin-bottom: 0.75rem;" />
-            <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">Scan to Pay ${currentPlan.priceDisplay}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Recipient: ${upiConfig.merchantName}</div>
+            <img src="${planQrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; height: auto; display: block; border-radius: 8px; margin-bottom: 0.75rem;" onerror="this.src='images/fido-upi-qr.svg'" />
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">Scan to Pay ${planPriceDisplay}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Recipient: ${planMerchantName}</div>
           </div>
 
           <!-- UPI ID Copy Box -->
           <div style="margin-top: 1.25rem; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 380px; width: 100%;">
             <div>
               <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">UPI ID</div>
-              <div id="upi-id-text" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--color-primary);">${upiConfig.upiId}</div>
+              <div id="upi-id-text" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--color-primary);">${planUpiId}</div>
             </div>
             <button type="button" id="btn-copy-upi" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.8rem;" onclick="copyUpiId()">
               📋 Copy
@@ -192,7 +211,7 @@ function renderCheckoutForm(container) {
           <div style="margin-top: 1.25rem; width: 100%; max-width: 380px; text-align: center;">
             <a href="${upiIntentUri}" id="btn-upi-app" class="btn btn-primary btn-block btn-lg" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-              Pay with UPI App (${currentPlan.priceDisplay})
+              Pay with UPI App (${planPriceDisplay})
             </a>
             <span style="display:block; font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
               Opens Google Pay, PhonePe, Paytm, or BHIM directly on your smartphone.
@@ -441,7 +460,7 @@ function renderRejectedState(container, payment) {
 }
 
 window.copyUpiId = function() {
-  const upiId = upiConfig.upiId;
+  const upiId = (currentPlan && currentPlan.upiId) || upiConfig.upiId;
   navigator.clipboard.writeText(upiId).then(() => {
     const btn = document.getElementById("btn-copy-upi");
     if (btn) {

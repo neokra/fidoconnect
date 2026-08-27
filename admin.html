@@ -333,19 +333,48 @@
         </div>
       </div>
 
-      <!-- 7. Memberships -->
+      <!-- 7. Memberships & Plans -->
       <div id="sec-memberships" class="admin-tab-section" style="display: none;">
-        <div class="admin-toolbar">
+        
+        <!-- 1. Database-Driven Membership Plans Management -->
+        <div class="admin-toolbar" style="margin-bottom:1rem;">
           <div>
-            <h2 style="margin-bottom: 0.2rem;">Membership Management</h2>
-            <p class="text-muted" style="font-size: 0.88rem;">Freelancer network memberships and validation periods.</p>
+            <h2 style="margin-bottom: 0.2rem;">Membership Plans (Database)</h2>
+            <p class="text-muted" style="font-size: 0.88rem;">Create, edit, pricing, QR codes, features, and publish status for all website membership tiers.</p>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openAddPlanModal()">+ Add New Plan</button>
+          </div>
+        </div>
+
+        <div class="admin-table-container" style="margin-bottom:2.5rem;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Plan Name & Tagline</th>
+                <th>Price & Duration</th>
+                <th>UPI ID & QR</th>
+                <th>Features</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-plans-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- 2. Freelancer Network Memberships -->
+        <div class="admin-toolbar" style="margin-bottom:1rem;">
+          <div>
+            <h3 style="margin-bottom: 0.2rem; font-size:1.3rem;">Freelancer Network Memberships</h3>
+            <p class="text-muted" style="font-size: 0.88rem;">Active and expired freelancer memberships across the network.</p>
           </div>
         </div>
 
         <div class="notice-box notice-info" style="margin-bottom:1.25rem;">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           <div>
-            <strong>Agency Policy:</strong> Membership provides access to project opportunities. Projects are not guaranteed.
+            <strong>Agency Policy:</strong> Membership provides access to eligible project opportunities. Projects are not guaranteed.
           </div>
         </div>
 
@@ -614,10 +643,102 @@
             <option value="Pending">Pending</option>
             <option value="Refunded">Refunded</option>
           </select>
-        </div>
         <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
           <button type="button" class="btn btn-secondary" onclick="closeModal('add-payment-modal')">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Payment Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add / Edit Membership Plan Modal -->
+  <div id="modal-plan-editor" class="modal-overlay">
+    <div class="modal-card" style="max-width: 640px; max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close-btn" onclick="closeModal('modal-plan-editor')">&times;</button>
+      <h3 id="plan-editor-title" style="margin-bottom: 0.35rem;">Add Membership Plan</h3>
+      <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1.25rem;">Configure plan pricing, duration, features, QR image, and payment details.</p>
+      
+      <form id="plan-editor-form">
+        <input type="hidden" id="planEditId" value="" />
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required">Plan Name</label>
+            <input type="text" id="planEditName" class="form-control" placeholder="e.g. Selected Basic" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tagline / Subtitle</label>
+            <input type="text" id="planEditTagline" class="form-control" placeholder="e.g. Start here / Best Value" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label form-label-required">Price (₹ INR)</label>
+            <input type="number" id="planEditPrice" class="form-control" placeholder="499" min="0" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">Duration Label</label>
+            <input type="text" id="planEditDuration" class="form-control" placeholder="e.g. 1 Month / 30 Days" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label form-label-required">Duration (Days)</label>
+            <input type="number" id="planEditDurationDays" class="form-control" placeholder="30" min="1" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="planEditDescription" class="form-control" rows="2" placeholder="Short summary of who this plan is for..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label form-label-required">Plan Features (One per line)</label>
+          <textarea id="planEditFeatures" class="form-control font-mono" rows="5" placeholder="Access to selected project opportunities&#10;Apply to matching projects&#10;Verified freelancer profile badge" required></textarea>
+          <span class="form-hint" style="font-size:0.75rem; color:var(--text-muted);">Enter each feature item on a new line.</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">QR Image URL / Asset Path</label>
+            <input type="text" id="planEditQrUrl" class="form-control" placeholder="e.g. images/fido-upi-qr.svg or https://cdn.../qr.png" />
+            <span class="form-hint" style="font-size:0.75rem; color:var(--text-muted);">Defaults to static QR asset in repo.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">UPI ID for this Plan</label>
+            <input type="text" id="planEditUpiId" class="form-control font-mono" placeholder="fidoconnect@okaxis" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Merchant / Recipient Name</label>
+            <input type="text" id="planEditMerchantName" class="form-control" placeholder="FidoConnect" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Button CTA Text</label>
+            <input type="text" id="planEditButtonText" class="form-control" placeholder="e.g. Choose Basic / Get Started" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sort Order</label>
+            <input type="number" id="planEditSortOrder" class="form-control" placeholder="1" min="0" />
+          </div>
+        </div>
+
+        <div style="background:var(--bg-subtle); padding:0.85rem 1rem; border-radius:var(--border-radius-md); margin-top:0.5rem; margin-bottom:1rem; display:flex; gap:1.5rem; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="planEditPublished" checked />
+            <span>✓ Published (Visible publicly)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="planEditRecommended" />
+            <span>★ Recommended Badge</span>
+          </label>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-plan-editor')">Cancel</button>
+          <button type="submit" id="btn-save-plan" class="btn btn-primary">Save Plan</button>
         </div>
       </form>
     </div>
