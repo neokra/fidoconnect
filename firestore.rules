@@ -17,130 +17,174 @@ service cloud.firestore {
         && request.auth.token.email.lower() == "thecard.primary@gmail.com";
     }
 
-    // --- 1. Users Collection ---
+    // =========================================================================
+    // 1. Users Collection
+    //    - Authenticated users can read any profile (admin panel, project
+    //      owner lookup, freelancer card display).
+    //    - Owners create / update their own document; admin can update any doc
+    //      (used by verifyMembershipPayment -> updateMembership -> updateUser).
+    //    - Admin-only delete.
+    // =========================================================================
     match /users/{userId} {
-      // Authenticated users can read profile data; Admin can read all
       allow read: if isAuthenticated();
-      
-      // Creating a new user profile for own UID
+
       allow create: if isOwner(userId)
                     && request.resource.data.get('uid', '') == userId
                     && (request.resource.data.get('role', null) != 'admin' || isAdmin());
 
-      // Updating a user profile: owners can update their own document, admins can update any
-      allow update: if isAdmin() || (
-                      isOwner(userId)
-                      && (request.resource.data.get('role', null) != 'admin' || isAdmin())
-                    );
-      
-      // Only admin can delete users
+      allow update: if isAdmin()
+                    || (isOwner(userId)
+                        && (request.resource.data.get('role', null) != 'admin' || isAdmin()));
+
       allow delete: if isAdmin();
     }
 
-    // --- 2. Invite Codes Collection ---
+    // =========================================================================
+    // 2. Invite Codes Collection
+    //    - Authenticated users can read & validate codes (auth.html sign-up).
+    //    - Authenticated users can claim (update) a code during registration.
+    //    - Only admin can create or delete codes.
+    // =========================================================================
     match /inviteCodes/{inviteCodeId} {
-      // Authenticated users can read and validate invite codes
-      allow read: if isAuthenticated() || isAdmin();
-
-      // Authenticated users can claim an active invite code
-      allow update: if isAuthenticated();
-
-      // Only admin can create or delete invite codes
+      allow read:          if isAuthenticated() || isAdmin();
+      allow update:        if isAuthenticated();
       allow create, delete: if isAdmin();
     }
 
-    // --- 3. Public Projects Collection (Public summaries for Find Work & Home) ---
+    // =========================================================================
+    // 3. Public Projects Collection
+    //    - Anyone can read public summaries (home page, find-work, share links).
+    //    - Any authenticated user can write (synced on project submit / update).
+    // =========================================================================
     match /publicProjects/{projectId} {
-      // Anyone can browse public project summaries
-      allow read: if true;
-      
-      // Synchronized on project creation/publish by client owner or admin
-      allow write: if isAuthenticated() || isAdmin();
+      allow read:  if true;
+      allow write: if isAuthenticated();
     }
 
-    // --- 4. Protected Projects Collection (Full project requirements) ---
+    // =========================================================================
+    // 4. Full Projects Collection
+    //    - Any authenticated user can read full project details (project-details,
+    //      admin panel, freelancer skill matching).
+    //    - Any authenticated user can create a project (clients via post-work).
+    //    - Only the project owner (clientId) or admin can update.
+    //    - Only admin can delete.
+    // =========================================================================
     match /projects/{projectId} {
-      // Authenticated users can view projects; admin can read all
-      allow read: if isAuthenticated() || isAdmin();
-      
-      // Authenticated users (clients, freelancers, admins) can submit/create projects
-      allow create: if isAuthenticated() || isAdmin();
-      
-      // Project owner or admin can update status and details
-      allow update: if isAuthenticated() && (
-                      resource.data.get('clientId', '') == request.auth.uid ||
-                      isAdmin()
-                    );
-      
-      // Only Admin can delete/cancel projects
+      allow read:   if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated()
+                    && (resource.data.get('clientId', '') == request.auth.uid || isAdmin());
       allow delete: if isAdmin();
     }
 
-    // --- 5. Counters Collection (Atomic Project ID sequence) ---
+    // =========================================================================
+    // 5. Counters Collection (Atomic project ID sequence FC-XXX)
+    //    - Any authenticated user can read/write (needed to generate next ID).
+    // =========================================================================
     match /counters/{counterId} {
-      allow read, write: if isAuthenticated() || isAdmin();
+      allow read, write: if isAuthenticated();
     }
 
-    // --- 6. Applications Collection ---
+    // =========================================================================
+    // 6. Applications Collection
+    //    - Any authenticated user can read (filtered in JS layer per role).
+    //    - Freelancers can create an application only for their own UID.
+    //      Uses deterministic ID (projectId_freelancerId) via setDoc, so
+    //      this rule covers both initial create and re-submission after withdrawal.
+    //    - Freelancers can update their own application (withdraw/edit).
+    //      Admin can update any application (status, assignment, etc.).
+    //    - Only admin can delete.
+    // =========================================================================
     match /applications/{applicationId} {
-      // Authenticated users can read applications
       allow read: if isAuthenticated();
-      
-      // Authenticated users can submit applications for their own UID
+
       allow create: if isAuthenticated()
                     && request.resource.data.get('freelancerId', '') == request.auth.uid;
-      
-      // Freelancers can update their own proposal/withdrawal; Admin can update status/assignment
+
       allow update: if isAuthenticated()
-                    && (request.resource.data.get('freelancerId', '') == request.auth.uid
-                        || resource.data.get('freelancerId', '') == request.auth.uid
-                        || isAdmin());
-      
-      // Only admin can delete applications
+                    && (resource.data.get('freelancerId', '') == request.auth.uid || isAdmin());
+
       allow delete: if isAdmin();
     }
 
-    // --- 7. Memberships Collection ---
+    // =========================================================================
+    // 7. Memberships Collection (Legacy compatibility)
+    //    - Membership state is primarily stored inside the user document.
+    //      This collection is kept for backward compatibility.
+    //    - Owner or admin can create / update records.
+    //    - Only admin can delete.
+    // =========================================================================
     match /memberships/{membershipId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && (request.resource.data.get('freelancerId', '') == request.auth.uid || isAdmin());
+
+      allow create, update: if isAuthenticated()
+                            && (request.resource.data.get('freelancerId', '') == request.auth.uid
+                                || isAdmin());
+
       allow delete: if isAdmin();
     }
 
-    // --- 8. Payments Collection ---
+    // =========================================================================
+    // 8. Payments Collection
+    //    - Users can read only their own payment records; admin reads all.
+    //      (userId and freelancerId both carry the owner UID for belt-and-braces.)
+    //    - Freelancers can submit (create) a payment record for their own UID.
+    //    - Only admin can update (verify/reject) or delete payment records.
+    // =========================================================================
     match /payments/{paymentId} {
-      // Authenticated users can read payment history, admin has full access
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (
-        request.resource.data.get('freelancerId', '') == request.auth.uid || 
-        request.resource.data.get('userId', '') == request.auth.uid || 
-        isAdmin()
-      );
+      allow read: if isAuthenticated()
+                  && (resource.data.get('userId', '') == request.auth.uid
+                      || resource.data.get('freelancerId', '') == request.auth.uid
+                      || isAdmin());
+
+      allow create: if isAuthenticated()
+                    && (request.resource.data.get('userId', '') == request.auth.uid
+                        || request.resource.data.get('freelancerId', '') == request.auth.uid
+                        || isAdmin());
+
       allow update, delete: if isAdmin();
     }
 
-    // --- 9. Reviews Collection ---
+    // =========================================================================
+    // 9. Reviews Collection
+    //    - Anyone can read reviews (public credibility / trust signals).
+    //    - Any authenticated user can create or update (reviewer check in JS).
+    //    - Only admin can delete.
+    // =========================================================================
     match /reviews/{reviewId} {
-      allow read: if true;
-      allow create, update: if isAuthenticated() || isAdmin();
-      allow delete: if isAdmin();
+      allow read:           if true;
+      allow create, update: if isAuthenticated();
+      allow delete:         if isAdmin();
     }
 
-    // --- 10. Messages Collection ---
+    // =========================================================================
+    // 10. Messages Collection
+    //     - Only sender, recipient, or admin can read a message.
+    //     - Any authenticated user can create where senderId == their UID.
+    //     - Only admin can update or delete messages.
+    // =========================================================================
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && (
-        resource.data.get('senderId', '') == request.auth.uid || 
-        resource.data.get('recipientId', '') == request.auth.uid || 
-        isAdmin()
-      );
-      allow create: if isAuthenticated() && request.resource.data.get('senderId', '') == request.auth.uid;
+      allow read: if isAuthenticated()
+                  && (resource.data.get('senderId', '') == request.auth.uid
+                      || resource.data.get('recipientId', '') == request.auth.uid
+                      || isAdmin());
+
+      allow create: if isAuthenticated()
+                    && request.resource.data.get('senderId', '') == request.auth.uid;
+
       allow update, delete: if isAdmin();
     }
 
-    // --- 11. Settings Collection ---
+    // =========================================================================
+    // 11. Settings Collection
+    //     - Anyone can read site settings (UPI config, agency name, etc.).
+    //     - Only admin can write settings.
+    // =========================================================================
     match /settings/{settingId} {
-      allow read: if true;
+      allow read:  if true;
       allow write: if isAdmin();
     }
+
   }
 }
+
