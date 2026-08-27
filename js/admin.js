@@ -231,6 +231,22 @@ function setupModalForms() {
     });
   }
 
+  // Add Plan Toolbar Button
+  const addPlanBtn = document.getElementById("btn-add-plan");
+  if (addPlanBtn) {
+    addPlanBtn.addEventListener("click", () => {
+      openAddPlanModal();
+    });
+  }
+
+  // Seed Plans Toolbar Button
+  const seedPlansBtn = document.getElementById("btn-seed-plans");
+  if (seedPlansBtn) {
+    seedPlansBtn.addEventListener("click", () => {
+      handleSeedDefaultPlans();
+    });
+  }
+
   // Generate Random Code Button
   const genBtn = document.getElementById("btn-generate-random-code");
   if (genBtn) {

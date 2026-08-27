@@ -343,8 +343,8 @@
             <p class="text-muted" style="font-size: 0.88rem;">Create, edit, pricing, QR codes, features, and publish status for all website membership tiers.</p>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="handleSeedDefaultPlans()">⚡ Load Default 3 Plans</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openAddPlanModal()">+ Add New Plan</button>
+            <button type="button" id="btn-seed-plans" class="btn btn-secondary btn-sm" onclick="handleSeedDefaultPlans()">⚡ Load Default 3 Plans</button>
+            <button type="button" id="btn-add-plan" class="btn btn-primary btn-sm" onclick="openAddPlanModal()">+ Add New Plan</button>
           </div>
         </div>
 
@@ -644,6 +644,8 @@
             <option value="Pending">Pending</option>
             <option value="Refunded">Refunded</option>
           </select>
+        </div>
+
         <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.5rem;">
           <button type="button" class="btn btn-secondary" onclick="closeModal('add-payment-modal')">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Payment Record</button>
