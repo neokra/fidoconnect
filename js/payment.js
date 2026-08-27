@@ -147,6 +147,17 @@ window.switchPaymentPlan = async function(planId) {
   }
 };
 
+window.downloadQrCode = function() {
+  const qrAsset = (currentPlan && currentPlan.qrImageUrl) || (upiConfig && upiConfig.qrAsset) || "images/fido-upi-qr.svg";
+  const link = document.createElement("a");
+  link.href = qrAsset;
+  link.download = `FidoConnect-UPI-QR-${((currentPlan && currentPlan.name) || "Plan").replace(/\s+/g, "_")}.svg`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("QR Code download started!", "success");
+};
+
 function renderCheckoutForm(container) {
   const planPrice = Number(currentPlan.price !== undefined ? currentPlan.price : currentPlan.priceAmount) || 0;
   const planPriceDisplay = currentPlan.priceDisplay || `₹${planPrice.toLocaleString("en-IN")}`;
@@ -154,63 +165,45 @@ function renderCheckoutForm(container) {
   const planQrAsset = currentPlan.qrImageUrl || upiConfig.qrAsset || "images/fido-upi-qr.svg";
   const planUpiId = currentPlan.upiId || upiConfig.upiId || "fidoconnect@okaxis";
   const planMerchantName = currentPlan.merchantName || upiConfig.merchantName || "FidoConnect";
-  const isAdminUser = FidoAuth.isAdmin();
 
-  // UPI Intent URI format: upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...
+  // UPI Intent URI format for Smartphone (opens Google Pay, PhonePe, Paytm, BHIM, etc.)
   const intentNote = `FidoConnect ${currentPlan.name} Membership`;
   const upiIntentUri = `upi://pay?pa=${encodeURIComponent(planUpiId)}&pn=${encodeURIComponent(planMerchantName)}&am=${planPrice}&cu=INR&tn=${encodeURIComponent(intentNote)}`;
 
   container.innerHTML = `
-    <!-- Header -->
-    <div style="margin-bottom: 1.75rem;">
-      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-accent);"></span>
-        <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; color:var(--color-accent);">Selected Freelancer Program (India)</span>
+    <!-- Top Summary Card: Prominent Plan & Exact Amount -->
+    <div class="checkout-summary-card">
+      <div class="summary-plan-info">
+        <span class="summary-plan-tag">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-accent);"></span>
+          FidoConnect Selected Freelancer
+        </span>
+        <h1 class="summary-plan-name">${currentPlan.name}</h1>
+        <span class="summary-plan-period">${currentPlan.billingCycle || '/ ' + planDuration} (${currentPlan.durationDays || 30} Days)</span>
       </div>
-      <h1 style="font-size: 2rem; font-weight: 750; margin-bottom: 0.5rem; color: var(--color-primary); letter-spacing: -0.02em;">Complete Membership Payment</h1>
-      <p class="text-muted" style="font-size: 1rem; margin: 0; line-height: 1.5;">
-        Activate your <strong>${currentPlan.name}</strong> access via UPI. Verification is processed manually by FidoConnect within business hours.
-      </p>
+      <div class="summary-amount-box">
+        <span class="amount-label">Payable Amount</span>
+        <div class="amount-value">${planPriceDisplay}</div>
+      </div>
     </div>
-
-    <!-- Admin Preview Banner (if admin) -->
-    ${isAdminUser ? `
-      <div class="card" style="background:#f0fdf4; border:1px solid #bbf7d0; padding:1rem 1.25rem; margin-bottom:1.5rem; border-radius:var(--border-radius-md);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
-          <div style="display:flex; align-items:center; gap:0.6rem; font-size:0.88rem; color:#166534;">
-            <span style="font-size:1.1rem;">👑</span>
-            <span><strong>Admin Mode:</strong> Viewing freelancer payment checkout. You can test submissions or manage incoming payments.</span>
-          </div>
-          <a href="admin.html#sec-payments" class="btn btn-secondary btn-sm" style="background:#ffffff; border-color:#86efac; color:#166534;">
-            Go to Admin Payment Verifications &rarr;
-          </a>
-        </div>
-      </div>
-    ` : ''}
 
     <!-- Return to Project Contextual Banner -->
     ${returnProject ? `
-      <div class="card" style="background: var(--color-accent-soft); border: 1px solid var(--color-accent-border); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; border-radius: var(--border-radius-md);">
-        <div style="display:flex; align-items:flex-start; gap:0.75rem;">
-          <svg width="22" height="22" fill="none" stroke="var(--color-accent)" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <div style="font-size: 0.92rem; color: var(--color-primary); line-height: 1.5;">
-            <strong>Application Pending for Project ${returnProject}${targetProjectData ? `: ${targetProjectData.title || ''}` : ''}</strong><br/>
-            Completing this membership payment will enable final submission and client review of your prepared proposal once verified.
-            <div style="margin-top:0.35rem;">
-              <a href="project-details.html?id=${encodeURIComponent(returnProject)}" style="color:var(--color-accent); font-weight:600; text-decoration:none; font-size:0.85rem;">
-                View Project Details & Draft &rarr;
-              </a>
-            </div>
+      <div class="card" style="background: var(--color-accent-soft); border: 1px solid var(--color-accent-border); padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: var(--border-radius-md);">
+        <div style="display:flex; align-items:flex-start; gap:0.6rem;">
+          <svg width="20" height="20" fill="none" stroke="var(--color-accent)" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <div style="font-size: 0.88rem; color: var(--color-primary); line-height: 1.45;">
+            <strong>Application Pending for Project ${returnProject}${targetProjectData ? `: ${targetProjectData.title || ''}` : ''}</strong> — Completing this payment enables proposal review once verified.
           </div>
         </div>
       </div>
     ` : ''}
 
-    <!-- Interactive Plan Switcher Pills (If multiple plans available) -->
+    <!-- Interactive Plan Switcher (If multiple plans exist) -->
     ${allPublishedPlans.length > 1 ? `
       <div style="margin-bottom: 1.25rem;">
-        <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:0.5rem;">
-          Select Membership Plan:
+        <div style="font-size:0.75rem; font-weight:750; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; margin-bottom:0.4rem;">
+          Switch Plan Tier:
         </div>
         <div class="payment-plan-switcher">
           ${allPublishedPlans.map(plan => {
@@ -232,95 +225,76 @@ function renderCheckoutForm(container) {
       </div>
     ` : ''}
 
-    <div style="display: grid; grid-template-columns: 1fr; gap: 1.75rem;">
+    <!-- Dedicated Main Checkout Card -->
+    <div class="payment-checkout-card">
       
-      <!-- 1. Selected Plan Details Card -->
-      <div class="payment-checkout-card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom: 1.25rem;">
-          <div>
-            <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
-              <span class="badge ${currentPlan.isRecommended ? 'badge-active' : 'badge-proposal'}" style="font-size:0.75rem;">Selected Plan</span>
-              ${currentPlan.isRecommended ? `<span style="font-size:0.78rem; font-weight:700; color:var(--color-accent);">★ ${currentPlan.badge || 'Recommended'}</span>` : ''}
-            </div>
-            <h2 style="font-size: 1.5rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.25rem;">${currentPlan.name}</h2>
-            <p class="text-muted" style="font-size: 0.9rem; margin: 0;">${currentPlan.description || 'Access to selected freelancer opportunities.'}</p>
-          </div>
-          
-          <div style="text-align: right; min-width: 140px;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--color-accent); line-height: 1;">${planPriceDisplay}</div>
-            <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; margin-top: 4px;">${currentPlan.billingCycle || '/ ' + planDuration} (${currentPlan.durationDays || 30} Days)</div>
-          </div>
+      <!-- Step 1 & 2: Steps Progress Bar -->
+      <div class="checkout-steps-bar">
+        <div class="checkout-step-item active">
+          <span class="checkout-step-num">1</span>
+          <span>Pay ${planPriceDisplay}</span>
         </div>
-
-        ${Array.isArray(currentPlan.features) && currentPlan.features.length > 0 ? `
-          <div style="background:var(--bg-subtle); border-radius:var(--border-radius-md); padding:0.85rem 1rem; margin-bottom:1rem;">
-            <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:0.4rem;">Plan Includes:</div>
-            <ul style="list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.4rem; font-size:0.85rem; color:var(--color-primary);">
-              ${currentPlan.features.map(f => `
-                <li style="display:flex; align-items:center; gap:6px;">
-                  <span style="color:var(--color-teal); font-weight:bold;">✓</span>
-                  <span>${f}</span>
-                </li>
-              `).join("")}
-            </ul>
-          </div>
-        ` : ''}
-
-        <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; display:flex; justify-content:space-between; align-items:center; font-size:0.88rem; flex-wrap:wrap; gap:0.5rem;">
-          <span class="text-muted">Freelancer Account: <strong style="color:var(--color-primary);">${currentUser.name || currentUser.email}</strong></span>
-          <a href="account.html?tab=membership${returnProject ? '&return_project=' + encodeURIComponent(returnProject) : ''}" style="color:var(--color-accent); font-weight:600; text-decoration:none;">
-            Compare All Plans &rarr;
-          </a>
+        <div class="checkout-step-divider"></div>
+        <div class="checkout-step-item">
+          <span class="checkout-step-num">2</span>
+          <span>Enter UTR</span>
+        </div>
+        <div class="checkout-step-divider"></div>
+        <div class="checkout-step-item">
+          <span class="checkout-step-num">3</span>
+          <span>Verify</span>
         </div>
       </div>
 
-      <!-- 2. Pay using UPI Section Card -->
-      <div class="payment-checkout-card">
-        <h3 style="font-size: 1.3rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.4rem;">
-          Step 1: Pay using UPI
-        </h3>
-        <p class="text-muted" style="font-size: 0.92rem; margin-bottom: 1.75rem;">
-          Scan the QR code with any UPI application (Google Pay, PhonePe, Paytm, BHIM, Bank Apps) and transfer exactly <strong>${planPriceDisplay}</strong>.
-        </p>
+      <!-- Smartphone ONLY CTA: Open UPI App -->
+      <div class="mobile-upi-action-block">
+        <a href="${upiIntentUri}" id="btn-open-upi-app" class="btn btn-primary btn-block open-upi-btn">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+          Open UPI App (${planPriceDisplay})
+        </a>
+        <div class="mobile-or-divider">
+          <span>Or Scan / Download QR Below</span>
+        </div>
+      </div>
 
-        <!-- Centered QR Container -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 2rem;">
-          
-          <!-- QR Card -->
-          <div class="upi-qr-card">
-            <img 
-              src="${planQrAsset}" 
-              alt="FidoConnect UPI QR Code" 
-              style="width: 100%; max-height: 240px; height: auto; display: block; border-radius: 8px; margin: 0 auto 0.75rem; object-fit: contain;" 
-              onerror="this.onerror=null; this.src='images/fido-upi-qr.svg';" 
-            />
-            <div style="font-size: 0.88rem; font-weight: 750; color: var(--color-primary);">Scan to Pay ${planPriceDisplay}</div>
-            <div style="font-size: 0.76rem; color: var(--text-muted); margin-top:2px;">Recipient: <strong>${planMerchantName}</strong></div>
+      <!-- Centered Large QR Code Display -->
+      <div class="checkout-qr-wrapper" style="display:flex; flex-direction:column; align-items:center;">
+        <div class="checkout-qr-card">
+          <img 
+            src="${planQrAsset}" 
+            alt="FidoConnect UPI QR Code" 
+            id="checkout-qr-image"
+            class="checkout-qr-img" 
+            onerror="this.onerror=null; this.src='images/fido-upi-qr.svg';" 
+          />
+          <div class="qr-scan-instruction">
+            Scan the QR code with your UPI app to pay.
           </div>
-
-          <!-- UPI ID Copy Box -->
-          <div class="upi-copy-box" style="margin-top: 1.25rem;">
-            <div>
-              <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">UPI ID</div>
-              <div id="upi-id-text" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--color-primary);">${planUpiId}</div>
-            </div>
-            <button type="button" id="btn-copy-upi" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.8rem;" onclick="copyUpiId()">
-              📋 Copy
-            </button>
+          <div class="qr-recipient-tag">
+            Recipient: <strong>${planMerchantName}</strong> &bull; Amount: <strong>${planPriceDisplay}</strong>
           </div>
+        </div>
 
-          <!-- Direct UPI Intent Button (Mobile & Supported Browsers) -->
-          <div style="margin-top: 1.25rem; width: 100%; max-width: 380px; text-align: center;">
-            <a href="${upiIntentUri}" id="btn-upi-app" class="btn btn-primary btn-block btn-lg" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-              Pay with UPI App (${planPriceDisplay})
-            </a>
-            <span style="display:block; font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
-              Opens Google Pay, PhonePe, Paytm, or BHIM directly on your smartphone.
-            </span>
-          </div>
+        <!-- QR Actions: Download QR Code + Copy UPI ID -->
+        <div class="qr-actions-row">
+          <button type="button" class="btn btn-secondary btn-sm btn-download-qr" onclick="downloadQrCode()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download QR Code
+          </button>
+          <button type="button" id="btn-copy-upi" class="btn btn-secondary btn-sm" onclick="copyUpiId()">
+            📋 Copy UPI ID
+          </button>
+        </div>
 
-          <!-- Accepted Apps Badges -->
+        <!-- UPI ID Text Box -->
+        <div class="upi-copy-box">
+          <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">UPI ID:</span>
+          <span id="upi-id-text" class="font-mono" style="font-weight:750; color:var(--color-primary);">${planUpiId}</span>
+        </div>
+
+        <!-- Accepted Apps List -->
+        <div class="accepted-apps-container">
+          <span class="accepted-apps-label">Accepted in all UPI Applications</span>
           <div class="accepted-apps-grid">
             <span class="accepted-app-tag">Google Pay</span>
             <span class="accepted-app-tag">PhonePe</span>
@@ -330,54 +304,52 @@ function renderCheckoutForm(container) {
             <span class="accepted-app-tag">Amazon Pay</span>
             <span class="accepted-app-tag">Any Bank UPI</span>
           </div>
-
         </div>
+      </div>
 
-        <!-- 3. Payment Confirmation Section -->
-        <div style="border-top: 2px dashed var(--border-color); padding-top: 2rem;">
-          <h4 style="font-size: 1.2rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.35rem;">
-            Step 2: Submit Transaction ID / UTR
-          </h4>
-          <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1.25rem;">
-            Once you complete the payment in your UPI app, copy the 12-digit UPI Reference Number / UTR from your receipt and paste it below.
-          </p>
+      <!-- Step 3 & 4: Transaction ID / UTR Form Section -->
+      <div style="border-top: 2px dashed var(--border-color); padding-top: 2rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.35rem;">
+          Step 3: Enter Transaction ID / UTR
+        </h3>
+        <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 1.25rem;">
+          After completing the payment in your UPI app, enter the 12-digit UPI Reference Number / UTR below to submit for verification.
+        </p>
 
-          <form id="payment-verification-form">
-            <div class="form-group" style="margin-bottom: 1.25rem;">
-              <label for="payment-utr-input" class="form-label form-label-required" style="font-weight: 700;">
-                Transaction ID / UPI Ref Number / UTR
-              </label>
-              <input 
-                type="text" 
-                id="payment-utr-input" 
-                class="form-control font-mono" 
-                placeholder="e.g. 423189201948 or UPI Ref No." 
-                required 
-                autocomplete="off"
-                style="font-size: 1.05rem; padding: 0.75rem 1rem;"
-              />
-              <span class="form-hint" style="margin-top: 0.35rem; display:block;">
-                Found in payment receipt details in Google Pay, PhonePe, Paytm, BHIM, or your bank app.
-              </span>
+        <form id="payment-verification-form">
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="payment-utr-input" class="form-label form-label-required" style="font-weight: 700;">
+              Transaction ID / UPI Reference Number (UTR)
+            </label>
+            <input 
+              type="text" 
+              id="payment-utr-input" 
+              class="form-control font-mono" 
+              placeholder="e.g. 423189201948 or UPI Ref No." 
+              required 
+              autocomplete="off"
+              maxlength="30"
+              style="font-size: 1.05rem; padding: 0.75rem 1rem;"
+            />
+            <span class="form-hint" style="margin-top: 0.35rem; display:block;">
+              Found in your payment receipt details (Google Pay, PhonePe, Paytm, BHIM, Bank App).
+            </span>
+          </div>
+
+          <div id="payment-submit-error" style="display:none; color: var(--color-danger); font-size: 0.88rem; margin-bottom: 1rem; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--border-radius-sm);"></div>
+
+          <button type="submit" id="btn-submit-payment" class="btn btn-primary btn-block btn-lg" style="margin-bottom: 1.25rem; font-weight:750; font-size:1.05rem;">
+            Submit Payment &rarr;
+          </button>
+
+          <!-- Security Note -->
+          <div class="checkout-security-notice">
+            <svg width="20" height="20" fill="none" stroke="var(--color-teal)" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            <div>
+              <strong>Secure Verification:</strong> Your membership will be activated after our team verifies the transaction reference against our bank records. Verification typically takes a few hours during standard business hours.
             </div>
-
-            <div id="payment-submit-error" style="display:none; color: var(--color-danger); font-size: 0.88rem; margin-bottom: 1rem; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--border-radius-sm);"></div>
-
-            <button type="submit" id="btn-submit-payment" class="btn btn-primary btn-block btn-lg" style="margin-bottom: 1.25rem;">
-              Submit Payment for Verification &rarr;
-            </button>
-
-            <!-- Explanation & Disclaimer -->
-            <div style="background: var(--bg-subtle); border-radius: var(--border-radius-md); padding: 1rem 1.25rem; font-size: 0.84rem; color: var(--text-muted); line-height: 1.55;">
-              <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 0.25rem;">Verification Timeline:</div>
-              Your membership will be activated after FidoConnect verifies the transaction reference against our bank records. Verification typically takes a few hours during standard business hours.
-              <div style="margin-top: 0.4rem; font-size: 0.78rem;">
-                FidoConnect membership provides access to eligible project opportunities. Project availability depends on client demand and verified skill match. Membership does not guarantee specific projects or income.
-              </div>
-            </div>
-          </form>
-        </div>
-
+          </div>
+        </form>
       </div>
 
     </div>

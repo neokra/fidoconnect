@@ -2169,34 +2169,257 @@ textarea.form-control {
   color: var(--color-accent);
 }
 
-.upi-qr-card {
+/* Dedicated Checkout Page Components */
+.checkout-summary-card {
+  background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-subtle) 100%);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 640px) {
+  .checkout-summary-card {
+    padding: 1.25rem 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .summary-amount-box {
+    text-align: left !important;
+    width: 100%;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-color);
+  }
+}
+
+.summary-plan-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-plan-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 750;
+  color: var(--color-accent);
+}
+
+.summary-plan-name {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.summary-plan-period {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.summary-amount-box {
+  text-align: right;
+}
+
+.amount-label {
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.amount-value {
+  font-size: 2.25rem;
+  font-weight: 850;
+  color: var(--color-accent);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Step Bar */
+.checkout-steps-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.checkout-step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
+.checkout-step-item.active {
+  color: var(--color-primary);
+}
+
+.checkout-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--border-color);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.checkout-step-item.active .checkout-step-num {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.checkout-step-divider {
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+  margin: 0 0.75rem;
+}
+
+/* Smartphone Open UPI App Button */
+.mobile-upi-action-block {
+  display: none;
+  margin-bottom: 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-upi-action-block {
+    display: block;
+  }
+}
+
+.open-upi-btn {
+  font-size: 1.05rem;
+  font-weight: 750;
+  padding: 0.9rem 1.25rem;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.mobile-or-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.25rem 0;
+  color: var(--text-muted);
+}
+
+.mobile-or-divider::before,
+.mobile-or-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.mobile-or-divider span {
+  padding: 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Centered Large QR Code Card */
+.checkout-qr-card {
   background: #ffffff;
-  padding: 1.25rem;
+  padding: 1.75rem;
   border-radius: var(--border-radius-lg);
   border: 2px solid var(--border-color);
   box-shadow: var(--shadow-md);
-  max-width: 280px;
+  max-width: 320px;
   width: 100%;
+  margin: 0 auto 1.5rem;
   text-align: center;
   transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
-.upi-qr-card:hover {
+.checkout-qr-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.checkout-qr-img {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  margin: 0 auto 1rem;
+  object-fit: contain;
+}
+
+.qr-scan-instruction {
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--color-primary);
+  line-height: 1.4;
+  margin-bottom: 0.35rem;
+}
+
+.qr-recipient-tag {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.qr-actions-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn-download-qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 650;
+  padding: 0.55rem 1rem;
 }
 
 .upi-copy-box {
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
-  padding: 0.75rem 1.25rem;
+  padding: 0.65rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  max-width: 380px;
+  gap: 0.75rem;
+  max-width: 340px;
   width: 100%;
+  margin: 0 auto 1.5rem;
 }
 
 .badge-pending-upi {
@@ -2210,13 +2433,27 @@ textarea.form-control {
   color: #d97706;
 }
 
+.accepted-apps-container {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.accepted-apps-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
 .accepted-apps-grid {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 0.4rem;
 }
 
 .accepted-app-tag {
@@ -2230,6 +2467,20 @@ textarea.form-control {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.checkout-security-notice {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1rem 1.25rem;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
 }
 
 .payment-details-table {
