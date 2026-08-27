@@ -2302,53 +2302,6 @@ textarea.form-control {
   margin: 0 0.75rem;
 }
 
-/* Smartphone Open UPI App Button */
-.mobile-upi-action-block {
-  display: none;
-  margin-bottom: 1.75rem;
-}
-
-@media (max-width: 768px) {
-  .mobile-upi-action-block {
-    display: block;
-  }
-}
-
-.open-upi-btn {
-  font-size: 1.05rem;
-  font-weight: 750;
-  padding: 0.9rem 1.25rem;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
-}
-
-.mobile-or-divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 1.25rem 0;
-  color: var(--text-muted);
-}
-
-.mobile-or-divider::before,
-.mobile-or-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px dashed var(--border-color);
-}
-
-.mobile-or-divider span {
-  padding: 0 0.75rem;
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* Centered Large QR Code Card */
 .checkout-qr-card {
   background: #ffffff;

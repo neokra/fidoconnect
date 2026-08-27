@@ -147,15 +147,60 @@ window.switchPaymentPlan = async function(planId) {
   }
 };
 
-window.downloadQrCode = function() {
+window.downloadQrCode = async function() {
   const qrAsset = (currentPlan && currentPlan.qrImageUrl) || (upiConfig && upiConfig.qrAsset) || "images/fido-upi-qr.svg";
-  const link = document.createElement("a");
-  link.href = qrAsset;
-  link.download = `FidoConnect-UPI-QR-${((currentPlan && currentPlan.name) || "Plan").replace(/\s+/g, "_")}.svg`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  showToast("QR Code download started!", "success");
+  const btn = document.querySelector(".btn-download-qr");
+  const origHtml = btn ? btn.innerHTML : "";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="preloader-spinner" style="width:14px; height:14px; margin:0; display:inline-block; vertical-align:middle;"></span> Downloading...`;
+  }
+
+  try {
+    const response = await fetch(qrAsset);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    const blob = await response.blob();
+
+    let filename = "FidoConnect-QR.png";
+    if (blob.type === "image/svg+xml" || qrAsset.toLowerCase().endsWith(".svg")) {
+      filename = "FidoConnect-QR.svg";
+    } else if (blob.type === "image/jpeg" || qrAsset.toLowerCase().endsWith(".jpg") || qrAsset.toLowerCase().endsWith(".jpeg")) {
+      filename = "FidoConnect-QR.jpg";
+    } else if (blob.type === "image/png" || qrAsset.toLowerCase().endsWith(".png")) {
+      filename = "FidoConnect-QR.png";
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    showToast("QR code downloaded successfully!", "success");
+  } catch (err) {
+    console.warn("Direct blob download failed, falling back to direct anchor download:", err);
+    try {
+      const link = document.createElement("a");
+      link.href = qrAsset;
+      link.download = "FidoConnect-QR.png";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("QR code download initiated.", "info");
+    } catch (fallbackErr) {
+      showToast("Could not download QR code image.", "error");
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
 };
 
 function renderCheckoutForm(container) {
@@ -163,12 +208,7 @@ function renderCheckoutForm(container) {
   const planPriceDisplay = currentPlan.priceDisplay || `₹${planPrice.toLocaleString("en-IN")}`;
   const planDuration = currentPlan.duration || `${currentPlan.durationDays || 30} Days`;
   const planQrAsset = currentPlan.qrImageUrl || upiConfig.qrAsset || "images/fido-upi-qr.svg";
-  const planUpiId = currentPlan.upiId || upiConfig.upiId || "fidoconnect@okaxis";
   const planMerchantName = currentPlan.merchantName || upiConfig.merchantName || "FidoConnect";
-
-  // UPI Intent URI format for Smartphone (opens Google Pay, PhonePe, Paytm, BHIM, etc.)
-  const intentNote = `FidoConnect ${currentPlan.name} Membership`;
-  const upiIntentUri = `upi://pay?pa=${encodeURIComponent(planUpiId)}&pn=${encodeURIComponent(planMerchantName)}&am=${planPrice}&cu=INR&tn=${encodeURIComponent(intentNote)}`;
 
   container.innerHTML = `
     <!-- Top Summary Card: Prominent Plan & Exact Amount -->
@@ -246,17 +286,6 @@ function renderCheckoutForm(container) {
         </div>
       </div>
 
-      <!-- Smartphone ONLY CTA: Open UPI App -->
-      <div class="mobile-upi-action-block">
-        <a href="${upiIntentUri}" id="btn-open-upi-app" class="btn btn-primary btn-block open-upi-btn">
-          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-          Open UPI App (${planPriceDisplay})
-        </a>
-        <div class="mobile-or-divider">
-          <span>Or Scan / Download QR Below</span>
-        </div>
-      </div>
-
       <!-- Centered Large QR Code Display -->
       <div class="checkout-qr-wrapper" style="display:flex; flex-direction:column; align-items:center;">
         <div class="checkout-qr-card">
@@ -275,21 +304,12 @@ function renderCheckoutForm(container) {
           </div>
         </div>
 
-        <!-- QR Actions: Download QR Code + Copy UPI ID -->
+        <!-- QR Actions: Download QR Code -->
         <div class="qr-actions-row">
           <button type="button" class="btn btn-secondary btn-sm btn-download-qr" onclick="downloadQrCode()">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             Download QR Code
           </button>
-          <button type="button" id="btn-copy-upi" class="btn btn-secondary btn-sm" onclick="copyUpiId()">
-            📋 Copy UPI ID
-          </button>
-        </div>
-
-        <!-- UPI ID Text Box -->
-        <div class="upi-copy-box">
-          <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">UPI ID:</span>
-          <span id="upi-id-text" class="font-mono" style="font-weight:750; color:var(--color-primary);">${planUpiId}</span>
         </div>
 
         <!-- Accepted Apps List -->
@@ -310,7 +330,7 @@ function renderCheckoutForm(container) {
       <!-- Step 3 & 4: Transaction ID / UTR Form Section -->
       <div style="border-top: 2px dashed var(--border-color); padding-top: 2rem;">
         <h3 style="font-size: 1.25rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.35rem;">
-          Step 3: Enter Transaction ID / UTR
+          Step 2: Enter Transaction ID / UTR
         </h3>
         <p class="text-muted" style="font-size: 0.88rem; margin-bottom: 1.25rem;">
           After completing the payment in your UPI app, enter the 12-digit UPI Reference Number / UTR below to submit for verification.
