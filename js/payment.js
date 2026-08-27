@@ -14,15 +14,6 @@ let returnProject = null;
 let upiConfig = DEFAULT_UPI_CONFIG;
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Preloader removal
-  const preloader = document.getElementById("page-preloader");
-  if (preloader) {
-    window.addEventListener("load", () => {
-      preloader.style.opacity = "0";
-      setTimeout(() => preloader.remove(), 300);
-    });
-  }
-
   // Auth observer
   FidoAuth.onAuthStateChanged(async (user) => {
     currentUser = user;
@@ -44,8 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function getQueryParams() {
   const params = new URLSearchParams(window.location.search);
+  const planParam = params.get("plan");
   return {
-    planKey: (params.get("plan") || "basic").toLowerCase(),
+    planKey: planParam ? planParam.trim().toLowerCase() : "",
     returnProject: params.get("return_project") || null,
     retry: params.get("retry") === "true"
   };
@@ -58,16 +50,27 @@ async function initPaymentPage() {
   const { planKey, returnProject: retProj, retry } = getQueryParams();
   returnProject = retProj;
 
-  // Validate and load plan dynamically from Firestore (Single source of truth)
-  currentPlan = await FidoDB.getMembershipPlanById(planKey);
+  // 1. Try to load requested plan from Firestore
+  if (planKey) {
+    currentPlan = await FidoDB.getMembershipPlanById(planKey);
+  }
 
+  // 2. If no plan specified or not found, fall back to first active/recommended published plan
+  if (!currentPlan) {
+    const published = await FidoDB.getMembershipPlans(false);
+    if (published && published.length > 0) {
+      currentPlan = published.find(p => p.isRecommended) || published[0];
+    }
+  }
+
+  // 3. If still no plan found (database has 0 active plans)
   if (!currentPlan) {
     container.innerHTML = `
-      <div class="card text-center" style="padding: 3rem 2rem; max-width: 600px; margin: 0 auto;">
-        <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚠️</div>
-        <h2 style="font-size: 1.5rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">Plan Not Found</h2>
-        <p class="text-muted" style="margin-bottom: 1.5rem;">The selected membership plan does not exist or has been disabled.</p>
-        <a href="account.html?tab=membership" class="btn btn-primary">View Available Membership Plans &rarr;</a>
+      <div class="card text-center" style="padding: 3rem 2rem; max-width: 600px; margin: 0 auto; border-radius: var(--border-radius-lg);">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">⭐</div>
+        <h2 style="font-size: 1.5rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">No Active Membership Plans</h2>
+        <p class="text-muted" style="margin-bottom: 1.5rem; line-height: 1.5;">Membership plans are currently being configured. Please check back shortly or visit your account dashboard.</p>
+        <a href="account.html" class="btn btn-primary">Return to Account Dashboard &rarr;</a>
       </div>
     `;
     return;
@@ -190,7 +193,7 @@ function renderCheckoutForm(container) {
           
           <!-- QR Card -->
           <div style="background: #ffffff; padding: 1.25rem; border-radius: var(--border-radius-lg); border: 2px solid var(--border-color); box-shadow: var(--shadow-md); max-width: 280px; width: 100%; text-align: center;">
-            <img src="${planQrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; max-height: 240px; height: auto; display: block; border-radius: 8px; margin: 0 auto 0.75rem; object-fit: contain;" onerror="this.src='images/fido-upi-qr.svg'" />
+            <img src="${planQrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; max-height: 240px; height: auto; display: block; border-radius: 8px; margin: 0 auto 0.75rem; object-fit: contain;" onerror="this.onerror=null; this.src='images/fido-upi-qr.svg';" />
             <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">Scan to Pay ${planPriceDisplay}</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">Recipient: ${planMerchantName}</div>
           </div>
@@ -447,7 +450,7 @@ function renderRejectedState(container, payment) {
       ` : ''}
 
       <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <a href="payment.html?plan=${currentPlan.id}&retry=true${returnProject ? '&return_project=' + encodeURIComponent(returnProject) : ''}" class="btn btn-primary btn-lg">
+        <a href="payment.html?plan=${(currentPlan && currentPlan.id) || (payment && payment.planId) || 'basic'}&retry=true${returnProject ? '&return_project=' + encodeURIComponent(returnProject) : ''}" class="btn btn-primary btn-lg">
           Start New Payment Attempt &rarr;
         </a>
         <a href="account.html" class="btn btn-secondary">
@@ -459,9 +462,10 @@ function renderRejectedState(container, payment) {
 }
 
 window.copyUpiId = function() {
-  const upiId = (currentPlan && currentPlan.upiId) || upiConfig.upiId;
-  navigator.clipboard.writeText(upiId).then(() => {
-    const btn = document.getElementById("btn-copy-upi");
+  const upiId = (currentPlan && currentPlan.upiId) || (upiConfig && upiConfig.upiId) || "fidoconnect@okaxis";
+  const btn = document.getElementById("btn-copy-upi");
+
+  const onSuccess = () => {
     if (btn) {
       const orig = btn.textContent;
       btn.textContent = "✓ Copied!";
@@ -472,7 +476,35 @@ window.copyUpiId = function() {
       }, 2000);
     }
     showToast("UPI ID copied to clipboard!", "success");
-  }).catch(() => {
-    showToast("Could not copy UPI ID automatically.", "error");
-  });
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(upiId).then(onSuccess).catch(() => {
+      fallbackCopy(upiId, onSuccess);
+    });
+  } else {
+    fallbackCopy(upiId, onSuccess);
+  }
 };
+
+function fallbackCopy(text, cb) {
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    if (successful && cb) {
+      cb();
+    } else {
+      showToast("UPI ID: " + text, "info");
+    }
+  } catch (err) {
+    showToast("UPI ID: " + text, "info");
+  }
+}
