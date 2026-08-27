@@ -772,10 +772,18 @@ export const FidoDB = {
       console.warn("Error fetching plan doc by id:", e);
     }
 
-    // Check by name or id in all plans from database
+    // Check by name, slug or partial id in all plans from database
     try {
       const all = await this.getMembershipPlans(true);
-      const found = all.find(p => p.id === cleanId || (p.name && p.name.toLowerCase() === cleanId.toLowerCase()));
+      const cleanLower = cleanId.toLowerCase();
+      const found = all.find(p => 
+        p.id === cleanId || 
+        p.id.toLowerCase() === cleanLower ||
+        (p.name && p.name.toLowerCase() === cleanLower) ||
+        (p.name && p.name.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanLower.replace(/[^a-z0-9]/g, "")) ||
+        (p.id && p.id.includes(cleanLower)) ||
+        (p.name && p.name.toLowerCase().includes(cleanLower))
+      );
       if (found) return found;
     } catch (e) {}
 
@@ -840,21 +848,23 @@ export const FidoDB = {
       published: Boolean(published),
       updatedAt: new Date().toISOString()
     };
-    await updateDoc(docRef, updates);
+    await setDoc(docRef, updates, { merge: true });
     return { id: planId, ...updates };
   },
 
-  async seedDefaultMembershipPlans() {
+  async seedDefaultMembershipPlans(force = false) {
     for (const [key, plan] of Object.entries(MEMBERSHIP_PLANS)) {
       try {
         const docRef = doc(db, "membershipPlans", key);
         const snap = await getDoc(docRef);
-        if (!snap.exists()) {
-          await setDoc(docRef, {
+        if (!snap.exists() || force) {
+          const nowIso = new Date().toISOString();
+          const clean = {
             ...plan,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
+            createdAt: snap.exists() ? (snap.data().createdAt || nowIso) : nowIso,
+            updatedAt: nowIso
+          };
+          await setDoc(docRef, clean, { merge: true });
         }
       } catch (e) {
         console.warn("Could not seed plan:", key, e);

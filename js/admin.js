@@ -247,29 +247,32 @@ function setupModalForms() {
 async function loadAdminData() {
   try {
     const [projects, apps, users, payments, reviews, messages, stats, inviteCodes, plans] = await Promise.all([
-      FidoDB.getProjects({}),
-      FidoDB.getApplications({}),
-      FidoDB.getUsers(),
-      FidoDB.getPayments(),
-      FidoDB.getReviews(),
-      FidoDB.getMessages(),
-      FidoDB.getDashboardStats(),
-      FidoDB.getInviteCodes(),
-      FidoDB.getMembershipPlans(true)
+      FidoDB.getProjects({}).catch(e => { console.warn("getProjects warning:", e); return []; }),
+      FidoDB.getApplications({}).catch(e => { console.warn("getApplications warning:", e); return []; }),
+      FidoDB.getUsers().catch(e => { console.warn("getUsers warning:", e); return []; }),
+      FidoDB.getPayments().catch(e => { console.warn("getPayments warning:", e); return []; }),
+      FidoDB.getReviews().catch(e => { console.warn("getReviews warning:", e); return []; }),
+      FidoDB.getMessages().catch(e => { console.warn("getMessages warning:", e); return []; }),
+      FidoDB.getDashboardStats().catch(e => { 
+        console.warn("getDashboardStats warning:", e); 
+        return { totalProjects: 0, newRequests: 0, activeProjects: 0, completedProjects: 0, totalUsers: 0, freelancersCount: 0, clientsCount: 0, activeMembers: 0, pendingApplications: 0, totalRevenue: "$0", agencyMargin: "$0" }; 
+      }),
+      FidoDB.getInviteCodes().catch(e => { console.warn("getInviteCodes warning:", e); return []; }),
+      FidoDB.getMembershipPlans(true).catch(e => { console.warn("getMembershipPlans warning:", e); return []; })
     ]);
 
-    allAdminProjects = projects;
-    allAdminApps = apps;
-    allAdminUsers = users;
-    allAdminFreelancers = users.filter(u => u.role === "freelancer");
-    allAdminClients = users.filter(u => u.role === "client");
-    allAdminPayments = payments;
-    allAdminReviews = reviews;
-    allAdminMessages = messages;
-    allAdminInviteCodes = inviteCodes;
-    allAdminPlans = plans;
+    allAdminProjects = projects || [];
+    allAdminApps = apps || [];
+    allAdminUsers = users || [];
+    allAdminFreelancers = (users || []).filter(u => u.role === "freelancer");
+    allAdminClients = (users || []).filter(u => u.role === "client");
+    allAdminPayments = payments || [];
+    allAdminReviews = reviews || [];
+    allAdminMessages = messages || [];
+    allAdminInviteCodes = inviteCodes || [];
+    allAdminPlans = plans || [];
 
-    renderOverviewStats(stats);
+    if (stats) renderOverviewStats(stats);
     renderProjectsTable();
     renderApplicationsTable();
     renderUsersTable();
@@ -283,8 +286,8 @@ async function loadAdminData() {
     renderInviteCodesTable();
 
   } catch (err) {
-    console.error("Error loading admin data from Firestore:", err);
-    showToast("Error loading admin data: " + err.message, "error");
+    console.error("Error in loadAdminData:", err);
+    showToast("Notice while loading data: " + err.message, "error");
   }
 }
 
@@ -736,6 +739,20 @@ window.handleDeletePlan = async function(planId) {
     await loadAdminData();
   } catch (err) {
     showToast(err.message || "Failed to delete plan.", "error");
+  }
+};
+
+window.handleSeedDefaultPlans = async function() {
+  if (!confirm("This will load the 3 standard membership plans (Basic ₹499, Pro ₹1,999, Premium ₹4,999) into your database. Existing plans with those IDs will be updated. Proceed?")) {
+    return;
+  }
+
+  try {
+    await FidoDB.seedDefaultMembershipPlans(true);
+    showToast("Default membership plans loaded successfully!", "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast(err.message || "Failed to seed default plans.", "error");
   }
 };
 

@@ -13,8 +13,14 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email.lower() == "thecard.primary@gmail.com";
+        && (
+          (request.auth.token.email != null && (
+            request.auth.token.email == "thecard.primary@gmail.com"
+            || request.auth.token.email.lower() == "thecard.primary@gmail.com"
+          ))
+          || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+              && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
+        );
     }
 
     // =========================================================================
