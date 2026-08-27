@@ -7,7 +7,6 @@
 
 import { FidoAuth } from "./auth.js";
 import { FidoDB, DEFAULT_UPI_CONFIG } from "./db.js";
-import { showToast, formatDate } from "./ui.js";
 
 let currentUser = null;
 let currentPlan = null;

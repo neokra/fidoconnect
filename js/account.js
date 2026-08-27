@@ -6,7 +6,6 @@
 
 import { FidoAuth } from "./auth.js";
 import { FidoDB, SKILL_TAXONOMY } from "./db.js";
-import { showToast, formatDate } from "./ui.js";
 
 let currentUser = null;
 let selectedModalCategories = new Set();

@@ -748,6 +748,7 @@ p {
 .badge-active { background-color: #ecfdf5; color: #059669; }
 .badge-inactive { background-color: #f1f5f9; color: #64748b; }
 .badge-expired { background-color: #fef2f2; color: #dc2626; }
+.badge-proposal { background-color: #ede9fe; color: #6d28d9; }
 
 /* --- Role Badges (compact inline indicators) --- */
 .role-badge {
