@@ -440,7 +440,7 @@ class AuthService {
       }
 
       const isMemberActive = user.membershipStatus === "active";
-      const planName = isMemberActive ? (user.membershipPlan || "Selected Basic") : "Join";
+      const planName = isMemberActive ? (user.membershipPlan || "Member") : "Join";
       const membershipTarget = `account.html?tab=membership`;
 
       container.innerHTML = `

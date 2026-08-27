@@ -190,7 +190,7 @@ function renderCheckoutForm(container) {
           
           <!-- QR Card -->
           <div style="background: #ffffff; padding: 1.25rem; border-radius: var(--border-radius-lg); border: 2px solid var(--border-color); box-shadow: var(--shadow-md); max-width: 280px; width: 100%; text-align: center;">
-            <img src="${planQrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; height: auto; display: block; border-radius: 8px; margin-bottom: 0.75rem;" onerror="this.src='images/fido-upi-qr.svg'" />
+            <img src="${planQrAsset}" alt="FidoConnect UPI QR Code" style="width: 100%; max-height: 240px; height: auto; display: block; border-radius: 8px; margin: 0 auto 0.75rem; object-fit: contain;" onerror="this.src='images/fido-upi-qr.svg'" />
             <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">Scan to Pay ${planPriceDisplay}</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">Recipient: ${planMerchantName}</div>
           </div>
@@ -408,7 +408,7 @@ function renderAlreadyActiveState(container) {
       </span>
 
       <h2 style="font-size: 1.65rem; font-weight: 750; color: var(--color-primary); margin-bottom: 0.5rem;">
-        ${currentUser.membershipPlan || "Selected Basic"} is Active
+        ${currentUser.membershipPlan || "Membership"} is Active
       </h2>
       <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.5;">
         Your membership is already active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You have full access to apply for eligible project opportunities.

@@ -700,13 +700,14 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">QR Image URL / Asset Path</label>
-            <input type="text" id="planEditQrUrl" class="form-control" placeholder="e.g. images/fido-upi-qr.svg or https://cdn.../qr.png" />
-            <span class="form-hint" style="font-size:0.75rem; color:var(--text-muted);">Defaults to static QR asset in repo.</span>
+            <label class="form-label">QR Code Image URL (GitHub CDN or direct link)</label>
+            <input type="text" id="planEditQrUrl" class="form-control" placeholder="https://raw.githubusercontent.com/.../qr.png or images/fido-upi-qr.svg" />
+            <span class="form-hint" style="font-size:0.75rem; color:var(--text-muted);">Paste your GitHub CDN / Raw image URL or local path. Shown on payment page.</span>
           </div>
           <div class="form-group">
             <label class="form-label">UPI ID for this Plan</label>
             <input type="text" id="planEditUpiId" class="form-control font-mono" placeholder="fidoconnect@okaxis" />
+            <span class="form-hint" style="font-size:0.75rem; color:var(--text-muted);">Your UPI ID where freelancers send payment.</span>
           </div>
         </div>
 

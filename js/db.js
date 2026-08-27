@@ -631,7 +631,7 @@ export const FidoDB = {
     return { uid, ...cleanUpdates };
   },
 
-  async updateMembership(freelancerId, status, plan = "Selected Basic", durationDays = 30) {
+  async updateMembership(freelancerId, status, plan = "Active Member", durationDays = 30) {
     const startDate = status === "active" ? new Date().toISOString() : null;
     const expiryDate = status === "active" ? new Date(Date.now() + durationDays*24*60*60*1000).toISOString() : null;
 
@@ -726,14 +726,6 @@ export const FidoDB = {
         plans.push({ id: docSnap.id, ...data });
       });
 
-      // If database collection is empty, seed defaults and return them
-      if (plans.length === 0) {
-        plans = Object.values(MEMBERSHIP_PLANS);
-        this.seedDefaultMembershipPlans().catch(err => {
-          console.log("Auto-seeding default plans notice:", err.message);
-        });
-      }
-
       if (!includeUnpublished) {
         plans = plans.filter(p => p.published !== false);
       }
@@ -747,17 +739,13 @@ export const FidoDB = {
 
       return plans;
     } catch (e) {
-      console.warn("Could not fetch membership plans from database, falling back to defaults:", e);
-      let fallback = Object.values(MEMBERSHIP_PLANS);
-      if (!includeUnpublished) {
-        fallback = fallback.filter(p => p.published !== false);
-      }
-      return fallback;
+      console.warn("Could not fetch membership plans from database:", e);
+      return [];
     }
   },
 
   async getMembershipPlanById(planId) {
-    if (!planId) return MEMBERSHIP_PLANS.basic;
+    if (!planId) return null;
     const cleanId = String(planId).trim();
     try {
       const docRef = doc(db, "membershipPlans", cleanId);
@@ -784,16 +772,14 @@ export const FidoDB = {
       console.warn("Error fetching plan doc by id:", e);
     }
 
-    // Check lowercase key in fallback dictionary
-    const fallbackKey = cleanId.toLowerCase();
-    if (MEMBERSHIP_PLANS[fallbackKey]) {
-      return MEMBERSHIP_PLANS[fallbackKey];
-    }
-
     // Check by name or id in all plans from database
-    const all = await this.getMembershipPlans(true);
-    const found = all.find(p => p.id === cleanId || p.name.toLowerCase() === cleanId.toLowerCase());
-    return found || MEMBERSHIP_PLANS.basic;
+    try {
+      const all = await this.getMembershipPlans(true);
+      const found = all.find(p => p.id === cleanId || (p.name && p.name.toLowerCase() === cleanId.toLowerCase()));
+      if (found) return found;
+    } catch (e) {}
+
+    return null;
   },
 
   async saveMembershipPlan(planData) {
@@ -965,7 +951,7 @@ export const FidoDB = {
 
     // Activate membership for the freelancer using actual plan data & durationDays from payment record
     const targetUserId = payment.userId || payment.freelancerId;
-    const planName = payment.planName || "Selected Basic";
+    const planName = payment.planName || "Active Membership";
     const durationDays = Number(payment.durationDays) || 30;
     await this.updateMembership(targetUserId, "active", planName, durationDays);
 
@@ -995,8 +981,10 @@ export const FidoDB = {
 
   // Legacy helper for simulated activation (used only for automated fallbacks)
   async activateMembershipPlan(freelancerId, planKey = "basic") {
-    const plan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
-    const updatedUser = await this.updateMembership(freelancerId, "active", plan.name, 30);
+    const plan = await this.getMembershipPlanById(planKey);
+    const planName = plan ? plan.name : "Active Member";
+    const durationDays = plan ? (plan.durationDays || 30) : 30;
+    const updatedUser = await this.updateMembership(freelancerId, "active", planName, durationDays);
     return { user: updatedUser, plan };
   },
 

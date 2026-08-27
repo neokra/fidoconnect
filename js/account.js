@@ -543,7 +543,7 @@ async function renderFreelancerView(container) {
                 </span>
               ` : `
                 <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
-                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "○ Inactive Membership"}
+                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Active Member"}` : "○ Inactive Membership"}
                 </span>
               `}
             </div>
@@ -619,7 +619,7 @@ async function renderFreelancerView(container) {
       <div class="dashboard-stats-grid">
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Membership</span>
-          <span class="dashboard-stat-value" style="font-size:1.25rem; ${pendingPayment ? 'color:#d97706;' : ''}">${pendingPayment ? "Pending Verification" : (isMemberActive ? (currentUser.membershipPlan || "Selected Basic") : "No Plan")}</span>
+          <span class="dashboard-stat-value" style="font-size:1.25rem; ${pendingPayment ? 'color:#d97706;' : ''}">${pendingPayment ? "Pending Verification" : (isMemberActive ? (currentUser.membershipPlan || "Active Member") : "No Plan")}</span>
           <span class="dashboard-stat-sub">
             ${pendingPayment ? `<span style="color:#d97706;">●</span> Verification in progress` : (isMemberActive ? `<span class="stat-dot-active">●</span> Active membership` : `<span class="stat-dot-inactive">●</span> Inactive membership`)}
           </span>
@@ -698,7 +698,7 @@ async function renderFreelancerView(container) {
                 </div>
               ` : `
                 <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-bottom:0.35rem;">
-                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "No Active Membership"}
+                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Active Membership"}` : "No Active Membership"}
                 </div>
                 <p style="font-size:0.9rem; color:var(--color-primary-muted); margin:0; line-height:1.5;">
                   ${isMemberActive ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` : "Activate a membership plan to unlock application submission for matching projects."}
@@ -884,7 +884,7 @@ async function renderFreelancerView(container) {
                   <span style="font-size:0.85rem; text-transform:uppercase; font-weight:750; color:var(--color-teal); letter-spacing:0.04em;">Current Active Membership</span>
                 </div>
                 <div style="font-size:1.5rem; font-weight:800; color:var(--color-primary); margin-top:4px;">
-                  ${currentUser.membershipPlan || "Selected Basic"}
+                  ${currentUser.membershipPlan || "Active Membership"}
                 </div>
                 <div style="font-size:0.92rem; color:var(--color-primary-muted); margin-top:4px;">
                   Active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.
@@ -919,11 +919,11 @@ async function renderFreelancerView(container) {
             const priceDisplay = plan.priceDisplay || `₹${(plan.price || plan.priceAmount || 0).toLocaleString("en-IN")}`;
             const durationDisplay = plan.billingCycle || `/ ${plan.duration || "month"}`;
             const features = Array.isArray(plan.features) ? plan.features : [];
-            const buttonText = plan.buttonText || `Choose ${plan.name.replace('Selected ', '')}`;
+            const buttonText = plan.buttonText || `Choose ${plan.name}`;
 
             return `
               <div class="plan-card ${plan.isRecommended ? "plan-card-recommended" : ""}">
-                ${plan.isRecommended ? `<div class="plan-badge-recommended">${plan.badge || "Recommended for New Members"}</div>` : ""}
+                ${plan.isRecommended ? `<div class="plan-badge-recommended">${plan.badge || "Recommended"}</div>` : ""}
 
                 <div class="plan-header">
                   <span class="plan-tagline">${plan.tagline || ""}</span>
@@ -951,7 +951,7 @@ async function renderFreelancerView(container) {
                   onclick="handleActivatePlan('${plan.id}')"
                   ${isCurrentPlan ? "disabled" : ""}
                 >
-                  ${isCurrentPlan ? "✓ Current Active Plan" : (isMemberActive ? 'Switch to ' + plan.name.replace('Selected ', '') : buttonText)}
+                  ${isCurrentPlan ? "✓ Current Active Plan" : (isMemberActive ? `Switch to ${plan.name}` : buttonText)}
                 </button>
               </div>
             `;
