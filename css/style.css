@@ -2104,5 +2104,55 @@ textarea.form-control {
   }
 }
 
+/* ==========================================================================
+   Manual UPI Payment & Checkout System Styles
+   ========================================================================== */
+.payment-checkout-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 2rem 2.25rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
 
+.upi-qr-card {
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: var(--border-radius-lg);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  max-width: 280px;
+  width: 100%;
+  text-align: center;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
 
+.upi-qr-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.upi-copy-box {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 380px;
+  width: 100%;
+}
+
+.badge-pending-upi {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  border: 1px solid #fde68a;
+}
+
+.stat-dot-pending {
+  color: #d97706;
+}

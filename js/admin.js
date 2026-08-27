@@ -570,27 +570,159 @@ function renderMembershipsTable() {
   }).join("");
 }
 
-// 8. Payments Table
+let currentPaymentFilter = "all";
+
+window.filterAdminPayments = function(filter) {
+  currentPaymentFilter = filter;
+  document.querySelectorAll(".admin-pay-filter-btn").forEach(btn => {
+    if (btn.getAttribute("data-filter") === filter) {
+      btn.classList.replace("btn-secondary", "btn-primary");
+    } else {
+      btn.classList.replace("btn-primary", "btn-secondary");
+    }
+  });
+  renderPaymentsTable();
+};
+
+// 8. Payments & Membership Verifications Table
 function renderPaymentsTable() {
   const container = document.getElementById("admin-payments-tbody");
   if (!container) return;
 
-  if (allAdminPayments.length === 0) {
-    container.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">No payment transactions recorded yet. Click "+ Record Payment" to add.</td></tr>`;
+  let filtered = allAdminPayments;
+  if (currentPaymentFilter === "pending-membership") {
+    filtered = allAdminPayments.filter(p => p.type === "membership" && p.status === "pending");
+  } else if (currentPaymentFilter === "verified-membership") {
+    filtered = allAdminPayments.filter(p => p.type === "membership" && p.status === "verified");
+  } else if (currentPaymentFilter === "project") {
+    filtered = allAdminPayments.filter(p => p.type !== "membership");
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:2.5rem;">No payments match the selected filter.</td></tr>`;
     return;
   }
 
-  container.innerHTML = allAdminPayments.map(p => `
-    <tr>
-      <td><strong style="font-family:var(--font-mono);">${p.projectId}</strong></td>
-      <td class="text-accent fw-bold">$${p.clientAmount}</td>
-      <td>$${p.freelancerAmount}</td>
-      <td style="color:#10b981; font-weight:600;">$${p.agencyMargin}</td>
-      <td><span class="badge ${p.status === "Paid" ? "badge-active" : "badge-review"}">${p.status}</span></td>
-      <td><span style="font-size:0.8rem; color:var(--text-muted);">${formatDate(p.createdAt)}</span></td>
-    </tr>
-  `).join("");
+  container.innerHTML = filtered.map(p => {
+    const isMembership = p.type === "membership";
+    
+    if (isMembership) {
+      const isPending = p.status === "pending";
+      const isVerified = p.status === "verified" || p.status === "Completed";
+      const isRejected = p.status === "rejected";
+
+      let statusBadge = `<span class="badge badge-review">Pending</span>`;
+      if (isPending) {
+        statusBadge = `<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🟡 Pending UPI</span>`;
+      } else if (isVerified) {
+        statusBadge = `<span class="badge badge-active">✓ Verified</span>`;
+      } else if (isRejected) {
+        statusBadge = `<span class="badge badge-inactive" style="background:#fee2e2; color:#991b1b;">✕ Rejected</span>`;
+      }
+
+      return `
+        <tr style="${isPending ? 'background: #fffdf5;' : ''}">
+          <td>
+            <div style="font-weight:700; color:var(--color-primary);">${p.planName || "Selected Membership"}</div>
+            <span class="badge badge-proposal" style="font-size:0.72rem; margin-top:2px;">UPI Membership</span>
+            ${p.returnProject ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Target Project: <strong class="font-mono">${p.returnProject}</strong></div>` : ''}
+          </td>
+          <td>
+            <div style="font-weight:600; color:var(--color-primary);">${p.userName || p.freelancerName || "Freelancer"}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">${p.userEmail || p.freelancerEmail || ""}</div>
+          </td>
+          <td>
+            <strong style="color:var(--color-accent); font-size:1.05rem;">₹${p.amount}</strong>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${p.currency || "INR"}</div>
+          </td>
+          <td>
+            <code style="font-family:var(--font-mono); font-size:0.9rem; font-weight:700; background:var(--bg-subtle); padding:3px 6px; border-radius:4px; border:1px solid var(--border-color);">${p.transactionId || "N/A"}</code>
+          </td>
+          <td>${statusBadge}</td>
+          <td>
+            <span style="font-size:0.85rem; color:var(--color-primary);">${formatDate(p.submittedAt || p.createdAt)}</span>
+            ${p.verifiedAt ? `<div style="font-size:0.75rem; color:var(--text-muted);">Verified: ${formatDate(p.verifiedAt)}</div>` : ''}
+          </td>
+          <td>
+            ${isPending ? `
+              <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary btn-sm" style="padding:4px 10px; font-size:0.78rem; background:#059669; border-color:#059669;" onclick="handleAdminVerifyPayment('${p.id}')">
+                  ✓ Verify
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:0.78rem; color:#dc2626; border-color:#fecaca;" onclick="handleAdminRejectPayment('${p.id}')">
+                  ✕ Reject
+                </button>
+              </div>
+            ` : (isVerified ? `
+              <span style="font-size:0.8rem; color:#059669; font-weight:600;">✓ Active (${p.verifiedBy || "Admin"})</span>
+            ` : `
+              <span style="font-size:0.8rem; color:#991b1b;">Rejected (${p.verifiedBy || "Admin"})</span>
+            `)}
+          </td>
+        </tr>
+      `;
+    }
+
+    // Standard Project Milestone Payment Row
+    return `
+      <tr>
+        <td>
+          <strong style="font-family:var(--font-mono);">${p.projectId || "Project"}</strong>
+          <div style="font-size:0.72rem; color:var(--text-muted);">Client Project</div>
+        </td>
+        <td>
+          <div style="font-weight:600; color:var(--color-primary);">${p.clientName || "Client"}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${p.freelancerName ? 'To: ' + p.freelancerName : ''}</div>
+        </td>
+        <td>
+          <div class="text-accent fw-bold">$${p.clientAmount || 0}</div>
+          <div style="font-size:0.75rem; color:#10b981; font-weight:600;">Margin: $${p.agencyMargin || 0}</div>
+        </td>
+        <td>
+          <span class="text-muted" style="font-size:0.85rem;">${p.paymentMethod || "Internal"}</span>
+        </td>
+        <td><span class="badge ${p.status === "Paid" ? "badge-active" : "badge-review"}">${p.status || "Completed"}</span></td>
+        <td><span style="font-size:0.85rem; color:var(--text-muted);">${formatDate(p.createdAt)}</span></td>
+        <td>
+          <span style="font-size:0.8rem; color:var(--text-muted);">&mdash;</span>
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
+
+window.handleAdminVerifyPayment = async function(paymentId) {
+  if (!confirm("Are you sure you want to verify this UPI payment?\n\nThis will immediately activate the freelancer's membership for 30 days and grant project application privileges.")) {
+    return;
+  }
+
+  try {
+    const adminUser = FidoAuth.getCurrentUser();
+    const adminEmail = adminUser ? adminUser.email : "Admin";
+
+    await FidoDB.verifyMembershipPayment(paymentId, adminEmail);
+    showToast("✓ Payment verified! Membership activated successfully.", "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast("Failed to verify payment: " + err.message, "error");
+  }
+};
+
+window.handleAdminRejectPayment = async function(paymentId) {
+  const reason = prompt("Enter a brief reason for rejecting this payment (optional):", "Transaction ID could not be verified in bank records.");
+  if (reason === null) return; // User cancelled prompt
+
+  try {
+    const adminUser = FidoAuth.getCurrentUser();
+    const adminEmail = adminUser ? adminUser.email : "Admin";
+
+    await FidoDB.rejectMembershipPayment(paymentId, adminEmail, reason);
+    showToast("Payment rejected. Membership remains inactive.", "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast("Failed to reject payment: " + err.message, "error");
+  }
+};
 
 window.openAddPaymentModal = function() {
   openModal("add-payment-modal");

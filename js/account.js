@@ -514,6 +514,7 @@ async function renderClientView(container) {
 async function renderFreelancerView(container) {
   const applications = await FidoDB.getApplications({ freelancerId: currentUser.uid });
   const activeProjects = await FidoDB.getProjects({ assignedFreelancerId: currentUser.uid });
+  const pendingPayment = await FidoDB.getUserPendingMembershipPayment(currentUser.uid);
   const isMemberActive = currentUser.membershipStatus === "active";
   const urlParams = new URLSearchParams(window.location.search);
   const returnProject = urlParams.get("return_project");
@@ -535,9 +536,15 @@ async function renderFreelancerView(container) {
             <div class="dashboard-badges-row">
               <span class="role-badge role-badge-freelancer">✓ Freelancer</span>
               ${currentUser.inviteVerified ? `<span class="badge badge-active">✓ Verified Member</span>` : `<span class="badge badge-inactive">○ Unverified</span>`}
-              <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
-                ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "○ Inactive Membership"}
-              </span>
+              ${pendingPayment ? `
+                <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">
+                  🟡 Verification Pending (${pendingPayment.planName})
+                </span>
+              ` : `
+                <span class="badge ${isMemberActive ? "badge-active" : "badge-inactive"}">
+                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "○ Inactive Membership"}
+                </span>
+              `}
             </div>
           </div>
         </div>
@@ -578,7 +585,7 @@ async function renderFreelancerView(container) {
           <div>
             <div class="account-action-card-head">
               <span class="account-action-card-title">⭐ Membership</span>
-              <span class="account-action-card-badge">${isMemberActive ? "Active" : "Plans"}</span>
+              <span class="account-action-card-badge" style="${pendingPayment ? 'background:#fef3c7; color:#92400e;' : ''}">${pendingPayment ? "Pending" : (isMemberActive ? "Active" : "Plans")}</span>
             </div>
             <p class="account-action-card-desc">Manage your Selected Freelancer membership plan.</p>
           </div>
@@ -611,15 +618,15 @@ async function renderFreelancerView(container) {
       <div class="dashboard-stats-grid">
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Membership</span>
-          <span class="dashboard-stat-value" style="font-size:1.25rem;">${isMemberActive ? (currentUser.membershipPlan || "Selected Basic") : "No Plan"}</span>
+          <span class="dashboard-stat-value" style="font-size:1.25rem; ${pendingPayment ? 'color:#d97706;' : ''}">${pendingPayment ? "Pending Verification" : (isMemberActive ? (currentUser.membershipPlan || "Selected Basic") : "No Plan")}</span>
           <span class="dashboard-stat-sub">
-            ${isMemberActive ? `<span class="stat-dot-active">●</span> Active membership` : `<span class="stat-dot-inactive">●</span> Inactive membership`}
+            ${pendingPayment ? `<span style="color:#d97706;">●</span> Verification in progress` : (isMemberActive ? `<span class="stat-dot-active">●</span> Active membership` : `<span class="stat-dot-inactive">●</span> Inactive membership`)}
           </span>
         </div>
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Member Status</span>
-          <span class="dashboard-stat-value" style="${isMemberActive ? "color:#10b981;" : "color:var(--text-muted);"}">${isMemberActive ? "Active" : "Inactive"}</span>
-          <span class="dashboard-stat-sub">${isMemberActive ? "Eligible to apply" : "Upgrade to apply"}</span>
+          <span class="dashboard-stat-value" style="${isMemberActive ? "color:#10b981;" : (pendingPayment ? "color:#d97706;" : "color:var(--text-muted);")}">${isMemberActive ? "Active" : (pendingPayment ? "In Review" : "Inactive")}</span>
+          <span class="dashboard-stat-sub">${isMemberActive ? "Eligible to apply" : (pendingPayment ? "Payment under review" : "Upgrade to apply")}</span>
         </div>
         <div class="dashboard-stat-card">
           <span class="dashboard-stat-label">Applications</span>
@@ -678,17 +685,33 @@ async function renderFreelancerView(container) {
           <div style="background:var(--bg-subtle); padding:1.5rem; border-radius:var(--border-radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
             <div>
               <div style="font-size:0.8rem; text-transform:uppercase; font-weight:700; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:0.5rem;">Membership Overview</div>
-              <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-bottom:0.35rem;">
-                ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "No Active Membership"}
-              </div>
-              <p style="font-size:0.9rem; color:var(--color-primary-muted); margin:0; line-height:1.5;">
-                ${isMemberActive ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` : "Activate a membership plan to unlock application submission for matching projects."}
-              </p>
+              
+              ${pendingPayment ? `
+                <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:var(--border-radius-sm); padding:0.85rem 1rem; margin-bottom:0.75rem;">
+                  <div style="font-weight:750; font-size:0.95rem; color:#92400e; margin-bottom:0.25rem;">
+                    🟡 Payment Verification Pending
+                  </div>
+                  <div style="font-size:0.85rem; color:#78350f; line-height:1.45;">
+                    UPI payment of <strong>₹${pendingPayment.amount}</strong> for <strong>${pendingPayment.planName}</strong> (Txn: <code>${pendingPayment.transactionId}</code>) is being verified.
+                  </div>
+                </div>
+              ` : `
+                <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-bottom:0.35rem;">
+                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Selected Basic"}` : "No Active Membership"}
+                </div>
+                <p style="font-size:0.9rem; color:var(--color-primary-muted); margin:0; line-height:1.5;">
+                  ${isMemberActive ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` : "Activate a membership plan to unlock application submission for matching projects."}
+                </p>
+              `}
             </div>
-            <div style="margin-top:1.25rem;">
-              <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'}" onclick="openModal('modal-membership')">
-                ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan &rarr;'}
-              </button>
+            <div style="margin-top:1.25rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+              ${pendingPayment ? `
+                <a href="payment.html" class="btn btn-primary btn-sm">View Payment Status &rarr;</a>
+              ` : `
+                <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'}" onclick="openModal('modal-membership')">
+                  ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan &rarr;'}
+                </button>
+              `}
             </div>
           </div>
         </div>
@@ -828,8 +851,30 @@ async function renderFreelancerView(container) {
           </div>
         </div>
 
-        <!-- Current Membership Banner / Project Return Prompt -->
-        ${isMemberActive ? `
+        <!-- Current Membership Banner / Pending Payment / Project Return Prompt -->
+        ${pendingPayment ? `
+          <div class="card" style="border: 2px solid #f59e0b; background-color: #fffbeb; margin-bottom: 1.75rem; padding: 1.5rem 1.75rem; border-radius:var(--border-radius-lg);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
+              <div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#f59e0b;"></span>
+                  <span style="font-size:0.85rem; text-transform:uppercase; font-weight:750; color:#d97706; letter-spacing:0.04em;">🟡 Payment Verification Pending</span>
+                </div>
+                <div style="font-size:1.5rem; font-weight:800; color:var(--color-primary); margin-top:4px;">
+                  ${pendingPayment.planName} (₹${pendingPayment.amount})
+                </div>
+                <div style="font-size:0.92rem; color:var(--color-primary-muted); margin-top:4px;">
+                  Transaction ID / UTR: <strong class="font-mono">${pendingPayment.transactionId}</strong> &bull; Submitted ${formatDate(pendingPayment.submittedAt || pendingPayment.createdAt)}
+                </div>
+              </div>
+              <div>
+                <a href="payment.html" class="btn btn-primary btn-lg">
+                  View Payment Status &rarr;
+                </a>
+              </div>
+            </div>
+          </div>
+        ` : (isMemberActive ? `
           <div class="card" style="border: 2px solid var(--color-teal); background-color: var(--color-teal-soft); margin-bottom: 1.75rem; padding: 1.5rem 1.75rem; border-radius:var(--border-radius-lg);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
               <div>
@@ -860,7 +905,7 @@ async function renderFreelancerView(container) {
               <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
             </div>
           </div>
-        ` : '')}
+        ` : ''))}
 
         <!-- 3 Membership Tiers Grid -->
         <div class="plans-grid">
@@ -1118,43 +1163,16 @@ async function renderFreelancerView(container) {
   }
 }
 
-window.handleActivatePlan = async function(planId) {
+window.handleActivatePlan = function(planId) {
   if (!currentUser) return;
-  const btn = document.getElementById("btn-plan-" + planId);
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Activating...";
+  const urlParams = new URLSearchParams(window.location.search);
+  const returnProject = urlParams.get("return_project");
+
+  let targetUrl = `payment.html?plan=${encodeURIComponent(planId)}`;
+  if (returnProject) {
+    targetUrl += `&return_project=${encodeURIComponent(returnProject)}`;
   }
-
-  try {
-    const res = await FidoDB.activateMembershipPlan(currentUser.uid, planId);
-    showToast(`✓ Membership activated! ${res.plan.name} is now active.`, "success");
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnProject = urlParams.get("return_project");
-
-    if (returnProject) {
-      setTimeout(() => {
-        window.location.href = `project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true`;
-      }, 700);
-    } else {
-      // Patch currentUser and FidoAuth._currentUser so UI reflects membership immediately
-      currentUser.membershipStatus = "active";
-      currentUser.membershipPlan = res.plan.name;
-      if (window.FidoAuth && window.FidoAuth._currentUser) {
-        window.FidoAuth._currentUser.membershipStatus = "active";
-        window.FidoAuth._currentUser.membershipPlan = res.plan.name;
-      }
-      const container = document.getElementById("account-layout-container");
-      if (container) await renderAccountView();
-    }
-  } catch (err) {
-    showToast("Failed to activate membership: " + err.message, "error");
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "Choose Plan";
-    }
-  }
+  window.location.href = targetUrl;
 };
 
 window.handleWithdrawApplication = async function(appId) {

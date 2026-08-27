@@ -141,9 +141,16 @@ export const MEMBERSHIP_PLANS = {
   }
 };
 
+export const DEFAULT_UPI_CONFIG = {
+  upiId: "fidoconnect@okaxis",
+  merchantName: "FidoConnect",
+  qrAsset: "images/fido-upi-qr.svg"
+};
+
 export const FidoDB = {
   SKILL_TAXONOMY,
   MEMBERSHIP_PLANS,
+  DEFAULT_UPI_CONFIG,
 
   // --- Skill Matching & Profile Helpers ---
   checkProjectSkillMatch(project, user) {
@@ -612,41 +619,205 @@ export const FidoDB = {
     });
   },
 
-  async activateMembershipPlan(freelancerId, planKey = "basic") {
-    const plan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
-    const currentUser = window.FidoAuth ? window.FidoAuth.getCurrentUser() : null;
-
-    const updatedUser = await this.updateMembership(freelancerId, "active", plan.name, 30);
-
+  async getUPIConfig() {
     try {
-      await this.addPayment({
-        freelancerId,
-        freelancerName: currentUser ? currentUser.name : "",
-        freelancerEmail: currentUser ? currentUser.email : "",
-        planId: plan.id,
-        planName: plan.name,
-        amount: plan.priceAmount,
-        currency: "INR",
-        paymentMethod: "Online (Simulated)",
-        status: "Completed",
-        type: "membership"
-      });
+      const settings = await this.getSettings();
+      return {
+        upiId: settings.upiId || DEFAULT_UPI_CONFIG.upiId,
+        merchantName: settings.agencyName || DEFAULT_UPI_CONFIG.merchantName,
+        qrAsset: DEFAULT_UPI_CONFIG.qrAsset
+      };
     } catch (e) {
-      console.warn("Could not log membership payment:", e);
+      return DEFAULT_UPI_CONFIG;
+    }
+  },
+
+  // Check if a transaction ID (UTR) already exists in payments collection
+  async checkTransactionIdExists(transactionId) {
+    if (!transactionId) return false;
+    const cleanTxn = String(transactionId).trim();
+    if (!cleanTxn) return false;
+
+    const paymentsRef = collection(db, "payments");
+    const q = query(paymentsRef, where("transactionId", "==", cleanTxn), limit(1));
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  },
+
+  // Get any pending membership payment for a specific user
+  async getUserPendingMembershipPayment(userId) {
+    if (!userId) return null;
+    try {
+      const paymentsRef = collection(db, "payments");
+      const q = query(
+        paymentsRef,
+        where("userId", "==", userId),
+        where("type", "==", "membership"),
+        where("status", "==", "pending"),
+        limit(1)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const docSnap = snapshot.docs[0];
+        return { id: docSnap.id, ...docSnap.data() };
+      }
+      return null;
+    } catch (e) {
+      console.warn("Could not check pending payment:", e);
+      return null;
+    }
+  },
+
+  // Get most recent membership payment for a specific user
+  async getUserLatestMembershipPayment(userId) {
+    if (!userId) return null;
+    try {
+      const paymentsRef = collection(db, "payments");
+      const q = query(
+        paymentsRef,
+        where("userId", "==", userId),
+        where("type", "==", "membership")
+      );
+      const snapshot = await getDocs(q);
+      let list = [];
+      snapshot.forEach(d => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      return list.length > 0 ? list[0] : null;
+    } catch (e) {
+      console.warn("Could not get latest user membership payment:", e);
+      return null;
+    }
+  },
+
+  // Submit manual UPI membership payment for admin verification
+  async submitMembershipPayment({ userId, userEmail, userName, planId, transactionId, returnProject }) {
+    if (!userId) throw new Error("Authenticated user ID is required.");
+    if (!transactionId || !String(transactionId).trim()) {
+      throw new Error("Please enter a valid UPI Transaction ID / UTR.");
     }
 
+    const cleanTxnId = String(transactionId).trim();
+    if (cleanTxnId.length < 6) {
+      throw new Error("Transaction ID / UTR must be at least 6 characters.");
+    }
+
+    // 1. Duplicate transaction protection
+    const exists = await this.checkTransactionIdExists(cleanTxnId);
+    if (exists) {
+      throw new Error("This transaction ID has already been submitted.");
+    }
+
+    // 2. Prevent multiple pending membership submissions
+    const existingPending = await this.getUserPendingMembershipPayment(userId);
+    if (existingPending) {
+      throw new Error(`You already have a pending payment verification (Txn ID: ${existingPending.transactionId}). Please wait for admin approval.`);
+    }
+
+    // 3. Resolve plan securely from server definitions (DO NOT trust arbitrary client amounts)
+    const planKey = (planId || "basic").toLowerCase();
+    const plan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
+
+    const paymentsRef = collection(db, "payments");
+    const nowIso = new Date().toISOString();
+
+    const paymentRecord = {
+      userId,
+      userEmail: userEmail || "",
+      userName: userName || "Freelancer",
+      freelancerId: userId,
+      freelancerEmail: userEmail || "",
+      freelancerName: userName || "Freelancer",
+      planId: plan.id,
+      planName: plan.name,
+      amount: plan.priceAmount,
+      amountDisplay: plan.priceDisplay,
+      currency: "INR",
+      transactionId: cleanTxnId,
+      paymentMethod: "UPI (Manual)",
+      type: "membership",
+      status: "pending",
+      submittedAt: nowIso,
+      createdAt: nowIso,
+      verifiedAt: null,
+      verifiedBy: null,
+      adminNote: null,
+      returnProject: returnProject || null
+    };
+
+    const docRef = await addDoc(paymentsRef, paymentRecord);
+    return { id: docRef.id, ...paymentRecord };
+  },
+
+  // Admin verification of membership payment
+  async verifyMembershipPayment(paymentId, adminEmail) {
+    if (!paymentId) throw new Error("Payment ID is required.");
+    const docRef = doc(db, "payments", paymentId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) throw new Error("Payment record not found.");
+
+    const payment = docSnap.data();
+    const nowIso = new Date().toISOString();
+
+    const updates = {
+      status: "verified",
+      verifiedAt: nowIso,
+      verifiedBy: adminEmail || "Admin"
+    };
+
+    await updateDoc(docRef, updates);
+
+    // Activate membership for the freelancer
+    const targetUserId = payment.userId || payment.freelancerId;
+    const planName = payment.planName || "Selected Basic";
+    await this.updateMembership(targetUserId, "active", planName, 30);
+
+    return { id: paymentId, ...payment, ...updates };
+  },
+
+  // Admin rejection of membership payment
+  async rejectMembershipPayment(paymentId, adminEmail, reason = "") {
+    if (!paymentId) throw new Error("Payment ID is required.");
+    const docRef = doc(db, "payments", paymentId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) throw new Error("Payment record not found.");
+
+    const payment = docSnap.data();
+    const nowIso = new Date().toISOString();
+
+    const updates = {
+      status: "rejected",
+      rejectedAt: nowIso,
+      rejectedBy: adminEmail || "Admin",
+      adminNote: reason || "Payment verification failed or details could not be confirmed."
+    };
+
+    await updateDoc(docRef, updates);
+    return { id: paymentId, ...payment, ...updates };
+  },
+
+  // Legacy helper for simulated activation (used only for automated fallbacks)
+  async activateMembershipPlan(freelancerId, planKey = "basic") {
+    const plan = MEMBERSHIP_PLANS[planKey] || MEMBERSHIP_PLANS.basic;
+    const updatedUser = await this.updateMembership(freelancerId, "active", plan.name, 30);
     return { user: updatedUser, plan };
   },
 
   // --- 4. Payments ---
-  async getPayments() {
+  async getPayments(filters = {}) {
     const paymentsRef = collection(db, "payments");
     const snapshot = await getDocs(paymentsRef);
     let payments = [];
     snapshot.forEach(docSnap => {
-      payments.push({ id: docSnap.id, ...docSnap.data() });
+      const data = docSnap.data();
+      let match = true;
+      if (filters.userId && data.userId !== filters.userId && data.freelancerId !== filters.userId) match = false;
+      if (filters.type && data.type !== filters.type) match = false;
+      if (filters.status && data.status !== filters.status) match = false;
+      if (match) {
+        payments.push({ id: docSnap.id, ...data });
+      }
     });
-    payments.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    payments.sort((a, b) => new Date(b.createdAt || b.submittedAt || 0) - new Date(a.createdAt || a.submittedAt || 0));
     return payments;
   },
 

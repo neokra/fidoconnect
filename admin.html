@@ -368,24 +368,35 @@
 
       <!-- 8. Payments -->
       <div id="sec-payments" class="admin-tab-section" style="display: none;">
-        <div class="admin-toolbar">
+        <div class="admin-toolbar" style="margin-bottom:1rem;">
           <div>
-            <h2 style="margin-bottom: 0.2rem;">Payment & Margin Tracking</h2>
-            <p class="text-muted" style="font-size: 0.88rem;">Track client project payments, freelancer payouts, and agency margins.</p>
+            <h2 style="margin-bottom: 0.2rem;">Payment & Membership Verifications</h2>
+            <p class="text-muted" style="font-size: 0.88rem;">Verify manual UPI membership payments, track payouts, and monitor agency margins.</p>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ Record Payment</button>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">+ Record Project Payment</button>
+          </div>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-sm admin-pay-filter-btn" data-filter="all" onclick="filterAdminPayments('all')">All Payments</button>
+          <button type="button" class="btn btn-secondary btn-sm admin-pay-filter-btn" data-filter="pending-membership" onclick="filterAdminPayments('pending-membership')">🟡 Pending Verifications</button>
+          <button type="button" class="btn btn-secondary btn-sm admin-pay-filter-btn" data-filter="verified-membership" onclick="filterAdminPayments('verified-membership')">✓ Verified Memberships</button>
+          <button type="button" class="btn btn-secondary btn-sm admin-pay-filter-btn" data-filter="project" onclick="filterAdminPayments('project')">💼 Project Payments</button>
         </div>
 
         <div class="admin-table-container">
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Project ID</th>
-                <th>Client Amount</th>
-                <th>Freelancer Amount</th>
-                <th>Agency Margin</th>
+                <th>Type / Plan / Project</th>
+                <th>Freelancer / Client</th>
+                <th>Amount</th>
+                <th>Transaction ID / UTR</th>
                 <th>Status</th>
-                <th>Date</th>
+                <th>Submitted Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="admin-payments-tbody"></tbody>
