@@ -18,7 +18,7 @@ let upiConfig = DEFAULT_UPI_CONFIG;
 
 document.addEventListener("DOMContentLoaded", () => {
   // Auth observer
-  FidoAuth.onAuthStateChanged(async (user) => {
+  FidoAuth.onAuthChange(async (user) => {
     currentUser = user;
     if (!currentUser) {
       const currentUrl = window.location.pathname + window.location.search;
