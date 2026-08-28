@@ -630,6 +630,13 @@ export const FidoDB = {
     return { id: appId, status: "Withdrawn" };
   },
 
+  async deleteApplication(appId) {
+    if (!appId) throw new Error("Application ID is required.");
+    const docRef = doc(db, "applications", appId);
+    await deleteDoc(docRef);
+    return { id: appId, deleted: true };
+  },
+
   async markProjectApplicationsCompleted(projectId) {
     // Marks all applications for a given project as "Completed"
     if (!projectId) throw new Error("Project ID is required.");

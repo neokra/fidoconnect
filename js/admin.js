@@ -573,6 +573,18 @@ window.executeApplicationAction = async function(actionType) {
       // 4. Deassign (opposite of assign: unassigns from database and resets status = submitted stage)
       await FidoDB.deassignProject(projDocId, appId, customNotes || `Freelancer assignment removed by agency on ${formatDate(new Date())}. Status reset to Submitted.`);
       showToast(`✓ Project deassigned and status reset to Submitted!`, "success");
+
+    } else if (actionType === "delete") {
+      // 5. Delete application permanently from Firestore database
+      if (!confirm(`Are you sure you want to permanently delete proposal for ${currentActionApp.projectId} by ${currentActionApp.freelancerName || "this freelancer"} from the database?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+      // If this freelancer was assigned to this project, also deassign the project
+      if (targetProj && targetProj.assignedFreelancerId === freelancerId) {
+        await FidoDB.deassignProject(projDocId, null, "Assigned application was deleted by administrator.");
+      }
+      await FidoDB.deleteApplication(appId);
+      showToast(`✓ Application proposal permanently deleted from database.`, "success");
     }
 
     closeModal("modal-application-action");
