@@ -23,6 +23,87 @@ service cloud.firestore {
         );
     }
 
+    // A freelancer may access applications and membership checkout only after
+    // their invite has been verified and their profile has been placed in a
+    // valid membership state by the existing onboarding/admin workflow.
+    function isVerifiedFreelancer() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'freelancer'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('inviteVerified', false) == true;
+    }
+
+    function hasEligibleMembershipPurchaseStatus() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('membershipStatus', '') == 'inactive'
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('membershipStatus', '') == 'active'
+        );
+    }
+
+    // Preserve the existing self-service profile and invite onboarding flow
+    // without allowing arbitrary changes to business-control fields.
+    function hasOnlyNormalProfileChanges() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'name', 'photoURL', 'phone', 'businessName', 'skills', 'portfolio',
+        'categories', 'subcategories', 'bio', 'customSkills', 'profileCompleted',
+        'userId', 'updatedAt'
+      ]);
+    }
+
+    function isNeutralInitialUserProfile(userId) {
+      return request.resource.data.get('uid', '') == userId
+        && request.resource.data.get('role', null) == null
+        && request.resource.data.get('accountType', null) == null
+        && request.resource.data.get('inviteVerified', false) == false
+        && request.resource.data.get('inviteCodeId', null) == null
+        && request.resource.data.get('membershipStatus', null) == null
+        && request.resource.data.get('membershipPlan', null) == null
+        && request.resource.data.get('membershipStart', null) == null
+        && request.resource.data.get('membershipExpiry', null) == null
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'name', 'photoURL', 'phone', 'businessName',
+          'role', 'accountType', 'inviteVerified', 'inviteCodeId', 'skills',
+          'portfolio', 'membershipStatus', 'membershipPlan', 'membershipStart',
+          'membershipExpiry', 'createdAt', 'updatedAt'
+        ]);
+    }
+
+    function isClientOnboardingUpdate() {
+      return resource.data.get('role', null) == null
+        && request.resource.data.get('role', '') == 'client'
+        && request.resource.data.get('accountType', '') == 'client'
+        && request.resource.data.get('inviteVerified', false) == false
+        && request.resource.data.get('inviteCodeId', null) == null
+        && request.resource.data.get('membershipStatus', null) == null
+        && request.resource.data.get('membershipPlan', null) == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'photoURL', 'phone', 'businessName', 'skills', 'portfolio',
+          'categories', 'subcategories', 'bio', 'customSkills', 'profileCompleted',
+          'userId', 'updatedAt', 'role', 'accountType', 'inviteVerified',
+          'inviteCodeId', 'membershipStatus', 'membershipPlan'
+        ]);
+    }
+
+    function isFreelancerInviteOnboardingUpdate() {
+      return (resource.data.get('role', null) == null || resource.data.get('role', '') == 'client')
+        && request.resource.data.get('role', '') == 'freelancer'
+        && request.resource.data.get('accountType', '') == 'freelancer'
+        && request.resource.data.get('inviteVerified', false) == true
+        && request.resource.data.get('membershipStatus', '') == 'inactive'
+        && request.resource.data.get('membershipPlan', '') == 'None'
+        && request.resource.data.get('inviteCodeId', '') is string
+        && exists(/databases/$(database)/documents/inviteCodes/$(request.resource.data.get('inviteCodeId', '')))
+        && get(/databases/$(database)/documents/inviteCodes/$(request.resource.data.get('inviteCodeId', ''))).data.get('status', '') == 'used'
+        && get(/databases/$(database)/documents/inviteCodes/$(request.resource.data.get('inviteCodeId', ''))).data.get('usedBy', '') == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'photoURL', 'phone', 'businessName', 'skills', 'portfolio',
+          'categories', 'subcategories', 'bio', 'customSkills', 'profileCompleted',
+          'userId', 'updatedAt', 'role', 'accountType', 'inviteVerified',
+          'inviteCodeId', 'membershipStatus', 'membershipPlan'
+        ]);
+    }
+
     // =========================================================================
     // 1. Users Collection
     //    - Authenticated users can read any profile (admin panel, project
@@ -34,13 +115,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
 
-      allow create: if isOwner(userId)
-                    && request.resource.data.get('uid', '') == userId
-                    && (request.resource.data.get('role', null) != 'admin' || isAdmin());
+      allow create: if isAdmin()
+                    || (isOwner(userId) && isNeutralInitialUserProfile(userId));
 
       allow update: if isAdmin()
                     || (isOwner(userId)
-                        && (request.resource.data.get('role', null) != 'admin' || isAdmin()));
+                        && (
+                          hasOnlyNormalProfileChanges()
+                          || isClientOnboardingUpdate()
+                          || isFreelancerInviteOnboardingUpdate()
+                        ));
 
       allow delete: if isAdmin();
     }
@@ -60,11 +144,11 @@ service cloud.firestore {
     // =========================================================================
     // 3. Public Projects Collection
     //    - Anyone can read public summaries (home page, find-work, share links).
-    //    - Any authenticated user can write (synced on project submit / update).
+    //    - Only administrators can publish or modify public project summaries.
     // =========================================================================
     match /publicProjects/{projectId} {
       allow read:  if true;
-      allow write: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // =========================================================================
@@ -104,8 +188,10 @@ service cloud.firestore {
     match /applications/{applicationId} {
       allow read: if isAuthenticated();
 
-      allow create: if isAuthenticated()
-                    && request.resource.data.get('freelancerId', '') == request.auth.uid;
+      allow create: if isAdmin()
+                    || (isVerifiedFreelancer()
+                        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('membershipStatus', '') == 'active'
+                        && request.resource.data.get('freelancerId', '') == request.auth.uid);
 
       allow update: if isAuthenticated()
                     && (resource.data.get('freelancerId', '') == request.auth.uid || isAdmin());
@@ -153,20 +239,17 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read: if isAuthenticated();
 
-      allow create: if isAuthenticated()
-                    && (
-                      (
-                        (request.resource.data.get('userId', '') == request.auth.uid
-                         || request.resource.data.get('freelancerId', '') == request.auth.uid)
+      allow create: if isAdmin()
+                    || (isVerifiedFreelancer()
+                        && hasEligibleMembershipPurchaseStatus()
+                        && request.resource.data.get('userId', '') == request.auth.uid
+                        && request.resource.data.get('freelancerId', '') == request.auth.uid
                         && request.resource.data.get('transactionId', '') is string
                         && request.resource.data.get('transactionId', '').size() >= 6
                         && request.resource.data.get('amount', 0) is number
                         && request.resource.data.get('amount', 0) > 0
                         && request.resource.data.get('status', 'pending') == 'pending'
-                        && request.resource.data.get('type', 'membership') == 'membership'
-                      )
-                      || isAdmin()
-                    );
+                        && request.resource.data.get('type', 'membership') == 'membership');
 
       allow update, delete: if isAdmin();
     }
@@ -213,4 +296,3 @@ service cloud.firestore {
 
   }
 }
-
