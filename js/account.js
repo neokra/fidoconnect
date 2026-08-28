@@ -340,6 +340,77 @@ async function renderClientView(container) {
           </div>
         `}
       </div>
+
+      <!-- 5. FidoConnect Information & Policies -->
+      <div class="account-policy-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; font-weight:750; color:var(--color-primary);">FidoConnect Information & Policies</h3>
+            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Important guidelines, project submission best practices, and platform policies.</p>
+          </div>
+        </div>
+
+        <div class="account-policy-grid">
+          <a href="client-guidelines.html" class="account-policy-card account-policy-card-featured" style="grid-column: 1 / -1;">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <span style="font-size:1.25rem;">📋</span>
+              <div>
+                <div style="font-weight:750; color:var(--color-accent);">Client Guidelines</div>
+                <div style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;">Project brief structure & collaboration best practices</div>
+              </div>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="how-it-works.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>💡</span>
+              <span>How FidoConnect Works</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="contact.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>💬</span>
+              <span>Contact Us</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="terms.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>📜</span>
+              <span>Terms & Conditions</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="privacy.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>🔒</span>
+              <span>Privacy Policy</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="refund-policy.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>💳</span>
+              <span>Refund / Cancellation Policy</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="freelancer-guidelines.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>🌟</span>
+              <span>Freelancer Guidelines</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
     </div>
 
     <!-- ============================================== -->
@@ -751,6 +822,77 @@ async function renderFreelancerView(container) {
               `}
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- 5. FidoConnect Information & Policies -->
+      <div class="account-policy-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; font-weight:750; color:var(--color-primary);">FidoConnect Information & Policies</h3>
+            <p class="text-muted" style="font-size:0.85rem; margin-top:2px;">Important guidelines, quality standards, and direct support for network members.</p>
+          </div>
+        </div>
+
+        <div class="account-policy-grid">
+          <a href="freelancer-guidelines.html" class="account-policy-card account-policy-card-featured" style="grid-column: 1 / -1;">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <span style="font-size:1.25rem;">🌟</span>
+              <div>
+                <div style="font-weight:750; color:var(--color-accent);">Freelancer Guidelines</div>
+                <div style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;">Quality expectations, proposal rules, and originality standards</div>
+              </div>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="how-it-works.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>💡</span>
+              <span>How FidoConnect Works</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="contact.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>💬</span>
+              <span>Contact Us</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="terms.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>📜</span>
+              <span>Terms & Conditions</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="privacy.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>🔒</span>
+              <span>Privacy Policy</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="refund-policy.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>💳</span>
+              <span>Refund / Cancellation Policy</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
+
+          <a href="client-guidelines.html" class="account-policy-card">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span>📋</span>
+              <span>Client Guidelines</span>
+            </div>
+            <span>&rarr;</span>
+          </a>
         </div>
       </div>
     </div>

@@ -2464,3 +2464,340 @@ textarea.form-control {
   font-weight: 600;
   color: var(--color-primary);
 }
+
+/* --- Content, Policy & Guidelines Pages Styles --- */
+.content-hero {
+  padding: 3rem 0 2rem;
+  background: var(--bg-body);
+}
+
+.content-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  margin-bottom: 0.75rem;
+}
+
+.content-hero-badge span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.content-hero-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+}
+
+.content-hero-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+.content-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+}
+
+.policy-block {
+  margin-bottom: 2.25rem;
+}
+
+.policy-block:last-child {
+  margin-bottom: 0;
+}
+
+.policy-block-title {
+  font-size: 1.35rem;
+  font-weight: 750;
+  color: var(--color-primary);
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.policy-block p {
+  color: var(--color-primary-muted);
+  font-size: 0.96rem;
+  line-height: 1.7;
+  margin-bottom: 0.85rem;
+}
+
+.policy-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.85rem 0 1.25rem;
+  padding-left: 0.25rem;
+}
+
+.policy-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  color: var(--color-primary-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.policy-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0.35rem;
+  top: -1px;
+  color: var(--color-accent);
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.policy-alert {
+  background: var(--bg-subtle);
+  border-left: 4px solid var(--color-accent);
+  border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+  padding: 1.15rem 1.35rem;
+  margin: 1.25rem 0;
+}
+
+.policy-alert-warning {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.policy-alert-warning p {
+  color: #92400e;
+}
+
+.policy-alert-danger {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+}
+
+.policy-alert-danger p {
+  color: #991b1b;
+}
+
+.policy-alert-success {
+  background: #ecfdf5;
+  border-left-color: #10b981;
+}
+
+.policy-alert-success p {
+  color: #065f46;
+}
+
+.policy-alert p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--color-primary);
+}
+
+/* WhatsApp Contact Card */
+.whatsapp-card {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  color: white;
+  border-radius: var(--border-radius-lg);
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.whatsapp-card h2, .whatsapp-card h3 {
+  color: white;
+  margin: 0;
+}
+
+.whatsapp-card p {
+  color: #d1fae5;
+  max-width: 540px;
+  font-size: 0.98rem;
+  margin: 0;
+}
+
+.btn-whatsapp {
+  background: #25d366;
+  color: #064e3b;
+  font-weight: 750;
+  font-size: 1.05rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: var(--border-radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+}
+
+.btn-whatsapp:hover {
+  background: #1ebc59;
+  transform: translateY(-2px);
+  color: #064e3b;
+}
+
+/* Step Flow Cards for How It Works */
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.step-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1.5rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.step-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.step-card h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: var(--color-primary);
+}
+
+.step-card p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Guidelines Example Boxes */
+.example-box {
+  border-radius: var(--border-radius-md);
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+
+.example-box-good {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.example-box-bad {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.example-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.example-box-good .example-title {
+  color: #166534;
+}
+
+.example-box-bad .example-title {
+  color: #991b1b;
+}
+
+/* Account Info & Policies Section */
+.account-policy-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.account-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.account-policy-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 1rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.account-policy-card:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--bg-subtle);
+  transform: translateY(-1px);
+}
+
+.account-policy-card-featured {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-border);
+  color: var(--color-accent);
+}
+
+.account-policy-card-featured:hover {
+  background: #dbeafe;
+}
+
+@media (max-width: 768px) {
+  .content-card {
+    padding: 1.5rem;
+  }
+  .content-hero-title {
+    font-size: 1.75rem;
+  }
+  .whatsapp-card {
+    padding: 2rem 1.25rem;
+  }
+}
+
