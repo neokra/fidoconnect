@@ -583,126 +583,138 @@ let activeMsgFreelancer = null;
 let activeMsgTemplates = {};
 
 window.openMembershipModal = function(uid, targetStatus) {
-  const f = allAdminFreelancers.find(x => x.uid === uid);
-  if (!f) return;
-
-  activeMsgFreelancer = f;
-
-  const titleEl = document.getElementById("modal-membership-title");
-  const uidInput = document.getElementById("msg-target-freelancer-uid");
-  const statusInput = document.getElementById("msg-target-status");
-  const nameEl = document.getElementById("msg-target-freelancer-name");
-  const metaEl = document.getElementById("msg-target-freelancer-meta");
-  const curMsgEl = document.getElementById("msg-target-current-msg");
-  const selectEl = document.getElementById("msg-template-select");
-  const textEl = document.getElementById("msg-custom-text");
-  const planGroup = document.getElementById("msg-plan-selection-group");
-  const planSelect = document.getElementById("msg-plan-select");
-  const submitBtn = document.getElementById("btn-save-membership-msg");
-
-  const isActivating = targetStatus === "active";
-
-  if (titleEl) {
-    titleEl.textContent = isActivating ? "Activate Freelancer Membership" : "Deactivate Freelancer Membership";
-  }
-
-  if (submitBtn) {
-    submitBtn.textContent = isActivating ? "Apply & Activate Membership" : "Apply & Deactivate Membership";
-    if (isActivating) {
-      submitBtn.className = "btn btn-primary";
-      submitBtn.style.color = "";
-      submitBtn.style.borderColor = "";
-    } else {
-      submitBtn.className = "btn btn-secondary";
-      submitBtn.style.color = "#dc2626";
-      submitBtn.style.borderColor = "#fca5a5";
+  try {
+    const f = (allAdminFreelancers || []).find(x => (x.uid === uid || x.id === uid)) 
+           || (allAdminUsers || []).find(x => (x.uid === uid || x.id === uid));
+    if (!f) {
+      console.warn("Freelancer not found for uid:", uid);
+      showToast("Freelancer record not found.", "error");
+      return;
     }
-  }
 
-  if (uidInput) uidInput.value = f.uid;
-  if (statusInput) statusInput.value = targetStatus;
-  if (nameEl) nameEl.textContent = `${f.name || 'Freelancer'} (${f.email})`;
-  
-  const isMember = f.membershipStatus === "active";
-  const planName = f.membershipPlan || "Basic";
-  const expiryText = f.membershipExpiry ? `Exp: ${formatDate(f.membershipExpiry)}` : "No expiry date";
-  if (metaEl) metaEl.textContent = `Current Status: ${isMember ? "Active" : "Inactive"} • Tier: ${planName} • ${expiryText}`;
+    activeMsgFreelancer = f;
 
-  if (curMsgEl) {
-    if (f.membershipMessage) {
-      curMsgEl.style.display = "block";
-      curMsgEl.innerHTML = `<strong>Current Reason Note:</strong> "${f.membershipMessage}" <span style="font-size:0.75rem; color:var(--text-muted);">(${formatDate(f.membershipMessageDate || f.updatedAt)})</span>`;
-    } else {
-      curMsgEl.style.display = "none";
-      curMsgEl.textContent = "";
+    const titleEl = document.getElementById("modal-membership-title");
+    const uidInput = document.getElementById("msg-target-freelancer-uid");
+    const statusInput = document.getElementById("msg-target-status");
+    const nameEl = document.getElementById("msg-target-freelancer-name");
+    const metaEl = document.getElementById("msg-target-freelancer-meta");
+    const curMsgEl = document.getElementById("msg-target-current-msg");
+    const selectEl = document.getElementById("msg-template-select");
+    const textEl = document.getElementById("msg-custom-text");
+    const planGroup = document.getElementById("msg-plan-selection-group");
+    const planSelect = document.getElementById("msg-plan-select");
+    const submitBtn = document.getElementById("btn-save-membership-msg");
+
+    const isActivating = targetStatus === "active";
+
+    if (titleEl) {
+      titleEl.textContent = isActivating ? "Activate Freelancer Membership" : "Deactivate Freelancer Membership";
     }
-  }
 
-  // 1. Resolve duration from plan or user data
-  let planDurationDays = 30;
-  if (allAdminPlans && allAdminPlans.length > 0) {
-    const matchedPlan = allAdminPlans.find(p => p.name && p.name.toLowerCase() === (f.membershipPlan || "").toLowerCase());
-    if (matchedPlan && matchedPlan.durationDays) {
-      planDurationDays = matchedPlan.durationDays;
+    if (submitBtn) {
+      submitBtn.textContent = isActivating ? "Apply & Activate Membership" : "Apply & Deactivate Membership";
+      if (isActivating) {
+        submitBtn.className = "btn btn-primary";
+        submitBtn.style.color = "";
+        submitBtn.style.borderColor = "";
+      } else {
+        submitBtn.className = "btn btn-secondary";
+        submitBtn.style.color = "#dc2626";
+        submitBtn.style.borderColor = "#fca5a5";
+      }
     }
-  }
 
-  // 2. Resolve project data from applications / system projects
-  let projectInfo = null;
-  const userApps = (allAdminApplications || []).filter(a => a.freelancerId === f.uid);
-  if (userApps.length > 0) {
-    const latestApp = userApps[0];
-    const targetProject = (allAdminProjects || []).find(p => (p.projectId || p.id) === (latestApp.projectId || latestApp.id) || p.id === latestApp.projectId);
-    if (targetProject) {
-      projectInfo = targetProject.title || targetProject.projectId || targetProject.id;
-    } else if (latestApp.projectId) {
-      projectInfo = `Project ${latestApp.projectId}`;
+    if (uidInput) uidInput.value = f.uid || f.id || uid;
+    if (statusInput) statusInput.value = targetStatus;
+    if (nameEl) nameEl.textContent = `${f.name || 'Freelancer'} (${f.email || 'No email'})`;
+    
+    const isMember = f.membershipStatus === "active";
+    const planName = f.membershipPlan || "Basic";
+    const expiryText = f.membershipExpiry ? `Exp: ${formatDate(f.membershipExpiry)}` : "No expiry date";
+    if (metaEl) metaEl.textContent = `Current Status: ${isMember ? "Active" : "Inactive"} • Tier: ${planName} • ${expiryText}`;
+
+    if (curMsgEl) {
+      if (f.membershipMessage) {
+        curMsgEl.style.display = "block";
+        curMsgEl.innerHTML = `<strong>Current Reason Note:</strong> "${f.membershipMessage}" <span style="font-size:0.75rem; color:var(--text-muted);">(${formatDate(f.membershipMessageDate || f.updatedAt)})</span>`;
+      } else {
+        curMsgEl.style.display = "none";
+        curMsgEl.textContent = "";
+      }
     }
-  }
 
-  // Populate plan selection if activating
-  if (planGroup && planSelect) {
-    if (isActivating && allAdminPlans && allAdminPlans.length > 0) {
-      planGroup.style.display = "block";
-      planSelect.innerHTML = allAdminPlans.map(p => `
-        <option value="${p.id}" ${p.name.toLowerCase() === (f.membershipPlan || "").toLowerCase() ? 'selected' : ''}>
-          ${p.name} (₹${p.price || p.priceAmount || 0} • ${p.durationDays || 30} Days)
-        </option>
-      `).join("");
-    } else {
-      planGroup.style.display = "none";
+    // 1. Resolve duration from plan or user data
+    let planDurationDays = 30;
+    if (allAdminPlans && allAdminPlans.length > 0) {
+      const matchedPlan = allAdminPlans.find(p => p.name && p.name.toLowerCase() === (f.membershipPlan || "").toLowerCase());
+      if (matchedPlan && matchedPlan.durationDays) {
+        planDurationDays = matchedPlan.durationDays;
+      }
     }
-  }
 
-  // Build dynamic templates based on actual system data
-  activeMsgTemplates = {
-    activated: `Membership Activated`,
-    expired_duration: `Membership Expired — ${planDurationDays}-day membership period completed`,
-    expired_project: projectInfo ? `Membership Expired — selected project opportunity completed (${projectInfo})` : `Membership Expired — selected project opportunity completed`,
-    deactivated: `Membership Deactivated`,
-    renewed: `Membership Renewed`,
-    custom: f.membershipMessage || ""
-  };
-
-  // Update option labels for dynamic duration & project in dropdown
-  if (selectEl) {
-    const optDuration = selectEl.querySelector('option[value="expired_duration"]');
-    if (optDuration) optDuration.textContent = activeMsgTemplates.expired_duration;
-
-    const optProject = selectEl.querySelector('option[value="expired_project"]');
-    if (optProject) optProject.textContent = activeMsgTemplates.expired_project;
-
-    // Default selection
-    if (isActivating) {
-      selectEl.value = isMember ? "renewed" : "activated";
-    } else {
-      selectEl.value = projectInfo ? "expired_project" : "expired_duration";
+    // 2. Resolve project data from applications / system projects
+    let projectInfo = null;
+    const userApps = (allAdminApps || []).filter(a => a.freelancerId === (f.uid || f.id));
+    if (userApps.length > 0) {
+      const latestApp = userApps[0];
+      const targetProject = (allAdminProjects || []).find(p => (p.projectId || p.id) === (latestApp.projectId || latestApp.id) || p.id === latestApp.projectId);
+      if (targetProject) {
+        projectInfo = targetProject.title || targetProject.projectId || targetProject.id;
+      } else if (latestApp.projectId) {
+        projectInfo = `Project ${latestApp.projectId}`;
+      }
     }
-  }
 
-  handleMembershipTemplateChange();
-  openModal("modal-membership-message");
+    // Populate plan selection if activating
+    if (planGroup && planSelect) {
+      if (isActivating && allAdminPlans && allAdminPlans.length > 0) {
+        planGroup.style.display = "block";
+        planSelect.innerHTML = allAdminPlans.map(p => `
+          <option value="${p.id}" ${p.name.toLowerCase() === (f.membershipPlan || "").toLowerCase() ? 'selected' : ''}>
+            ${p.name} (₹${p.price || p.priceAmount || 0} • ${p.durationDays || 30} Days)
+          </option>
+        `).join("");
+      } else {
+        planGroup.style.display = "none";
+      }
+    }
+
+    // Build dynamic templates based on actual system data
+    activeMsgTemplates = {
+      activated: `Membership Activated`,
+      expired_duration: `Membership Expired — ${planDurationDays}-day membership period completed`,
+      expired_project: projectInfo ? `Membership Expired — selected project opportunity completed (${projectInfo})` : `Membership Expired — selected project opportunity completed`,
+      deactivated: `Membership Deactivated`,
+      renewed: `Membership Renewed`,
+      custom: f.membershipMessage || ""
+    };
+
+    // Update option labels for dynamic duration & project in dropdown
+    if (selectEl) {
+      const optDuration = selectEl.querySelector('option[value="expired_duration"]');
+      if (optDuration) optDuration.textContent = activeMsgTemplates.expired_duration;
+
+      const optProject = selectEl.querySelector('option[value="expired_project"]');
+      if (optProject) optProject.textContent = activeMsgTemplates.expired_project;
+
+      // Default selection
+      if (isActivating) {
+        selectEl.value = isMember ? "renewed" : "activated";
+      } else {
+        selectEl.value = projectInfo ? "expired_project" : "expired_duration";
+      }
+    }
+
+    handleMembershipTemplateChange();
+    openModal("modal-membership-message");
+  } catch (err) {
+    console.error("Error opening membership modal:", err);
+    showToast("Error opening membership modal: " + err.message, "error");
+  }
 };
+
+window.toggleFreelancerMembership = window.openMembershipModal;
 
 window.handleMembershipTemplateChange = function() {
   const selectEl = document.getElementById("msg-template-select");
@@ -1004,8 +1016,8 @@ function renderMembershipsTable() {
         <td>${formatDate(f.membershipStart)}</td>
         <td>${formatDate(f.membershipExpiry)}</td>
         <td>
-          <button class="btn ${isMember ? "btn-secondary" : "btn-primary"} btn-sm" onclick="toggleFreelancerMembership('${f.uid}', '${isMember ? "inactive" : "active"}')">
-            ${isMember ? "Revoke" : "Grant Membership"}
+          <button class="btn ${isMember ? "btn-secondary" : "btn-primary"} btn-sm" onclick="openMembershipModal('${f.uid}', '${isMember ? "inactive" : "active"}')">
+            ${isMember ? "Deactivate Membership" : "Activate Membership"}
           </button>
         </td>
       </tr>
