@@ -570,59 +570,68 @@ function renderFreelancersTable() {
           <span style="font-size:0.85rem; font-weight:600;">★ ${f.rating || "5.0"}</span>
         </td>
         <td>
-          <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
-            <button class="btn ${isMember ? "btn-secondary" : "btn-primary"} btn-sm" onclick="toggleFreelancerMembership('${f.uid}', '${isMember ? "inactive" : "active"}')">
-              ${isMember ? "Deactivate Membership" : "Activate Membership"}
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="openMembershipMessageModal('${f.uid}')" style="display:inline-flex; align-items:center; gap:4px;" title="Set or send membership status message">
-              <span>💬 Membership Message</span>
-            </button>
-          </div>
+          <button class="btn ${isMember ? "btn-secondary" : "btn-primary"} btn-sm" onclick="openMembershipModal('${f.uid}', '${isMember ? "inactive" : "active"}')">
+            ${isMember ? "Deactivate Membership" : "Activate Membership"}
+          </button>
         </td>
       </tr>
     `;
   }).join("");
 }
 
-window.toggleFreelancerMembership = async function(uid, targetStatus) {
-  try {
-    await FidoDB.updateMembership(uid, targetStatus);
-    showToast(`Freelancer membership updated to ${targetStatus}`, "success");
-    await loadAdminData();
-  } catch (err) {
-    showToast("Failed to update membership: " + err.message, "error");
-  }
-};
-
 let activeMsgFreelancer = null;
 let activeMsgTemplates = {};
 
-window.openMembershipMessageModal = function(uid) {
+window.openMembershipModal = function(uid, targetStatus) {
   const f = allAdminFreelancers.find(x => x.uid === uid);
   if (!f) return;
 
   activeMsgFreelancer = f;
 
+  const titleEl = document.getElementById("modal-membership-title");
   const uidInput = document.getElementById("msg-target-freelancer-uid");
+  const statusInput = document.getElementById("msg-target-status");
   const nameEl = document.getElementById("msg-target-freelancer-name");
   const metaEl = document.getElementById("msg-target-freelancer-meta");
   const curMsgEl = document.getElementById("msg-target-current-msg");
   const selectEl = document.getElementById("msg-template-select");
   const textEl = document.getElementById("msg-custom-text");
-  const statusEl = document.getElementById("msg-target-status");
+  const planGroup = document.getElementById("msg-plan-selection-group");
+  const planSelect = document.getElementById("msg-plan-select");
+  const submitBtn = document.getElementById("btn-save-membership-msg");
+
+  const isActivating = targetStatus === "active";
+
+  if (titleEl) {
+    titleEl.textContent = isActivating ? "Activate Freelancer Membership" : "Deactivate Freelancer Membership";
+  }
+
+  if (submitBtn) {
+    submitBtn.textContent = isActivating ? "Apply & Activate Membership" : "Apply & Deactivate Membership";
+    if (isActivating) {
+      submitBtn.className = "btn btn-primary";
+      submitBtn.style.color = "";
+      submitBtn.style.borderColor = "";
+    } else {
+      submitBtn.className = "btn btn-secondary";
+      submitBtn.style.color = "#dc2626";
+      submitBtn.style.borderColor = "#fca5a5";
+    }
+  }
 
   if (uidInput) uidInput.value = f.uid;
+  if (statusInput) statusInput.value = targetStatus;
   if (nameEl) nameEl.textContent = `${f.name || 'Freelancer'} (${f.email})`;
   
   const isMember = f.membershipStatus === "active";
-  const planName = f.membershipPlan || "Membership";
+  const planName = f.membershipPlan || "Basic";
   const expiryText = f.membershipExpiry ? `Exp: ${formatDate(f.membershipExpiry)}` : "No expiry date";
-  if (metaEl) metaEl.textContent = `Status: ${isMember ? "Active" : "Inactive"} • Tier: ${planName} • ${expiryText}`;
+  if (metaEl) metaEl.textContent = `Current Status: ${isMember ? "Active" : "Inactive"} • Tier: ${planName} • ${expiryText}`;
 
   if (curMsgEl) {
     if (f.membershipMessage) {
       curMsgEl.style.display = "block";
-      curMsgEl.innerHTML = `<strong>Current Note:</strong> "${f.membershipMessage}" <span style="font-size:0.75rem; color:var(--text-muted);">(${formatDate(f.membershipMessageDate || f.updatedAt)})</span>`;
+      curMsgEl.innerHTML = `<strong>Current Reason Note:</strong> "${f.membershipMessage}" <span style="font-size:0.75rem; color:var(--text-muted);">(${formatDate(f.membershipMessageDate || f.updatedAt)})</span>`;
     } else {
       curMsgEl.style.display = "none";
       curMsgEl.textContent = "";
@@ -651,6 +660,20 @@ window.openMembershipMessageModal = function(uid) {
     }
   }
 
+  // Populate plan selection if activating
+  if (planGroup && planSelect) {
+    if (isActivating && allAdminPlans && allAdminPlans.length > 0) {
+      planGroup.style.display = "block";
+      planSelect.innerHTML = allAdminPlans.map(p => `
+        <option value="${p.id}" ${p.name.toLowerCase() === (f.membershipPlan || "").toLowerCase() ? 'selected' : ''}>
+          ${p.name} (₹${p.price || p.priceAmount || 0} • ${p.durationDays || 30} Days)
+        </option>
+      `).join("");
+    } else {
+      planGroup.style.display = "none";
+    }
+  }
+
   // Build dynamic templates based on actual system data
   activeMsgTemplates = {
     activated: `Membership Activated`,
@@ -670,10 +693,10 @@ window.openMembershipMessageModal = function(uid) {
     if (optProject) optProject.textContent = activeMsgTemplates.expired_project;
 
     // Default selection
-    if (!isMember) {
-      selectEl.value = "expired_duration";
+    if (isActivating) {
+      selectEl.value = isMember ? "renewed" : "activated";
     } else {
-      selectEl.value = "activated";
+      selectEl.value = projectInfo ? "expired_project" : "expired_duration";
     }
   }
 
@@ -684,7 +707,9 @@ window.openMembershipMessageModal = function(uid) {
 window.handleMembershipTemplateChange = function() {
   const selectEl = document.getElementById("msg-template-select");
   const textEl = document.getElementById("msg-custom-text");
-  const statusEl = document.getElementById("msg-target-status");
+  const statusInput = document.getElementById("msg-target-status");
+  const titleEl = document.getElementById("modal-membership-title");
+  const submitBtn = document.getElementById("btn-save-membership-msg");
   if (!selectEl || !textEl) return;
 
   const key = selectEl.value;
@@ -692,11 +717,25 @@ window.handleMembershipTemplateChange = function() {
     textEl.value = activeMsgTemplates[key] || "";
   }
 
-  if (statusEl) {
+  if (statusInput) {
     if (key === "activated" || key === "renewed") {
-      statusEl.value = "active";
+      statusInput.value = "active";
+      if (titleEl) titleEl.textContent = "Activate Freelancer Membership";
+      if (submitBtn) {
+        submitBtn.textContent = "Apply & Activate Membership";
+        submitBtn.className = "btn btn-primary";
+        submitBtn.style.color = "";
+        submitBtn.style.borderColor = "";
+      }
     } else if (key === "expired_duration" || key === "expired_project" || key === "deactivated") {
-      statusEl.value = "inactive";
+      statusInput.value = "inactive";
+      if (titleEl) titleEl.textContent = "Deactivate Freelancer Membership";
+      if (submitBtn) {
+        submitBtn.textContent = "Apply & Deactivate Membership";
+        submitBtn.className = "btn btn-secondary";
+        submitBtn.style.color = "#dc2626";
+        submitBtn.style.borderColor = "#fca5a5";
+      }
     }
   }
 };
@@ -704,9 +743,10 @@ window.handleMembershipTemplateChange = function() {
 window.handleSaveMembershipMessage = async function(e) {
   e.preventDefault();
   const uid = document.getElementById("msg-target-freelancer-uid")?.value;
+  const status = document.getElementById("msg-target-status")?.value || "active";
   const textEl = document.getElementById("msg-custom-text");
   const selectEl = document.getElementById("msg-template-select");
-  const statusEl = document.getElementById("msg-target-status");
+  const planSelect = document.getElementById("msg-plan-select");
   const submitBtn = document.getElementById("btn-save-membership-msg");
 
   if (!uid || !textEl) return;
@@ -716,30 +756,41 @@ window.handleSaveMembershipMessage = async function(e) {
     return;
   }
 
-  const targetStatus = statusEl ? statusEl.value : "keep";
   const templateType = selectEl ? selectEl.value : "custom";
+
+  let selectedPlanName = null;
+  let selectedPlanDuration = 30;
+  if (status === "active" && planSelect && planSelect.value && allAdminPlans) {
+    const p = allAdminPlans.find(x => x.id === planSelect.value);
+    if (p) {
+      selectedPlanName = p.name;
+      selectedPlanDuration = p.durationDays || 30;
+    }
+  }
 
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = "Saving...";
+    submitBtn.textContent = "Applying...";
   }
 
   try {
     await FidoDB.updateFreelancerMembershipMessage(uid, {
       message: msgText,
       messageType: templateType,
-      status: targetStatus === "keep" ? null : targetStatus
+      status: status,
+      plan: selectedPlanName || (activeMsgFreelancer && activeMsgFreelancer.membershipPlan) || "Basic",
+      durationDays: selectedPlanDuration
     });
 
-    showToast("✓ Membership message saved & published to freelancer account!", "success");
+    showToast(`✓ Freelancer membership updated to ${status} with reason saved!`, "success");
     closeModal("modal-membership-message");
     await loadAdminData();
   } catch (err) {
-    showToast("Failed to save membership message: " + err.message, "error");
+    showToast("Failed to update membership: " + err.message, "error");
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Send & Save Message";
+      submitBtn.textContent = status === "active" ? "Apply & Activate Membership" : "Apply & Deactivate Membership";
     }
   }
 };
