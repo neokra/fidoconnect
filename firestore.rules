@@ -142,21 +142,31 @@ service cloud.firestore {
 
     // =========================================================================
     // 8. Payments Collection
-    //    - Users can read only their own payment records; admin reads all.
-    //      (userId and freelancerId both carry the owner UID for belt-and-braces.)
-    //    - Freelancers can submit (create) a payment record for their own UID.
+    //    - Authenticated users can read payments (user status, history, duplicate
+    //      UTR check, and admin verification dashboard).
+    //    - Authenticated users can submit (create) a payment record for their own
+    //      UID with a valid Transaction ID / UPI Reference Number (UTR).
+    //    - Enforces UTR length (minimum 6 chars), string type, positive amount,
+    //      and initial "pending" status on user creation.
     //    - Only admin can update (verify/reject) or delete payment records.
     // =========================================================================
     match /payments/{paymentId} {
-      allow read: if isAuthenticated()
-                  && (resource.data.get('userId', '') == request.auth.uid
-                      || resource.data.get('freelancerId', '') == request.auth.uid
-                      || isAdmin());
+      allow read: if isAuthenticated();
 
       allow create: if isAuthenticated()
-                    && (request.resource.data.get('userId', '') == request.auth.uid
-                        || request.resource.data.get('freelancerId', '') == request.auth.uid
-                        || isAdmin());
+                    && (
+                      (
+                        (request.resource.data.get('userId', '') == request.auth.uid
+                         || request.resource.data.get('freelancerId', '') == request.auth.uid)
+                        && request.resource.data.get('transactionId', '') is string
+                        && request.resource.data.get('transactionId', '').size() >= 6
+                        && request.resource.data.get('amount', 0) is number
+                        && request.resource.data.get('amount', 0) > 0
+                        && request.resource.data.get('status', 'pending') == 'pending'
+                        && request.resource.data.get('type', 'membership') == 'membership'
+                      )
+                      || isAdmin()
+                    );
 
       allow update, delete: if isAdmin();
     }

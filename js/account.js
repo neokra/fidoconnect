@@ -697,12 +697,21 @@ async function renderFreelancerView(container) {
                   </div>
                 </div>
               ` : `
-                <div style="font-size:1.35rem; font-weight:800; color:var(--color-primary); margin-bottom:0.35rem;">
-                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Active Membership"}` : "No Active Membership"}
+                <div style="font-size:1.35rem; font-weight:800; color:${isMemberActive ? 'var(--color-primary)' : (currentUser.membershipMessage ? '#b45309' : 'var(--color-primary)')}; margin-bottom:0.35rem;">
+                  ${isMemberActive ? `⭐ ${currentUser.membershipPlan || "Active Membership"}` : (currentUser.membershipMessage ? `⚠️ ${currentUser.membershipMessage}` : "No Active Membership")}
                 </div>
                 <p style="font-size:0.9rem; color:var(--color-primary-muted); margin:0; line-height:1.5;">
-                  ${isMemberActive ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` : "Activate a membership plan to unlock application submission for matching projects."}
+                  ${isMemberActive 
+                    ? `Your membership is active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.` 
+                    : (currentUser.membershipMessage 
+                        ? `${currentUser.membershipPlan ? `Previous Plan: <strong>${currentUser.membershipPlan}</strong> &bull; ` : ""}Activate or renew a membership plan to unlock application submission for matching projects.` 
+                        : "Activate a membership plan to unlock application submission for matching projects.")}
                 </p>
+                ${isMemberActive && currentUser.membershipMessage ? `
+                  <div style="margin-top:0.6rem; font-size:0.82rem; color:var(--color-teal); background:rgba(13,148,136,0.08); border:1px solid rgba(13,148,136,0.2); padding:0.4rem 0.75rem; border-radius:var(--border-radius-sm); font-weight:600; line-height:1.4;">
+                    💬 <strong>Status:</strong> ${currentUser.membershipMessage}
+                  </div>
+                ` : ''}
               `}
             </div>
             <div style="margin-top:1.25rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -710,7 +719,7 @@ async function renderFreelancerView(container) {
                 <a href="payment.html${(pendingPayment.returnProject || returnProject) ? '?return_project=' + encodeURIComponent(pendingPayment.returnProject || returnProject) : ''}" class="btn btn-primary btn-sm">View Payment Status &rarr;</a>
               ` : `
                 <button type="button" class="btn ${isMemberActive ? 'btn-secondary' : 'btn-primary'}" onclick="openModal('modal-membership')">
-                  ${isMemberActive ? 'View Plan Details' : 'Choose a Membership Plan &rarr;'}
+                  ${isMemberActive ? 'View Plan Details' : (currentUser.membershipMessage ? 'Renew Membership &rarr;' : 'Choose a Membership Plan &rarr;')}
                 </button>
               `}
             </div>
@@ -889,12 +898,42 @@ async function renderFreelancerView(container) {
                 <div style="font-size:0.92rem; color:var(--color-primary-muted); margin-top:4px;">
                   Active until <strong>${formatDate(currentUser.membershipExpiry)}</strong>. You can apply to matching project opportunities.
                 </div>
+                ${currentUser.membershipMessage ? `
+                  <div style="margin-top:0.6rem; font-size:0.88rem; color:var(--color-teal); font-weight:650; display:flex; align-items:center; gap:6px;">
+                    <span>💬</span>
+                    <span><strong>Latest Status:</strong> ${currentUser.membershipMessage}</span>
+                  </div>
+                ` : ''}
               </div>
               ${returnProject ? `
                 <div>
                   <a href="project-details.html?id=${encodeURIComponent(returnProject)}&from_plan=true" class="btn btn-primary btn-lg">
                     Return to Project (${returnProject}) & Complete Application &rarr;
                   </a>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        ` : (currentUser.membershipMessage ? `
+          <div class="card" style="border: 2px solid #f59e0b; background-color: #fffbeb; margin-bottom: 1.75rem; padding: 1.5rem 1.75rem; border-radius:var(--border-radius-lg);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
+              <div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#d97706;"></span>
+                  <span style="font-size:0.85rem; text-transform:uppercase; font-weight:750; color:#d97706; letter-spacing:0.04em;">Membership Status</span>
+                </div>
+                <div style="font-size:1.4rem; font-weight:800; color:#92400e; margin-top:4px;">
+                  ${currentUser.membershipMessage}
+                </div>
+                <div style="font-size:0.92rem; color:#78350f; margin-top:4px;">
+                  ${currentUser.membershipPlan ? `Previous Plan: <strong>${currentUser.membershipPlan}</strong> &bull; ` : ''}Select a membership plan below to renew and unlock project applications.
+                </div>
+              </div>
+              ${returnProject ? `
+                <div>
+                  <span class="badge" style="background:#fef3c7; color:#92400e; padding:6px 12px; font-size:0.85rem; border:1px solid #fde68a;">
+                    Application Ready for Project ${returnProject}
+                  </span>
                 </div>
               ` : ''}
             </div>
@@ -906,7 +945,7 @@ async function renderFreelancerView(container) {
               <strong>Application Ready for Project ${returnProject}:</strong> Activate a membership below to submit your prepared proposal.
             </div>
           </div>
-        ` : ''))}
+        ` : '')))}
 
         <!-- Database-Driven Membership Plans Grid -->
         <div class="plans-grid">

@@ -643,6 +643,32 @@ export const FidoDB = {
     });
   },
 
+  async updateFreelancerMembershipMessage(freelancerId, { message, messageType = "custom", status = null, durationDays = null, plan = null }) {
+    if (!freelancerId) throw new Error("Freelancer ID is required.");
+
+    const nowIso = new Date().toISOString();
+    const updates = {
+      membershipMessage: String(message || "").trim(),
+      membershipMessageType: messageType || "custom",
+      membershipMessageDate: nowIso
+    };
+
+    if (status && status !== "keep") {
+      updates.membershipStatus = status;
+      if (status === "active") {
+        updates.membershipStart = nowIso;
+        if (durationDays) {
+          updates.membershipExpiry = new Date(Date.now() + Number(durationDays) * 24 * 60 * 60 * 1000).toISOString();
+        }
+        if (plan) {
+          updates.membershipPlan = plan;
+        }
+      }
+    }
+
+    return this.updateUser(freelancerId, updates);
+  },
+
   async getUPIConfig() {
     try {
       const settings = await this.getSettings();
