@@ -336,6 +336,37 @@ async function loadProjectDetails(projectId) {
     document.getElementById("proj-deadline").textContent = formatDate(currentProject.deadline);
     document.getElementById("proj-posted").textContent = formatDate(currentProject.createdAt);
 
+    const customFieldsEl = document.getElementById("proj-custom-fields");
+    if (customFieldsEl) {
+      if (Array.isArray(currentProject.customFields) && currentProject.customFields.length > 0) {
+        customFieldsEl.innerHTML = currentProject.customFields.map(f => {
+          const heading = (f.heading || '').trim();
+          const val = (f.value || '').trim();
+          if (!heading && !val) return '';
+          let displayText = '';
+          if (heading && val) {
+            if (heading.toLowerCase().endsWith(' on') || heading.toLowerCase().endsWith(' on ')) {
+              displayText = `${heading} ${val}`;
+            } else {
+              displayText = `${heading}: ${val}`;
+            }
+          } else {
+            displayText = heading || val;
+          }
+          return `
+            <span class="project-custom-field-badge" style="display:inline-flex; align-items:center; gap:5px; font-size:0.82rem; font-weight:600; padding:0.25rem 0.65rem; background:#f1f5f9; color:var(--color-primary, #0f172a); border:1px solid #cbd5e1; border-radius:4px; letter-spacing:0.01em;">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--color-accent, #6366f1);"></span>
+              <span>${escapeHtml(displayText)}</span>
+            </span>
+          `;
+        }).join('');
+        customFieldsEl.style.display = "flex";
+      } else {
+        customFieldsEl.innerHTML = "";
+        customFieldsEl.style.display = "none";
+      }
+    }
+
     const skillsContainer = document.getElementById("proj-skills");
     if (skillsContainer) {
       const skills = currentProject.requiredSkills || [currentProject.category];

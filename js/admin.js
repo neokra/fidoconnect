@@ -380,9 +380,9 @@ function renderProjectsTable() {
         </td>
         <td>
           <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-            ${proj.status === "Submitted" || proj.status === "Under Review" ? `
-              <button class="btn btn-primary btn-sm" onclick="approveAndPublishProject('${proj.id}')" title="Approve & Publish to Find Work">Approve & Publish</button>
-            ` : ""}
+            <button class="btn btn-primary btn-sm" onclick="openProjectActionModal('${proj.id}')" style="display:inline-flex; align-items:center; gap:4px;" title="Manage & Publish Project">
+              <span>⚙️ Action</span>
+            </button>
             <a href="project-details.html?id=${proj.projectId || proj.id}" target="_blank" class="btn btn-secondary btn-sm">View</a>
           </div>
         </td>
@@ -390,6 +390,146 @@ function renderProjectsTable() {
     `;
   }).join("");
 }
+
+let currentManagingProject = null;
+
+window.openProjectActionModal = function(projId) {
+  const proj = (allAdminProjects || []).find(p => p.id === projId || p.projectId === projId);
+  if (!proj) {
+    showToast("Project not found.", "error");
+    return;
+  }
+
+  currentManagingProject = proj;
+
+  const idInput = document.getElementById("manage-proj-id");
+  const badge = document.getElementById("manage-proj-badge");
+  const title = document.getElementById("manage-proj-title");
+  const statusBadge = document.getElementById("manage-proj-status-badge");
+  const category = document.getElementById("manage-proj-category");
+  const budget = document.getElementById("manage-proj-budget");
+  const client = document.getElementById("manage-proj-client");
+  const deadline = document.getElementById("manage-proj-deadline");
+  const statusSelect = document.getElementById("manage-proj-status-select");
+  const visSelect = document.getElementById("manage-proj-visibility-select");
+  const notesInput = document.getElementById("manage-proj-notes");
+  const fieldsContainer = document.getElementById("manage-proj-fields-list");
+
+  if (idInput) idInput.value = proj.id || proj.projectId;
+  if (badge) badge.textContent = proj.projectId || proj.id;
+  if (title) title.textContent = proj.title || "Untitled Project";
+  if (statusBadge) statusBadge.innerHTML = getStatusBadge(proj.status);
+  if (category) category.textContent = proj.category || "General";
+  if (budget) budget.textContent = proj.budget || "To be discussed";
+  if (client) client.textContent = proj.clientBusiness || proj.clientName || "Direct Client";
+  if (deadline) deadline.textContent = formatDate(proj.deadline);
+  if (statusSelect) statusSelect.value = proj.status || "Published";
+  if (visSelect) visSelect.value = proj.visibility || (proj.status === "Published" ? "public" : "admin_only");
+  if (notesInput) notesInput.value = proj.agencyNotes || "";
+
+  // Populate existing custom fields
+  if (fieldsContainer) {
+    fieldsContainer.innerHTML = "";
+    if (Array.isArray(proj.customFields) && proj.customFields.length > 0) {
+      proj.customFields.forEach(f => {
+        addProjectCustomFieldRow(f.heading || "", f.value || "");
+      });
+    }
+  }
+
+  openModal("modal-project-manage");
+};
+
+window.addProjectCustomFieldRow = function(heading = "", value = "") {
+  const container = document.getElementById("manage-proj-fields-list");
+  if (!container) return;
+
+  const row = document.createElement("div");
+  row.className = "custom-field-row";
+  row.style.cssText = "display:flex; gap:0.5rem; align-items:center;";
+
+  row.innerHTML = `
+    <input type="text" class="form-control form-control-sm field-heading-input" style="flex:1;" placeholder="Heading (e.g. Platform, Available on)" value="${escapeHtml(heading)}" />
+    <input type="text" class="form-control form-control-sm field-value-input" style="flex:1;" placeholder="Value (e.g. Freelancer, Upwork)" value="${escapeHtml(value)}" />
+    <button type="button" class="btn btn-secondary btn-sm" style="color:#ef4444; border-color:#fca5a5; padding:3px 8px; line-height:1;" onclick="this.closest('.custom-field-row').remove()" title="Remove field">&times;</button>
+  `;
+
+  container.appendChild(row);
+};
+
+window.addPredefinedProjectField = function(heading, value) {
+  // Check if a row with same heading and value already exists to prevent duplicate additions
+  const rows = document.querySelectorAll("#manage-proj-fields-list .custom-field-row");
+  for (const r of rows) {
+    const h = r.querySelector(".field-heading-input")?.value.trim();
+    const v = r.querySelector(".field-value-input")?.value.trim();
+    if (h === heading && v === value) {
+      showToast(`Field "${heading}: ${value}" is already in the list.`, "info");
+      return;
+    }
+  }
+  addProjectCustomFieldRow(heading, value);
+};
+
+window.saveProjectManagement = async function(shouldPublish = false) {
+  if (!currentManagingProject) return;
+
+  const projId = currentManagingProject.id || currentManagingProject.projectId;
+  const statusSelect = document.getElementById("manage-proj-status-select");
+  const visSelect = document.getElementById("manage-proj-visibility-select");
+  const notesInput = document.getElementById("manage-proj-notes");
+
+  // Collect custom fields
+  const rows = document.querySelectorAll("#manage-proj-fields-list .custom-field-row");
+  const customFields = [];
+  rows.forEach(r => {
+    const heading = (r.querySelector(".field-heading-input")?.value || "").trim();
+    const value = (r.querySelector(".field-value-input")?.value || "").trim();
+    if (heading || value) {
+      customFields.push({ heading, value });
+    }
+  });
+
+  const newStatus = shouldPublish ? "Published" : (statusSelect ? statusSelect.value : currentManagingProject.status);
+  const newVisibility = shouldPublish ? "public" : (visSelect ? visSelect.value : ((newStatus === "Published" || newStatus === "Applications Open") ? "public" : "admin_only"));
+  const notes = notesInput ? notesInput.value.trim() : (currentManagingProject.agencyNotes || "");
+
+  try {
+    const updates = {
+      status: newStatus,
+      visibility: newVisibility,
+      customFields: customFields,
+      agencyNotes: notes || (shouldPublish ? "Approved and published to Find Work with custom project information." : "")
+    };
+
+    if (newStatus === "Completed") {
+      updates.completedAt = new Date().toISOString();
+    }
+
+    await FidoDB.updateProject(projId, updates);
+
+    // If marked Completed, mark applications completed
+    if (newStatus === "Completed") {
+      try {
+        await FidoDB.markProjectApplicationsCompleted(projId);
+      } catch (appErr) {
+        console.warn("Could not mark applications completed:", appErr);
+      }
+    }
+
+    if (shouldPublish) {
+      showToast("✓ Project published to Find Work with custom fields!", "success");
+    } else {
+      showToast("✓ Project settings and custom fields saved.", "success");
+    }
+
+    closeModal("modal-project-manage");
+    await loadAdminData();
+  } catch (err) {
+    console.error("Error saving project management:", err);
+    showToast("Failed to save project: " + err.message, "error");
+  }
+};
 
 window.updateProjectStatus = async function(projId, newStatus) {
   try {

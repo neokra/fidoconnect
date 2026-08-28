@@ -493,6 +493,31 @@ function renderProjectsList() {
 
         <div>
           <h3 class="project-title">${project.title}</h3>
+          ${Array.isArray(project.customFields) && project.customFields.length > 0 ? `
+            <div class="project-custom-fields" style="display:flex; flex-wrap:wrap; gap:0.35rem 0.5rem; margin-top:0.45rem; margin-bottom:0.45rem;">
+              ${project.customFields.map(f => {
+                const heading = (f.heading || '').trim();
+                const val = (f.value || '').trim();
+                if (!heading && !val) return '';
+                let displayText = '';
+                if (heading && val) {
+                  if (heading.toLowerCase().endsWith(' on') || heading.toLowerCase().endsWith(' on ')) {
+                    displayText = `${heading} ${val}`;
+                  } else {
+                    displayText = `${heading}: ${val}`;
+                  }
+                } else {
+                  displayText = heading || val;
+                }
+                return `
+                  <span class="project-custom-field-badge" style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem; font-weight:600; padding:0.2rem 0.6rem; background:#f1f5f9; color:var(--color-primary, #0f172a); border:1px solid #cbd5e1; border-radius:4px; letter-spacing:0.01em;">
+                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--color-accent, #6366f1);"></span>
+                    <span>${escapeHtml(displayText)}</span>
+                  </span>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
           <p class="project-desc" style="margin-top:0.4rem;">${project.description}</p>
         </div>
 

@@ -868,6 +868,116 @@
     </div>
   </div>
 
+  <!-- Modal: Project Management & Publishing with Custom Fields -->
+  <div id="modal-project-manage" class="modal-overlay">
+    <div class="modal-card modal-card-lg" style="max-width: 680px;">
+      <button class="modal-close-btn" onclick="closeModal('modal-project-manage')">&times;</button>
+      <div class="modal-header-bar">
+        <div>
+          <h3 style="margin: 0; font-size: 1.25rem;">Manage & Publish Project</h3>
+          <div class="text-muted" style="font-size: 0.82rem; margin-top: 2px;">Configure custom project information fields and publish to Find Work.</div>
+        </div>
+      </div>
+
+      <div style="padding: 1.25rem 1.5rem;">
+        <input type="hidden" id="manage-proj-id" />
+
+        <!-- Project Overview Summary -->
+        <div style="background:var(--bg-subtle); padding:1rem 1.25rem; border-radius:var(--border-radius-md); margin-bottom:1.25rem; border:1px solid var(--border-color);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+            <div>
+              <span id="manage-proj-badge" class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">FC-101</span>
+              <strong id="manage-proj-title" style="color:var(--color-primary); font-size:1.05rem; margin-left:0.4rem;">Project Title</strong>
+            </div>
+            <div id="manage-proj-status-badge"></div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.5rem 1rem; font-size:0.85rem; color:var(--text-muted);">
+            <div><strong>Category:</strong> <span id="manage-proj-category" style="color:var(--color-primary);">Website</span></div>
+            <div><strong>Budget:</strong> <span id="manage-proj-budget" style="color:var(--color-primary);">₹15,000</span></div>
+            <div><strong>Client:</strong> <span id="manage-proj-client">Client Business</span></div>
+            <div><strong>Deadline:</strong> <span id="manage-proj-deadline">Flexible</span></div>
+          </div>
+        </div>
+
+        <!-- Custom Fields Section -->
+        <div style="margin-bottom: 1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+            <div>
+              <label class="form-label" style="font-weight:700; margin:0;">Custom Project Information Fields:</label>
+              <div style="font-size:0.8rem; color:var(--text-muted);">These fields are displayed immediately below the project title on the Find Work page.</div>
+            </div>
+          </div>
+
+          <!-- Predefined Quick Add Options -->
+          <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.75rem; background:#f8fafc; padding:0.6rem 0.8rem; border-radius:var(--border-radius-sm); border:1px dashed var(--border-color);">
+            <span style="font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Predefined Options:</span>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.78rem; padding:3px 9px;" onclick="addPredefinedProjectField('Available on', 'Freelancer')">
+              + Available on Freelancer
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.78rem; padding:3px 9px;" onclick="addPredefinedProjectField('Available on', 'Upwork')">
+              + Available on Upwork
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.78rem; padding:3px 9px;" onclick="addPredefinedProjectField('Available on', 'Fiverr')">
+              + Available on Fiverr
+            </button>
+          </div>
+
+          <!-- Dynamic Custom Fields List -->
+          <div id="manage-proj-fields-list" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:0.75rem;">
+            <!-- Rows injected dynamically via JS -->
+          </div>
+
+          <button type="button" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:4px; font-weight:600;" onclick="addProjectCustomFieldRow()">
+            <span>+ Add Custom Field</span>
+          </button>
+        </div>
+
+        <!-- Workflow Status & Notes -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem;">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-weight:700;">Workflow Status:</label>
+            <select id="manage-proj-status-select" class="form-control" style="font-size:0.9rem;">
+              <option value="Published">Published (Public on Find Work)</option>
+              <option value="Applications Open">Applications Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Client Review">Client Review</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-weight:700;">Visibility:</label>
+            <select id="manage-proj-visibility-select" class="form-control" style="font-size:0.9rem;">
+              <option value="public">Public (Visible on Find Work)</option>
+              <option value="admin_only">Admin Only (Private)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label class="form-label" style="font-weight:700;">Agency Notes (Internal):</label>
+          <input type="text" id="manage-proj-notes" class="form-control" placeholder="Internal notes or updates for this project..." />
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-project-manage')">Cancel</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn btn-secondary" style="font-weight:600;" onclick="saveProjectManagement(false)">
+              💾 Save Changes
+            </button>
+            <button type="button" class="btn btn-primary" style="font-weight:700; padding:0.6rem 1.25rem;" onclick="saveProjectManagement(true)">
+              🚀 Publish Project
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/ui.js?v=2.1"></script>
   <script type="module" src="js/firebase-config.js?v=2.1"></script>

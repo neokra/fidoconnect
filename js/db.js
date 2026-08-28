@@ -375,6 +375,7 @@ export const FidoDB = {
           budget: projectData.budget || "To be discussed",
           deadline: projectData.deadline || "Flexible",
           status: projectData.status,
+          customFields: Array.isArray(projectData.customFields) ? projectData.customFields : [],
           createdAt: projectData.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
