@@ -10,6 +10,7 @@ import { FidoDB } from "./db.js";
 
 let allAdminProjects = [];
 let allAdminApps = [];
+let allAdminApplications = [];
 let allAdminUsers = [];
 let allAdminFreelancers = [];
 let allAdminClients = [];
@@ -279,6 +280,8 @@ async function loadAdminData() {
 
     allAdminProjects = projects || [];
     allAdminApps = apps || [];
+    allAdminApplications = allAdminApps;
+    window.allAdminApplications = allAdminApps;
     allAdminUsers = users || [];
     allAdminFreelancers = (users || []).filter(u => u.role === "freelancer");
     allAdminClients = (users || []).filter(u => u.role === "client");
