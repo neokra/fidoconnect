@@ -572,7 +572,7 @@ async function renderFreelancerView(container) {
           <div>
             <div class="account-action-card-head">
               <span class="account-action-card-title">📋 My Applications</span>
-              <span class="account-action-card-badge">${applications.length}</span>
+              <span class="account-action-card-badge">${activeApplications.length}</span>
             </div>
             <p class="account-action-card-desc">Track submitted proposals and live review status.</p>
           </div>
@@ -588,6 +588,17 @@ async function renderFreelancerView(container) {
             <p class="account-action-card-desc">Active client tasks currently assigned to you.</p>
           </div>
           <div class="account-action-card-arrow">View Projects &rarr;</div>
+        </div>
+
+        <div class="account-action-card" onclick="openModal('modal-freelancer-completed')">
+          <div>
+            <div class="account-action-card-head">
+              <span class="account-action-card-title">✅ Completed Projects</span>
+              <span class="account-action-card-badge" style="background:#d1fae5; color:#065f46;">${completedProjects.length}</span>
+            </div>
+            <p class="account-action-card-desc">Delivered project history and verified track record.</p>
+          </div>
+          <div class="account-action-card-arrow">View Completed &rarr;</div>
         </div>
 
         <div class="account-action-card" onclick="openModal('modal-membership')">
@@ -669,6 +680,9 @@ async function renderFreelancerView(container) {
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
             <button type="button" class="btn btn-secondary" onclick="openModal('modal-freelancer-apps')">
               My Applications (${activeApplications.length})
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="openModal('modal-freelancer-completed')">
+              Completed Projects (${completedProjects.length})
             </button>
             <a href="find-work.html" class="btn btn-primary">
               Find Matching Work &rarr;
@@ -805,95 +819,111 @@ async function renderFreelancerView(container) {
       </div>
     </div>
 
-    <!-- Modal 2: Assigned Projects -->
+    <!-- Modal 2: Assigned Projects (Active Only) -->
     <div id="modal-freelancer-projects" class="modal-overlay">
       <div class="modal-card modal-card-lg">
         <button class="modal-close-btn" onclick="closeModal('modal-freelancer-projects')">&times;</button>
         <div class="modal-header-bar">
           <div>
-            <div class="modal-header-title">💼 Assigned Projects (${activeProjects.length} active)</div>
-            <div class="modal-header-sub">Projects currently assigned to you for execution with FidoConnect coordination.</div>
+            <div class="modal-header-title">💼 Assigned Projects (${activeProjects.length})</div>
+            <div class="modal-header-sub">Active projects currently assigned to you for execution with FidoConnect coordination.</div>
           </div>
         </div>
 
-        ${activeProjects.length === 0 && completedProjects.length === 0 ? `
+        ${activeProjects.length === 0 ? `
           <div class="text-center" style="padding: 3.5rem 1.5rem; background: var(--bg-subtle); border-radius: var(--border-radius-md); border: 1px solid var(--border-color);">
             <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1.25rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">No assigned projects yet</h3>
-            <p class="text-muted" style="margin: 0 0 1.5rem; font-size:0.95rem; max-width:440px; margin-left:auto; margin-right:auto;">Selected projects matching your verified skills will appear here once approved by our agency team.</p>
+            <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">No active assigned projects</h3>
+            <p class="text-muted" style="margin: 0 0 1.5rem; font-size:0.95rem; max-width:440px; margin-left:auto; margin-right:auto;">Selected projects matching your verified skills will appear here once assigned by our agency team.</p>
             <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
           </div>
         ` : `
-          <div style="display:flex; flex-direction:column; gap:2rem;">
-
-            ${activeProjects.length > 0 ? `
-              <div>
-                <div style="font-size:0.8rem; text-transform:uppercase; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:1rem;">
-                  ⚡ In Progress (${activeProjects.length})
-                </div>
-                <div style="display:flex; flex-direction:column; gap:1.25rem;">
-                  ${activeProjects.map(proj => `
-                    <div class="card" style="padding: 1.5rem; border:1px solid var(--border-color); border-radius:var(--border-radius-md);">
-                      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
-                        <div style="flex:1; min-width:0;">
-                          <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
-                            <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.projectId || proj.id}</span>
-                            <span class="project-category-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.category}</span>
-                            ${getStatusBadge(proj.status)}
-                          </div>
-                          <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.35rem; color:var(--color-primary);">${proj.title}</h3>
-                          <p class="text-muted" style="font-size:0.95rem; line-height:1.55;">${proj.description}</p>
-                        </div>
-                        <div style="text-align:right;">
-                          <div style="font-size:0.95rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
-                          <div style="font-size:0.85rem; color:var(--text-muted); margin-top:3px;">Deadline: ${formatDate(proj.deadline)}</div>
-                        </div>
-                      </div>
-                      <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid var(--border-color); font-size:0.88rem; color:var(--text-muted);">
-                        Agency Notes: <strong style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</strong>
-                      </div>
+          <div style="display:flex; flex-direction:column; gap:1.25rem;">
+            ${activeProjects.map(proj => `
+              <div class="card" style="padding: 1.5rem; border:1px solid var(--border-color); border-radius:var(--border-radius-md);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                      <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.projectId || proj.id}</span>
+                      <span class="project-category-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.category}</span>
+                      ${getStatusBadge(proj.status)}
                     </div>
-                  `).join("")}
+                    <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.35rem; color:var(--color-primary);">${proj.title}</h3>
+                    <p class="text-muted" style="font-size:0.95rem; line-height:1.55;">${proj.description}</p>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:0.95rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                    <div style="font-size:0.85rem; color:var(--text-muted); margin-top:3px;">Deadline: ${formatDate(proj.deadline)}</div>
+                  </div>
+                </div>
+                <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid var(--border-color); font-size:0.88rem; color:var(--text-muted);">
+                  Agency Notes: <strong style="color:var(--color-primary);">${proj.agencyNotes || "In progress"}</strong>
                 </div>
               </div>
-            ` : ''}
-
-            ${completedProjects.length > 0 ? `
-              <div>
-                <div style="font-size:0.8rem; text-transform:uppercase; font-weight:700; letter-spacing:0.06em; color:#10b981; margin-bottom:1rem;">
-                  ✅ Completed Projects (${completedProjects.length})
-                </div>
-                <div style="display:flex; flex-direction:column; gap:1.25rem;">
-                  ${completedProjects.map(proj => `
-                    <div class="card" style="padding: 1.5rem; border:1px solid #d1fae5; border-radius:var(--border-radius-md); background:#f0fdf4;">
-                      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
-                        <div style="flex:1; min-width:0;">
-                          <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
-                            <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.projectId || proj.id}</span>
-                            <span class="project-category-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.category}</span>
-                            <span class="badge" style="background:#d1fae5; color:#065f46; border:1px solid #a7f3d0;">✓ Completed</span>
-                          </div>
-                          <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.35rem; color:var(--color-primary);">${proj.title}</h3>
-                          <p class="text-muted" style="font-size:0.95rem; line-height:1.55;">${proj.description}</p>
-                        </div>
-                        <div style="text-align:right;">
-                          <div style="font-size:0.95rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
-                          <div style="font-size:0.85rem; color:#10b981; margin-top:3px; font-weight:600;">Completed: ${formatDate(proj.completedAt || proj.updatedAt)}</div>
-                        </div>
-                      </div>
-                      ${proj.agencyNotes ? `
-                        <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid #a7f3d0; font-size:0.88rem; color:var(--text-muted);">
-                          Agency Notes: <strong style="color:var(--color-primary);">${proj.agencyNotes}</strong>
-                        </div>
-                      ` : ''}
-                    </div>
-                  `).join("")}
-                </div>
-              </div>
-            ` : ''}
-
+            `).join("")}
           </div>
         `}
+
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-projects')">Close</button>
+          <a href="find-work.html" class="btn btn-primary">Browse Open Projects</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Completed Projects Only -->
+    <div id="modal-freelancer-completed" class="modal-overlay">
+      <div class="modal-card modal-card-lg">
+        <button class="modal-close-btn" onclick="closeModal('modal-freelancer-completed')">&times;</button>
+        <div class="modal-header-bar">
+          <div>
+            <div class="modal-header-title">✅ Completed Projects (${completedProjects.length})</div>
+            <div class="modal-header-sub">Track record of projects successfully delivered and completed with FidoConnect coordination.</div>
+          </div>
+        </div>
+
+        ${completedProjects.length === 0 ? `
+          <div class="text-center" style="padding: 3.5rem 1.5rem; background: var(--bg-subtle); border-radius: var(--border-radius-md); border: 1px solid var(--border-color);">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 1.25rem; color:var(--text-light);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">No completed projects yet</h3>
+            <p class="text-muted" style="margin: 0 0 1.5rem; font-size:0.95rem; max-width:440px; margin-left:auto; margin-right:auto;">Once your assigned projects are finished and marked Completed by our agency team, they will be archived here.</p>
+            <a href="find-work.html" class="btn btn-secondary">Browse Open Projects</a>
+          </div>
+        ` : `
+          <div style="display:flex; flex-direction:column; gap:1.25rem;">
+            ${completedProjects.map(proj => `
+              <div class="card" style="padding: 1.5rem; border:1px solid #d1fae5; border-radius:var(--border-radius-md); background:#f0fdf4;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.25rem; flex-wrap:wrap;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                      <span class="project-id-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.projectId || proj.id}</span>
+                      <span class="project-category-badge" style="font-size:0.85rem; padding:0.25rem 0.65rem;">${proj.category}</span>
+                      <span class="badge" style="background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;">✓ Completed</span>
+                    </div>
+                    <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.35rem; color:var(--color-primary);">${proj.title}</h3>
+                    <p class="text-muted" style="font-size:0.95rem; line-height:1.55;">${proj.description}</p>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:0.95rem; color:var(--text-muted);">Budget: <strong style="color:var(--color-primary);">${proj.budget}</strong></div>
+                    <div style="font-size:0.85rem; color:#059669; margin-top:3px; font-weight:600;">Completed: ${formatDate(proj.completedAt || proj.updatedAt)}</div>
+                  </div>
+                </div>
+                ${proj.agencyNotes ? `
+                  <div style="margin-top:1.25rem; padding-top:0.85rem; border-top:1px solid #a7f3d0; font-size:0.88rem; color:var(--text-muted);">
+                    Agency Notes: <strong style="color:var(--color-primary);">${proj.agencyNotes}</strong>
+                  </div>
+                ` : ''}
+              </div>
+            `).join("")}
+          </div>
+        `}
+
+        <div class="modal-footer-bar">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-completed')">Close</button>
+          <a href="find-work.html" class="btn btn-primary">Browse Open Projects</a>
+        </div>
+      </div>
+    </div>
 
         <div class="modal-footer-bar">
           <button type="button" class="btn btn-secondary" onclick="closeModal('modal-freelancer-projects')">Close</button>

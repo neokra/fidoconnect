@@ -443,6 +443,7 @@ function renderApplicationsTable() {
 
   container.innerHTML = allAdminApps.map(app => {
     const proj = allAdminProjects.find(p => p.projectId === app.projectId || p.id === app.projectId);
+    const isSelected = app.status === "Selected" || (proj && proj.assignedFreelancerId === app.freelancerId);
 
     return `
       <tr>
@@ -461,21 +462,136 @@ function renderApplicationsTable() {
         </td>
         <td>
           ${getStatusBadge(app.status)}
+          ${isSelected ? `<div style="font-size:0.75rem; color:#059669; font-weight:700; margin-top:2px;">★ Assigned</div>` : ""}
         </td>
         <td>
           <span style="font-size:0.8rem; color:var(--text-muted);">${formatDate(app.createdAt)}</span>
         </td>
         <td>
-          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" onclick="selectFreelancerForProject('${app.projectId}', '${app.freelancerId}', '${app.id}')">Select & Assign</button>
-            <button class="btn btn-secondary btn-sm" onclick="updateAppStatus('${app.id}', 'Shortlisted')">Shortlist</button>
-            <button class="btn btn-secondary btn-sm" onclick="updateAppStatus('${app.id}', 'Rejected')">Reject</button>
-          </div>
+          <button class="btn btn-secondary btn-sm" onclick="openApplicationActionModal('${app.id}')" style="display:inline-flex; align-items:center; gap:4px;" title="Manage Application Actions">
+            <span>⚙️ Action</span>
+          </button>
         </td>
       </tr>
     `;
   }).join("");
 }
+
+let currentActionApp = null;
+let currentActionProj = null;
+
+window.openApplicationActionModal = function(appId) {
+  const app = (allAdminApps || []).find(a => a.id === appId);
+  if (!app) {
+    showToast("Application not found.", "error");
+    return;
+  }
+
+  currentActionApp = app;
+  const proj = (allAdminProjects || []).find(p => (p.projectId || p.id) === app.projectId || p.id === app.projectId);
+  currentActionProj = proj;
+
+  const appIdInput = document.getElementById("app-action-app-id");
+  const projIdInput = document.getElementById("app-action-proj-id");
+  const freeIdInput = document.getElementById("app-action-freelancer-id");
+  const projBadge = document.getElementById("app-action-proj-badge");
+  const projTitle = document.getElementById("app-action-proj-title");
+  const appBadge = document.getElementById("app-action-app-badge");
+  const freeName = document.getElementById("app-action-freelancer-name");
+  const freeEmail = document.getElementById("app-action-freelancer-email");
+  const delivery = document.getElementById("app-action-delivery");
+  const budget = document.getElementById("app-action-budget");
+  const projStatus = document.getElementById("app-action-proj-status");
+  const assignStatus = document.getElementById("app-action-assigned-status");
+  const msgBox = document.getElementById("app-action-message-box");
+  const notesInput = document.getElementById("app-action-notes");
+
+  if (appIdInput) appIdInput.value = app.id;
+  if (projIdInput) projIdInput.value = proj ? (proj.id || proj.projectId) : app.projectId;
+  if (freeIdInput) freeIdInput.value = app.freelancerId;
+
+  if (projBadge) projBadge.textContent = app.projectId;
+  if (projTitle) projTitle.textContent = proj ? proj.title : "Project Opportunity";
+  if (appBadge) appBadge.innerHTML = getStatusBadge(app.status);
+  if (freeName) freeName.textContent = app.freelancerName || "Freelancer";
+  if (freeEmail) freeEmail.textContent = app.freelancerEmail || "N/A";
+  if (delivery) delivery.textContent = app.deliveryDays || "Not specified";
+  if (budget) budget.textContent = proj ? proj.budget : "N/A";
+  if (projStatus) projStatus.textContent = proj ? proj.status : "N/A";
+  
+  const isCurrentlyAssigned = proj && proj.assignedFreelancerId === app.freelancerId;
+  if (assignStatus) {
+    if (isCurrentlyAssigned) {
+      assignStatus.innerHTML = `<span style="color:#059669; font-weight:700;">● Assigned to this Freelancer</span>`;
+    } else if (proj && proj.assignedFreelancerId) {
+      assignStatus.innerHTML = `<span style="color:#dc2626;">● Assigned to another specialist</span>`;
+    } else {
+      assignStatus.innerHTML = `<span style="color:var(--text-muted);">● Unassigned</span>`;
+    }
+  }
+
+  if (msgBox) msgBox.textContent = `"${app.message || "No proposal message provided."}"`;
+  if (notesInput) notesInput.value = "";
+
+  openModal("modal-application-action");
+};
+
+window.executeApplicationAction = async function(actionType) {
+  if (!currentActionApp) return;
+
+  const appId = currentActionApp.id;
+  const projId = currentActionProj ? (currentActionProj.id || currentActionProj.projectId) : currentActionApp.projectId;
+  const freelancerId = currentActionApp.freelancerId;
+  const notesInput = document.getElementById("app-action-notes");
+  const customNotes = notesInput ? notesInput.value.trim() : "";
+
+  try {
+    if (actionType === "assign") {
+      // 1. Select & Assign
+      await FidoDB.updateProject(projId, {
+        assignedFreelancerId: freelancerId,
+        status: "In Progress",
+        agencyNotes: customNotes || `Freelancer ${currentActionApp.freelancerName || ""} selected and assigned by agency on ${formatDate(new Date())}. Work is in progress.`
+      });
+      await FidoDB.updateApplication(appId, { status: "Selected" });
+      showToast(`✓ Freelancer selected and assigned to project ${currentActionApp.projectId}!`, "success");
+
+    } else if (actionType === "shortlist") {
+      // 2. Shortlist
+      await FidoDB.updateApplication(appId, { status: "Shortlisted" });
+      showToast(`✓ Application marked as Shortlisted!`, "success");
+
+    } else if (actionType === "reject") {
+      // 3. Reject
+      await FidoDB.updateApplication(appId, { status: "Rejected" });
+      // If this freelancer was assigned to this project, deassign them
+      if (currentActionProj && currentActionProj.assignedFreelancerId === freelancerId) {
+        await FidoDB.updateProject(projId, {
+          assignedFreelancerId: null,
+          status: "Submitted",
+          agencyNotes: customNotes || "Freelancer assignment removed after rejection."
+        });
+      }
+      showToast(`✓ Application marked as Rejected.`, "info");
+
+    } else if (actionType === "deassign") {
+      // 4. Deassign (opposite of assign: unassigns and resets status = submitted stage)
+      await FidoDB.updateProject(projId, {
+        assignedFreelancerId: null,
+        status: "Submitted",
+        agencyNotes: customNotes || `Freelancer assignment removed by agency on ${formatDate(new Date())}. Status reset to Submitted.`
+      });
+      await FidoDB.updateApplication(appId, { status: "Submitted" });
+      showToast(`✓ Project deassigned and status reset to Submitted!`, "success");
+    }
+
+    closeModal("modal-application-action");
+    await loadAdminData();
+  } catch (err) {
+    console.error("Error executing application action:", err);
+    showToast("Failed to perform action: " + err.message, "error");
+  }
+};
 
 window.updateAppStatus = async function(appId, newStatus) {
   try {
