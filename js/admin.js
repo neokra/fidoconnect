@@ -391,10 +391,25 @@ function renderProjectsTable() {
 window.updateProjectStatus = async function(projId, newStatus) {
   try {
     const visibility = (newStatus === "Published" || newStatus === "Applications Open") ? "public" : "admin_only";
-    await FidoDB.updateProject(projId, { 
+    const updates = {
       status: newStatus,
       visibility: visibility
-    });
+    };
+    if (newStatus === "Completed") {
+      updates.completedAt = new Date().toISOString();
+    }
+    await FidoDB.updateProject(projId, updates);
+
+    // When marked Completed, also mark all applications for this project as Completed
+    if (newStatus === "Completed") {
+      try {
+        const result = await FidoDB.markProjectApplicationsCompleted(projId);
+        console.log(`Marked ${result.count} application(s) as Completed for project ${projId}`);
+      } catch (appErr) {
+        console.warn("Could not mark applications as completed:", appErr);
+      }
+    }
+
     showToast(`Project status updated to ${newStatus}`, "success");
     await loadAdminData();
   } catch (err) {

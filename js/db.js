@@ -580,6 +580,25 @@ export const FidoDB = {
     return { id: appId, status: "Withdrawn" };
   },
 
+  async markProjectApplicationsCompleted(projectId) {
+    // Marks all applications for a given project as "Completed"
+    if (!projectId) throw new Error("Project ID is required.");
+    const appsRef = collection(db, "applications");
+    const q = query(appsRef, where("projectId", "==", projectId));
+    const snap = await getDocs(q);
+    const nowIso = new Date().toISOString();
+    const batch = [];
+    snap.forEach(docSnap => {
+      batch.push(updateDoc(doc(db, "applications", docSnap.id), {
+        status: "Completed",
+        completedAt: nowIso,
+        updatedAt: nowIso
+      }));
+    });
+    await Promise.all(batch);
+    return { projectId, count: batch.length };
+  },
+
   // --- 3. Users ---
   async getUsers(role = null) {
     const usersRef = collection(db, "users");
