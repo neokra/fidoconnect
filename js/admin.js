@@ -372,7 +372,10 @@ function renderProjectsTable() {
         </td>
         <td>
           <span style="font-size:0.85rem; font-weight:600;">
-            ${assignedFreelancer ? assignedFreelancer.name : `<span class="text-muted">Unassigned</span>`}
+            ${assignedFreelancer ? `
+              <div style="color:var(--color-primary); font-weight:700;">${assignedFreelancer.name}</div>
+              <button class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:1px 6px; margin-top:3px; color:#b45309; border-color:#fde68a;" onclick="deassignProjectFromTable('${proj.id}')" title="Deassign Freelancer from Project">✕ Deassign</button>
+            ` : `<span class="text-muted">Unassigned</span>`}
           </span>
         </td>
         <td>
@@ -540,7 +543,8 @@ window.executeApplicationAction = async function(actionType) {
   if (!currentActionApp) return;
 
   const appId = currentActionApp.id;
-  const projId = currentActionProj ? (currentActionProj.id || currentActionProj.projectId) : currentActionApp.projectId;
+  const targetProj = currentActionProj || (allAdminProjects || []).find(p => p.id === currentActionApp.projectId || p.projectId === currentActionApp.projectId);
+  const projDocId = targetProj ? targetProj.id : currentActionApp.projectId;
   const freelancerId = currentActionApp.freelancerId;
   const notesInput = document.getElementById("app-action-notes");
   const customNotes = notesInput ? notesInput.value.trim() : "";
@@ -548,12 +552,7 @@ window.executeApplicationAction = async function(actionType) {
   try {
     if (actionType === "assign") {
       // 1. Select & Assign
-      await FidoDB.updateProject(projId, {
-        assignedFreelancerId: freelancerId,
-        status: "In Progress",
-        agencyNotes: customNotes || `Freelancer ${currentActionApp.freelancerName || ""} selected and assigned by agency on ${formatDate(new Date())}. Work is in progress.`
-      });
-      await FidoDB.updateApplication(appId, { status: "Selected" });
+      await FidoDB.assignProject(projDocId, freelancerId, appId, customNotes || `Freelancer ${currentActionApp.freelancerName || ""} selected and assigned by agency on ${formatDate(new Date())}. Work is in progress.`);
       showToast(`✓ Freelancer selected and assigned to project ${currentActionApp.projectId}!`, "success");
 
     } else if (actionType === "shortlist") {
@@ -565,23 +564,14 @@ window.executeApplicationAction = async function(actionType) {
       // 3. Reject
       await FidoDB.updateApplication(appId, { status: "Rejected" });
       // If this freelancer was assigned to this project, deassign them
-      if (currentActionProj && currentActionProj.assignedFreelancerId === freelancerId) {
-        await FidoDB.updateProject(projId, {
-          assignedFreelancerId: null,
-          status: "Submitted",
-          agencyNotes: customNotes || "Freelancer assignment removed after rejection."
-        });
+      if (targetProj && targetProj.assignedFreelancerId === freelancerId) {
+        await FidoDB.deassignProject(projDocId, null, customNotes || "Freelancer assignment removed after rejection.");
       }
       showToast(`✓ Application marked as Rejected.`, "info");
 
     } else if (actionType === "deassign") {
-      // 4. Deassign (opposite of assign: unassigns and resets status = submitted stage)
-      await FidoDB.updateProject(projId, {
-        assignedFreelancerId: null,
-        status: "Submitted",
-        agencyNotes: customNotes || `Freelancer assignment removed by agency on ${formatDate(new Date())}. Status reset to Submitted.`
-      });
-      await FidoDB.updateApplication(appId, { status: "Submitted" });
+      // 4. Deassign (opposite of assign: unassigns from database and resets status = submitted stage)
+      await FidoDB.deassignProject(projDocId, appId, customNotes || `Freelancer assignment removed by agency on ${formatDate(new Date())}. Status reset to Submitted.`);
       showToast(`✓ Project deassigned and status reset to Submitted!`, "success");
     }
 
@@ -590,6 +580,19 @@ window.executeApplicationAction = async function(actionType) {
   } catch (err) {
     console.error("Error executing application action:", err);
     showToast("Failed to perform action: " + err.message, "error");
+  }
+};
+
+window.deassignProjectFromTable = async function(projId) {
+  if (!confirm("Are you sure you want to deassign the freelancer from this project? The project status will be reset to Submitted.")) {
+    return;
+  }
+  try {
+    await FidoDB.deassignProject(projId);
+    showToast("✓ Freelancer deassigned and project status reset to Submitted.", "success");
+    await loadAdminData();
+  } catch (err) {
+    showToast("Failed to deassign project: " + err.message, "error");
   }
 };
 
@@ -605,12 +608,7 @@ window.updateAppStatus = async function(appId, newStatus) {
 
 window.selectFreelancerForProject = async function(projId, freelancerId, appId) {
   try {
-    await FidoDB.updateProject(projId, {
-      assignedFreelancerId: freelancerId,
-      status: "In Progress",
-      agencyNotes: `Freelancer selected and assigned by agency on ${formatDate(new Date())}. Work is in progress.`
-    });
-    await FidoDB.updateApplication(appId, { status: "Selected" });
+    await FidoDB.assignProject(projId, freelancerId, appId);
     showToast("Freelancer selected and assigned to project!", "success");
     await loadAdminData();
   } catch (err) {

@@ -460,6 +460,56 @@ export const FidoDB = {
     return { id: projectId, ...cleanUpdates };
   },
 
+  async assignProject(projectId, freelancerId, appId = null, customNotes = "") {
+    if (!projectId || !freelancerId) throw new Error("Project and Freelancer IDs are required.");
+    const nowIso = new Date().toISOString();
+    const cleanUpdates = {
+      assignedFreelancerId: freelancerId,
+      status: "In Progress",
+      visibility: "admin_only",
+      updatedAt: nowIso,
+      agencyNotes: customNotes || `Freelancer assigned by agency on ${nowIso.slice(0, 10)}. Work is in progress.`
+    };
+    await this.updateProject(projectId, cleanUpdates);
+
+    if (appId) {
+      await this.updateApplication(appId, { status: "Selected" });
+    }
+    return { projectId, freelancerId, success: true };
+  },
+
+  async deassignProject(projectId, appId = null, customNotes = "") {
+    if (!projectId) throw new Error("Project ID is required.");
+    const nowIso = new Date().toISOString();
+    const cleanUpdates = {
+      assignedFreelancerId: null,
+      status: "Submitted",
+      visibility: "admin_only",
+      updatedAt: nowIso,
+      agencyNotes: customNotes || `Freelancer assignment removed by agency on ${nowIso.slice(0, 10)}. Status reset to Submitted.`
+    };
+    await this.updateProject(projectId, cleanUpdates);
+
+    if (appId) {
+      await this.updateApplication(appId, { status: "Submitted" });
+    } else {
+      // Also reset any application for this project that was 'Selected'
+      try {
+        const appsRef = collection(db, "applications");
+        const q = query(appsRef, where("projectId", "==", projectId), where("status", "==", "Selected"));
+        const snap = await getDocs(q);
+        const batch = [];
+        snap.forEach(d => {
+          batch.push(updateDoc(doc(db, "applications", d.id), { status: "Submitted", updatedAt: nowIso }));
+        });
+        await Promise.all(batch);
+      } catch (e) {
+        console.warn("Reset selected apps error:", e);
+      }
+    }
+    return { projectId, success: true };
+  },
+
   async deleteProject(projectId) {
     const docRef = doc(db, "projects", projectId);
     await deleteDoc(docRef);
