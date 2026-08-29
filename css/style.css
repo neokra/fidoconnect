@@ -306,18 +306,27 @@ p {
 }
 
 /* --- Role-Based View Modifiers --- */
-body[data-user-role="client"] .desktop-nav a[href*="find-work.html"],
-body[data-user-role="client"] .mobile-bottom-nav a[href*="find-work.html"],
-body[data-user-role="client"] .hero-cta-group a[href*="find-work.html"],
-body[data-user-role="client"] .footer-links a[href*="find-work.html"],
-body[data-user-role="client"] .footer-links a[href*="role=freelancer"],
-body[data-user-role="client"] .header-plan-btn,
-body[data-user-role="client"] .header-user-mobile,
-body[data-user-role="client"] a[href*="tab=membership"] {
+[data-user-role="client"] .desktop-nav a[href*="find-work.html"],
+[data-user-role="client"] .mobile-bottom-nav a[href*="find-work.html"],
+[data-user-role="client"] .hero-cta-group a[href*="find-work.html"],
+[data-user-role="client"] .footer-links a[href*="find-work.html"],
+[data-user-role="client"] .footer-links a[href*="role=freelancer"],
+[data-user-role="client"] .header-plan-btn,
+[data-user-role="client"] .header-user-mobile,
+[data-user-role="client"] a[href*="tab=membership"],
+.is-client .desktop-nav a[href*="find-work.html"],
+.is-client .mobile-bottom-nav a[href*="find-work.html"],
+.is-client .hero-cta-group a[href*="find-work.html"],
+.is-client .footer-links a[href*="find-work.html"],
+.is-client .footer-links a[href*="role=freelancer"],
+.is-client .header-plan-btn,
+.is-client .header-user-mobile,
+.is-client a[href*="tab=membership"] {
   display: none !important;
 }
 
-body[data-user-role="client"] .mobile-nav-grid {
+[data-user-role="client"] .mobile-nav-grid,
+.is-client .mobile-nav-grid {
   grid-template-columns: repeat(3, 1fr) !important;
 }
 

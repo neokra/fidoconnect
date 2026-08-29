@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!category) return;
 
       const user = FidoAuth.getCurrentUser() || (await FidoAuth.waitForAuth());
-      const isFreelancer = user && user.role === "freelancer";
+      const isFreelancer = FidoAuth.isFreelancer(user);
       const target = isFreelancer
         ? `find-work.html?category=${encodeURIComponent(category)}`
         : `post-work.html?category=${encodeURIComponent(category)}`;

@@ -7,6 +7,12 @@
   <meta name="description" content="Terms & Conditions for using FidoConnect project coordination and freelancer membership services.">
   <link rel="icon" type="image/png" href="/images/logo.png">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    try {
+      var r = localStorage.getItem("fc_user_role");
+      if (r) document.documentElement.setAttribute("data-user-role", r);
+    } catch(e) {}
+  </script>
 </head>
 <body>
   <!-- Page Preloader -->

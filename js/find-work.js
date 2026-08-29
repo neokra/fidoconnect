@@ -26,10 +26,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!isAuth) return;
 
   const currentUser = FidoAuth.getCurrentUser();
-  const isAdmin = FidoAuth.isAdmin();
+  const role = FidoAuth.getUserRole(currentUser);
+  const isAdmin = role === "admin";
+  const isClient = role === "client" && Boolean(currentUser);
 
   // If the logged-in user is a client (and not admin), redirect to post-work
-  if (currentUser && currentUser.role === "client" && !isAdmin) {
+  if (isClient && !isAdmin) {
     if (typeof showToast === "function") {
       showToast("Find Work is for freelancers. As a client, you can post a work request.", "info");
     }
@@ -48,7 +50,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderRoleMembershipState();
 
   FidoAuth.onAuthChange((user) => {
-    if (user && user.role === "client" && !FidoAuth.isAdmin()) {
+    const r = FidoAuth.getUserRole(user);
+    if (r === "client" && Boolean(user) && !FidoAuth.isAdmin()) {
       if (typeof showToast === "function") {
         showToast("Find Work is for freelancers. As a client, you can post a work request.", "info");
       }

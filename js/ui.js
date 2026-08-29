@@ -2,6 +2,23 @@
  * FidoConnect - UI Components & Notification Helper
  */
 
+// Early Role Initialization from Cache (Immediate Zero-Flicker Execution)
+(function applyEarlyRole() {
+  try {
+    const cachedRole = localStorage.getItem("fc_user_role");
+    if (cachedRole) {
+      document.documentElement.setAttribute("data-user-role", cachedRole);
+      if (document.body) {
+        document.body.setAttribute("data-user-role", cachedRole);
+        document.body.classList.toggle("is-client", cachedRole === "client");
+        document.body.classList.toggle("is-freelancer", cachedRole === "freelancer");
+        document.body.classList.toggle("is-admin", cachedRole === "admin");
+        document.body.classList.add("is-logged-in");
+      }
+    }
+  } catch (e) {}
+})();
+
 // Toast Notifications
 function showToast(message, type = "info", duration = 3500) {
   let container = document.getElementById("toast-container");
@@ -140,6 +157,27 @@ function initPagePreloader() {
 
 // Document Ready Initialization
 document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const cachedRole = localStorage.getItem("fc_user_role");
+    if (cachedRole && document.body) {
+      document.body.setAttribute("data-user-role", cachedRole);
+      document.body.classList.toggle("is-client", cachedRole === "client");
+      document.body.classList.toggle("is-freelancer", cachedRole === "freelancer");
+      document.body.classList.toggle("is-admin", cachedRole === "admin");
+      document.body.classList.add("is-logged-in");
+
+      if (cachedRole === "client") {
+        document.querySelectorAll(".desktop-nav a[href*='find-work.html']").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".mobile-bottom-nav a[href*='find-work.html']").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".hero-cta-group a[href*='find-work.html']").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".footer-links a[href*='find-work.html']").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".footer-links a[href*='role=freelancer']").forEach(el => el.style.display = "none");
+        const mobileNavGrid = document.querySelector(".mobile-bottom-nav .mobile-nav-grid");
+        if (mobileNavGrid) mobileNavGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      }
+    }
+  } catch (e) {}
+
   initPagePreloader();
   highlightActiveNav();
   // Close modals when clicking backdrop

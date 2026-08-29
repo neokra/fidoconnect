@@ -107,6 +107,42 @@ class AuthService {
     return () => {};
   }
 
+  // Check user role: 'admin', 'freelancer', 'client', or 'guest'
+  getUserRole(user = this._currentUser) {
+    if (!user) return "guest";
+    if (this.isAdminEmail(user.email) || user.role === "admin" || user.accountType === "admin" || user.isAdmin === true) {
+      return "admin";
+    }
+    const r = ((user.role || user.accountType || "") + "").toLowerCase().trim();
+    if (r === "freelancer") return "freelancer";
+    return "client";
+  }
+
+  isClient(user = this._currentUser) {
+    return Boolean(user) && this.getUserRole(user) === "client";
+  }
+
+  isFreelancer(user = this._currentUser) {
+    return Boolean(user) && this.getUserRole(user) === "freelancer";
+  }
+
+  _cacheUserRole() {
+    if (this._currentUser) {
+      try {
+        const role = this.getUserRole(this._currentUser);
+        localStorage.setItem("fc_user_role", role);
+        localStorage.setItem("fc_user_email", this._currentUser.email || "");
+        localStorage.setItem("fc_user_name", this._currentUser.name || this._currentUser.businessName || "");
+      } catch (e) {}
+    } else {
+      try {
+        localStorage.removeItem("fc_user_role");
+        localStorage.removeItem("fc_user_email");
+        localStorage.removeItem("fc_user_name");
+      } catch (e) {}
+    }
+  }
+
   _initAuth() {
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -117,6 +153,14 @@ class AuthService {
 
           if (snap.exists()) {
             const data = snap.data();
+            const rawRole = ((data.role || data.accountType || "") + "").toLowerCase().trim();
+            let resolvedRole = "client";
+            if (isUserAdmin || rawRole === "admin") {
+              resolvedRole = "admin";
+            } else if (rawRole === "freelancer") {
+              resolvedRole = "freelancer";
+            }
+
             this._currentUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -124,19 +168,19 @@ class AuthService {
               inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
               inviteCodeId: data.inviteCodeId || null,
               ...data,
-              role: isUserAdmin ? "admin" : (data.role || null),
+              role: resolvedRole,
+              accountType: resolvedRole,
               isAdmin: isUserAdmin
             };
           } else {
-            // Registration and Google sign-in own first-time profile creation.
-            // Do not write here: this listener can run concurrently with those
-            // flows and turn an initial create into a conflicting update.
+            const resolvedRole = isUserAdmin ? "admin" : "client";
             this._currentUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               name: firebaseUser.displayName || "",
               photoURL: firebaseUser.photoURL || null,
-              role: isUserAdmin ? "admin" : null,
+              role: resolvedRole,
+              accountType: resolvedRole,
               inviteVerified: isUserAdmin,
               inviteCodeId: null,
               isAdmin: isUserAdmin
@@ -144,11 +188,13 @@ class AuthService {
           }
         } catch (err) {
           console.error("Error fetching Firestore user profile:", err);
+          const resolvedRole = isUserAdmin ? "admin" : "client";
           this._currentUser = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName || "",
-            role: isUserAdmin ? "admin" : null,
+            role: resolvedRole,
+            accountType: resolvedRole,
             inviteVerified: isUserAdmin ? true : false,
             inviteCodeId: null,
             isAdmin: isUserAdmin
@@ -158,6 +204,7 @@ class AuthService {
         this._currentUser = null;
       }
 
+      this._cacheUserRole();
       this._authReady = true;
       this.updateNavUI();
 
@@ -235,6 +282,14 @@ class AuthService {
 
     if (snap.exists()) {
       const data = snap.data();
+      const rawRole = ((data.role || data.accountType || "") + "").toLowerCase().trim();
+      let resolvedRole = "client";
+      if (isUserAdmin || rawRole === "admin") {
+        resolvedRole = "admin";
+      } else if (rawRole === "freelancer") {
+        resolvedRole = "freelancer";
+      }
+
       this._currentUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
@@ -242,17 +297,19 @@ class AuthService {
         inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
         inviteCodeId: data.inviteCodeId || null,
         ...data,
-        role: isUserAdmin ? "admin" : (data.role || null),
+        role: resolvedRole,
+        accountType: resolvedRole,
         isAdmin: isUserAdmin
       };
     } else {
+      const resolvedRole = isUserAdmin ? "admin" : "client";
       const newUserData = {
         uid: firebaseUser.uid,
         email: firebaseUser.email.toLowerCase(),
         name: firebaseUser.displayName || "",
         photoURL: firebaseUser.photoURL || null,
-        role: isUserAdmin ? "admin" : null,
-        accountType: isUserAdmin ? "admin" : null,
+        role: resolvedRole,
+        accountType: resolvedRole,
         phone: "",
         businessName: "",
         inviteVerified: isUserAdmin ? true : false,
@@ -274,6 +331,7 @@ class AuthService {
       };
     }
 
+    this._cacheUserRole();
     this.updateNavUI();
     return this._currentUser;
   }
@@ -292,14 +350,15 @@ class AuthService {
     await cred.user.getIdToken();
     const uid = cred.user.uid;
 
+    const resolvedRole = isUserAdmin ? "admin" : "client";
     const newUserData = {
       uid: uid,
       email: email.trim().toLowerCase(),
       name: name.trim(),
       photoURL: null,
       phone: phone.trim(),
-      role: isUserAdmin ? "admin" : null,
-      accountType: isUserAdmin ? "admin" : null,
+      role: resolvedRole,
+      accountType: resolvedRole,
       businessName: businessName ? businessName.trim() : "",
       inviteVerified: isUserAdmin ? true : false,
       inviteCodeId: null,
@@ -320,6 +379,7 @@ class AuthService {
       ...newUserData,
       isAdmin: isUserAdmin
     };
+    this._cacheUserRole();
     this.updateNavUI();
     return this._currentUser;
   }
@@ -339,6 +399,14 @@ class AuthService {
 
     if (snap.exists()) {
       const data = snap.data();
+      const rawRole = ((data.role || data.accountType || "") + "").toLowerCase().trim();
+      let resolvedRole = "client";
+      if (isUserAdmin || rawRole === "admin") {
+        resolvedRole = "admin";
+      } else if (rawRole === "freelancer") {
+        resolvedRole = "freelancer";
+      }
+
       this._currentUser = {
         uid: uid,
         email: cred.user.email,
@@ -346,21 +414,25 @@ class AuthService {
         inviteVerified: isUserAdmin ? true : (data.inviteVerified === true),
         inviteCodeId: data.inviteCodeId || null,
         ...data,
-        role: isUserAdmin ? "admin" : (data.role || "client"),
+        role: resolvedRole,
+        accountType: resolvedRole,
         isAdmin: isUserAdmin
       };
     } else {
+      const resolvedRole = isUserAdmin ? "admin" : "client";
       this._currentUser = {
         uid: uid,
         email: cred.user.email,
         name: cred.user.displayName || "",
-        role: isUserAdmin ? "admin" : "client",
+        role: resolvedRole,
+        accountType: resolvedRole,
         inviteVerified: isUserAdmin ? true : false,
         inviteCodeId: null,
         isAdmin: isUserAdmin
       };
     }
 
+    this._cacheUserRole();
     this.updateNavUI();
     return this._currentUser;
   }
@@ -449,19 +521,21 @@ class AuthService {
   // Header & Role-Based Nav State Update
   updateNavUI() {
     const user = this.getCurrentUser();
-    const isUserAdmin = this.isAdmin();
-    const role = isUserAdmin ? "admin" : (user ? (user.role || "client") : "guest");
+    const role = this.getUserRole(user);
+    const isUserAdmin = role === "admin";
+    const isClient = Boolean(user) && role === "client";
+    const isFreelancer = Boolean(user) && role === "freelancer";
 
+    if (document.documentElement) {
+      document.documentElement.setAttribute("data-user-role", role);
+    }
     if (document.body) {
       document.body.setAttribute("data-user-role", role);
       document.body.classList.toggle("is-admin", isUserAdmin);
-      document.body.classList.toggle("is-client", role === "client");
-      document.body.classList.toggle("is-freelancer", role === "freelancer");
+      document.body.classList.toggle("is-client", isClient);
+      document.body.classList.toggle("is-freelancer", isFreelancer);
       document.body.classList.toggle("is-logged-in", Boolean(user));
     }
-
-    const isClient = user && role === "client";
-    const isFreelancer = user && role === "freelancer";
 
     // 1. Desktop Navigation: Hide Find Work for Clients, Add Admin for Admins
     document.querySelectorAll(".desktop-nav a").forEach(link => {
