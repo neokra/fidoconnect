@@ -305,6 +305,22 @@ p {
   margin: 0 auto;
 }
 
+/* --- Role-Based View Modifiers --- */
+body[data-user-role="client"] .desktop-nav a[href*="find-work.html"],
+body[data-user-role="client"] .mobile-bottom-nav a[href*="find-work.html"],
+body[data-user-role="client"] .hero-cta-group a[href*="find-work.html"],
+body[data-user-role="client"] .footer-links a[href*="find-work.html"],
+body[data-user-role="client"] .footer-links a[href*="role=freelancer"],
+body[data-user-role="client"] .header-plan-btn,
+body[data-user-role="client"] .header-user-mobile,
+body[data-user-role="client"] a[href*="tab=membership"] {
+  display: none !important;
+}
+
+body[data-user-role="client"] .mobile-nav-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
 .mobile-nav-item {
   display: flex;
   flex-direction: column;
@@ -533,6 +549,7 @@ p {
   gap: 0.6rem;
   transition: all 0.15s ease;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .category-card:hover {

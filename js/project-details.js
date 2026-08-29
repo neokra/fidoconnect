@@ -28,7 +28,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!currentProjectId) {
     showToast("No project specified.", "error");
-    window.location.href = "find-work.html";
+    const user = FidoAuth.getCurrentUser();
+    if (user && user.role === "client" && !FidoAuth.isAdmin()) {
+      window.location.href = "account.html";
+    } else {
+      window.location.href = "find-work.html";
+    }
     return;
   }
 
@@ -289,11 +294,12 @@ async function loadProjectDetails(projectId) {
     currentProject = await FidoDB.getProjectById(projectId);
 
     if (!currentProject) {
+      const isClient = FidoAuth.getCurrentUser() && FidoAuth.getCurrentUser().role === "client" && !FidoAuth.isAdmin();
       document.getElementById("project-content-container").innerHTML = `
         <div class="card text-center" style="grid-column: 1 / -1; padding: 3rem 1rem;">
           <h3>Project Not Found</h3>
           <p class="text-muted" style="margin: 0.5rem 0 1.5rem;">The requested project could not be located or has been archived.</p>
-          <a href="find-work.html" class="btn btn-secondary">Back to Find Work</a>
+          <a href="${isClient ? "account.html" : "find-work.html"}" class="btn btn-secondary">${isClient ? "Back to Account" : "Back to Find Work"}</a>
         </div>
       `;
       return;

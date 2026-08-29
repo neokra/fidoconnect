@@ -25,6 +25,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const isAuth = await FidoAuth.requireAuth();
   if (!isAuth) return;
 
+  const currentUser = FidoAuth.getCurrentUser();
+  const isAdmin = FidoAuth.isAdmin();
+
+  // If the logged-in user is a client (and not admin), redirect to post-work
+  if (currentUser && currentUser.role === "client" && !isAdmin) {
+    if (typeof showToast === "function") {
+      showToast("Find Work is for freelancers. As a client, you can post a work request.", "info");
+    }
+    window.location.href = "post-work.html";
+    return;
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const paramCategory = urlParams.get("category");
   if (paramCategory) {
@@ -35,7 +47,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadProjects();
   renderRoleMembershipState();
 
-  FidoAuth.onAuthChange(() => {
+  FidoAuth.onAuthChange((user) => {
+    if (user && user.role === "client" && !FidoAuth.isAdmin()) {
+      if (typeof showToast === "function") {
+        showToast("Find Work is for freelancers. As a client, you can post a work request.", "info");
+      }
+      window.location.href = "post-work.html";
+      return;
+    }
     renderRoleMembershipState();
     renderProjectsList();
   });

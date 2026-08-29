@@ -32,6 +32,13 @@ class AuthService {
     this._listeners = [];
     this._initAuth();
     this._setupProtectedNavigation();
+    if (typeof document !== "undefined") {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => this.updateNavUI());
+      } else {
+        this.updateNavUI();
+      }
+    }
   }
 
   // Check if an email matches the designated administrator
@@ -168,6 +175,20 @@ class AuthService {
 
       const href = link.getAttribute("href") || link.getAttribute("data-href");
       if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      // If client attempts to click find-work.html, redirect to post-work
+      if (href.split("?")[0].endsWith("find-work.html") || href.startsWith("find-work.html")) {
+        const user = this._currentUser || (this._authReady ? this._currentUser : await this.waitForAuth());
+        if (user && user.role === "client" && !this.isAdmin()) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof showToast === "function") {
+            showToast("Find Work is for freelancers. As a client, you can post your work requirements here.", "info");
+          }
+          window.location.href = "post-work.html";
+          return;
+        }
+      }
 
       const protectedPages = ["post-work.html", "find-work.html", "project-details.html", "account.html", "admin.html", "payment.html"];
       const isProtected = protectedPages.some(page => href.split("?")[0].endsWith(page) || href.startsWith(page));
@@ -425,42 +446,130 @@ class AuthService {
     return true;
   }
 
-  // Header Nav State Update
+  // Header & Role-Based Nav State Update
   updateNavUI() {
     const user = this.getCurrentUser();
+    const isUserAdmin = this.isAdmin();
+    const role = isUserAdmin ? "admin" : (user ? (user.role || "client") : "guest");
+
+    if (document.body) {
+      document.body.setAttribute("data-user-role", role);
+      document.body.classList.toggle("is-admin", isUserAdmin);
+      document.body.classList.toggle("is-client", role === "client");
+      document.body.classList.toggle("is-freelancer", role === "freelancer");
+      document.body.classList.toggle("is-logged-in", Boolean(user));
+    }
+
+    const isClient = user && role === "client";
+    const isFreelancer = user && role === "freelancer";
+
+    // 1. Desktop Navigation: Hide Find Work for Clients, Add Admin for Admins
+    document.querySelectorAll(".desktop-nav a").forEach(link => {
+      const href = link.getAttribute("href") || "";
+      if (href.includes("find-work.html")) {
+        link.style.display = isClient ? "none" : "";
+      }
+    });
+
+    const desktopNav = document.querySelector(".desktop-nav");
+    if (desktopNav) {
+      let adminNavLink = desktopNav.querySelector('a[href*="admin.html"]');
+      if (isUserAdmin) {
+        if (!adminNavLink) {
+          adminNavLink = document.createElement("a");
+          adminNavLink.href = "admin.html";
+          adminNavLink.className = "nav-link" + (window.location.pathname.endsWith("admin.html") ? " active" : "");
+          adminNavLink.textContent = "Admin";
+          desktopNav.appendChild(adminNavLink);
+        }
+      } else if (adminNavLink) {
+        adminNavLink.remove();
+      }
+    }
+
+    // 2. Mobile Bottom Navigation: Hide Find Work for Clients, Rebalance Grid
+    document.querySelectorAll(".mobile-bottom-nav a").forEach(link => {
+      const href = link.getAttribute("href") || "";
+      if (href.includes("find-work.html")) {
+        link.style.display = isClient ? "none" : "";
+      }
+    });
+    const mobileNavGrid = document.querySelector(".mobile-bottom-nav .mobile-nav-grid");
+    if (mobileNavGrid) {
+      if (isClient) {
+        mobileNavGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      } else {
+        mobileNavGrid.style.gridTemplateColumns = "";
+      }
+    }
+
+    // 3. Hero CTA: Hide Find Work for Clients
+    document.querySelectorAll(".hero-cta-group a").forEach(link => {
+      const href = link.getAttribute("href") || "";
+      if (href.includes("find-work.html")) {
+        link.style.display = isClient ? "none" : "";
+      }
+    });
+
+    // 4. Footer Links: Hide Find Work & Join Network for Clients
+    document.querySelectorAll(".footer-links a").forEach(link => {
+      const href = link.getAttribute("href") || "";
+      if (href.includes("find-work.html") || href.includes("role=freelancer")) {
+        link.style.display = isClient ? "none" : "";
+      }
+    });
+
+    // 5. Header Auth Actions
     const container = document.getElementById("header-auth-actions");
     if (!container) return;
 
     if (user) {
-      let roleLabel = user.role;
-      if (user.role === "freelancer") {
-        roleLabel = user.inviteVerified ? "Verified Freelancer" : (user.membershipStatus === "active" ? "Member" : "Freelancer");
-      } else if (user.role === "admin") {
+      let roleLabel = "Client";
+      if (isUserAdmin) {
         roleLabel = "Admin";
+      } else if (user.role === "freelancer") {
+        roleLabel = user.inviteVerified ? "Verified Freelancer" : (user.membershipStatus === "active" ? "Member" : "Freelancer");
       }
 
       const isMemberActive = user.membershipStatus === "active";
       const planName = isMemberActive ? (user.membershipPlan || "Member") : "Join";
       const membershipTarget = `account.html?tab=membership`;
 
+      const showMembershipBtn = !isClient && !isUserAdmin;
+      const showAdminBtn = isUserAdmin;
+
       container.innerHTML = `
         <div class="header-user-desktop">
           <a href="account.html" class="btn btn-secondary btn-sm" title="My Account">
             ${user.photoURL ? `<img src="${user.photoURL}" alt="" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />` : `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`}
-            <span>${(user.name || "Account").split(" ")[0]}</span>
+            <span>${(user.businessName || user.name || "Account").split(" ")[0]}</span>
             <span class="brand-badge">${roleLabel}</span>
           </a>
-          <a href="${membershipTarget}" class="btn btn-primary btn-sm ${isMemberActive ? 'header-plan-btn' : ''}" title="${isMemberActive ? 'Your Membership Plan' : 'Join Membership'}">
-            ${isMemberActive ? `⭐ ${planName}` : 'Join'}
-          </a>
+          ${showMembershipBtn ? `
+            <a href="${membershipTarget}" class="btn btn-primary btn-sm ${isMemberActive ? 'header-plan-btn' : ''}" title="${isMemberActive ? 'Your Membership Plan' : 'Join Membership'}">
+              ${isMemberActive ? `⭐ ${planName}` : 'Join'}
+            </a>
+          ` : ''}
+          ${showAdminBtn ? `
+            <a href="admin.html" class="btn btn-primary btn-sm" title="Admin Console">
+              ⚙ Admin Panel
+            </a>
+          ` : ''}
           <button id="logout-btn" class="btn btn-secondary btn-sm" title="Sign Out">
             <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
           </button>
         </div>
         <div class="header-user-mobile">
-          <a href="${membershipTarget}" class="btn btn-primary btn-sm ${isMemberActive ? 'header-plan-btn' : ''}">
-            ${isMemberActive ? `⭐ ${planName}` : 'Join'}
-          </a>
+          ${showMembershipBtn ? `
+            <a href="${membershipTarget}" class="btn btn-primary btn-sm ${isMemberActive ? 'header-plan-btn' : ''}">
+              ${isMemberActive ? `⭐ ${planName}` : 'Join'}
+            </a>
+          ` : ''}
+          ${showAdminBtn ? `
+            <a href="admin.html" class="btn btn-primary btn-sm">
+              ⚙ Admin
+            </a>
+          ` : ''}
         </div>
       `;
 

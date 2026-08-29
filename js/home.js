@@ -6,18 +6,21 @@ import { FidoAuth } from "./auth.js";
 import { FidoDB } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Category quick filter clicks
+  // Category quick filter clicks: Redirect clients & visitors to post-work, freelancers to find-work
   document.querySelectorAll(".category-card").forEach(card => {
     card.addEventListener("click", async () => {
       const category = card.getAttribute("data-category");
       if (!category) return;
 
-      const target = `find-work.html?category=${encodeURIComponent(category)}`;
-      const user = await FidoAuth.waitForAuth();
+      const user = FidoAuth.getCurrentUser() || (await FidoAuth.waitForAuth());
+      const isFreelancer = user && user.role === "freelancer";
+      const target = isFreelancer
+        ? `find-work.html?category=${encodeURIComponent(category)}`
+        : `post-work.html?category=${encodeURIComponent(category)}`;
 
       if (!user) {
         if (typeof showToast === "function") {
-          showToast("Please log in first", "info");
+          showToast("Please log in to post your work request", "info");
         }
         setTimeout(() => {
           window.location.href = `auth.html?redirect=${encodeURIComponent(target)}`;
