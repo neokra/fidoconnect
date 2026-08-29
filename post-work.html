@@ -48,20 +48,824 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <div class="container container-narrow">
+    <div class="container container-narrow" id="post-work-page-wrap">
       
-      <!-- Submission Form Container -->
+      <!-- Submission Header -->
+      <div style="margin-bottom: 2rem; text-align:center;">
+        <h1 class="page-header-title" style="margin-bottom: 0.5rem;">Post your project</h1>
+        <p class="text-muted" style="max-width:560px; margin:0 auto;">
+          Tell us what you need completed. Select a category below to get started.
+        </p>
+      </div>
+
+      <!-- Main Form Wrapper -->
       <div id="post-work-form-container">
-        <div style="margin-bottom: 2rem; text-align:center;">
-          <h1 class="page-header-title" style="margin-bottom: 0.5rem;">Post your project</h1>
-          <p class="text-muted">
-            Tell us what you need completed. Our team will review your requirements and match a verified professional.
-          </p>
+        
+        <!-- Category Selector Header Card -->
+        <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1.5px solid #bfdbfe;">
+          <div class="form-group" style="margin: 0;">
+            <label for="projectCategory" class="form-label form-label-required" style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+              <span>📁</span> Select Project Service Category
+            </label>
+            <select id="projectCategory" class="form-control" style="font-size: 1rem; font-weight: 600; padding: 0.75rem 1rem;" required>
+              <option value="Website" selected>🌐 Website Development — Guided Website Planner (Recommended)</option>
+              <option value="Data Entry">📊 Data Entry & Processing</option>
+              <option value="Design">🎨 Design & Graphics</option>
+              <option value="Documents">📄 Documents & Formatting</option>
+              <option value="Digital Marketing">📢 Digital Marketing & Tasks</option>
+              <option value="Other">⚡ Other Digital Work</option>
+            </select>
+            <span class="form-hint" id="category-hint-text" style="margin-top: 0.5rem; display: block; color: var(--color-accent);">
+              ✨ Guided Website Planner activated — plan your website visually in minutes. No technical knowledge required!
+            </span>
+          </div>
         </div>
 
-        <form id="post-work-form" class="card">
+        <!-- =========================================================================
+             1. GUIDED QUESTIONNAIRE FOR WEBSITE DEVELOPMENT (Activated when Category = Website)
+             ========================================================================= -->
+        <div id="website-guided-builder">
+
+          <!-- Smart Quick Presets Banner -->
+          <div class="smart-presets-card">
+            <div class="smart-presets-title">
+              <span>✨</span>
+              <span>Quick Business Presets (Click your business type to auto-recommend pages & features):</span>
+            </div>
+            <div class="smart-preset-chips" id="smart-presets-list">
+              <button type="button" class="smart-preset-btn" data-preset="salon">💇‍♀️ Beauty Salon & Spa</button>
+              <button type="button" class="smart-preset-btn" data-preset="restaurant">🍽️ Restaurant / Cafe</button>
+              <button type="button" class="smart-preset-btn" data-preset="photographer">📷 Photographer / Studio</button>
+              <button type="button" class="smart-preset-btn" data-preset="retail">🛍️ Clothing / Retail Shop</button>
+              <button type="button" class="smart-preset-btn" data-preset="clinic">🩺 Clinic / Doctor</button>
+              <button type="button" class="smart-preset-btn" data-preset="tuition">📚 Tuition / Classes</button>
+              <button type="button" class="smart-preset-btn" data-preset="realestate">🏠 Real Estate</button>
+              <button type="button" class="smart-preset-btn" data-preset="gym">🏋️ Gym / Fitness</button>
+              <button type="button" class="smart-preset-btn" data-preset="agency">💼 Agency / Consulting</button>
+              <button type="button" class="smart-preset-btn" data-preset="services">🧹 Local Home Services</button>
+              <button type="button" class="smart-preset-btn" data-preset="custom">💡 Custom / Start Fresh</button>
+            </div>
+          </div>
+
+          <form id="website-guided-form" class="guided-builder-wrap">
+
+            <!-- Step 1: Business Information -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">1</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Basic Business & Contact Information</h3>
+                  <p>Tell us about your brand so we can tailor the site content and contact channels.</p>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="web-business-name" class="form-label form-label-required">Business / Brand Name</label>
+                  <input type="text" id="web-business-name" class="form-control" placeholder="e.g., Glamour Hair & Beauty Salon" required />
+                </div>
+                <div class="form-group">
+                  <label for="web-location" class="form-label">Location (City / Area)</label>
+                  <input type="text" id="web-location" class="form-control" placeholder="e.g., Downtown, Kochi, Kerala" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="web-business-desc" class="form-label form-label-required">What does your business do?</label>
+                <textarea id="web-business-desc" class="form-control" style="min-height: 80px;" placeholder="e.g., We provide premium bridal makeup, haircuts, facials, and hair spa services for women." required></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="web-whatsapp" class="form-label form-label-required">WhatsApp Number</label>
+                  <input type="tel" id="web-whatsapp" class="form-control" placeholder="+91 98765 43210" required />
+                  <span class="form-hint">Used for the live WhatsApp button on your website.</span>
+                </div>
+                <div class="form-group">
+                  <label for="web-phone" class="form-label">Phone Number (Calling)</label>
+                  <input type="tel" id="web-phone" class="form-control" placeholder="+91 98765 43210" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="web-email" class="form-label form-label-required">Email Address</label>
+                  <input type="email" id="web-email" class="form-control" placeholder="contact@example.com" required />
+                </div>
+                <div class="form-group">
+                  <label for="web-client-name" class="form-label form-label-required">Your Name</label>
+                  <input type="text" id="web-client-name" class="form-control" placeholder="Jane Doe" required />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="web-instagram" class="form-label">Instagram Profile (Optional)</label>
+                  <input type="text" id="web-instagram" class="form-control" placeholder="e.g., @glamour_beauty_salon" />
+                </div>
+                <div class="form-group">
+                  <label for="web-facebook" class="form-label">Facebook Page (Optional)</label>
+                  <input type="text" id="web-facebook" class="form-control" placeholder="e.g., facebook.com/glamourbeautysalon" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="web-google-maps" class="form-label">Google Business Profile / Maps Link (Optional)</label>
+                  <input type="url" id="web-google-maps" class="form-control" placeholder="e.g., https://maps.app.goo.gl/..." />
+                </div>
+                <div class="form-group">
+                  <label for="web-existing-site" class="form-label">Existing Website (Optional)</label>
+                  <input type="text" id="web-existing-site" class="form-control" placeholder="e.g., oldsalonwebsite.com" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Upload or Link Logo (Optional)</label>
+                  <input type="file" id="web-logo-file" class="form-control" accept="image/*" />
+                  <input type="url" id="web-logo-url" class="form-control" style="margin-top: 0.4rem;" placeholder="Or paste logo image link (e.g. Google Drive/Dropbox)" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Upload or Link Photos (Optional)</label>
+                  <input type="file" id="web-photos-file" class="form-control" accept="image/*" multiple />
+                  <input type="url" id="web-photos-url" class="form-control" style="margin-top: 0.4rem;" placeholder="Or paste photos folder link (e.g. Drive folder)" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="web-business-other" class="form-label">Other Business Info / Notes (Optional)</label>
+                <input type="text" id="web-business-other" class="form-control" placeholder="Anything specific about your business branch or hours" />
+              </div>
+            </div>
+
+            <!-- Step 2: What kind of website do you want? -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">2</div>
+                <div class="guided-step-title-wrap">
+                  <h3>What kind of website do you want?</h3>
+                  <p>Select all options that fit your vision. You can select multiple types.</p>
+                </div>
+              </div>
+
+              <div class="choice-cards-grid" id="website-types-grid">
+                <div class="choice-card" data-val="Business Website">
+                  <div class="choice-card-icon">🏢</div>
+                  <div class="choice-card-title">Business Website</div>
+                  <p class="choice-card-desc">Showcase your brand, services, and company details.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Service Website">
+                  <div class="choice-card-icon">🛠️</div>
+                  <div class="choice-card-title">Service Website</div>
+                  <p class="choice-card-desc">Highlight list of services, pricing, and client inquiries.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Salon / Beauty Website">
+                  <div class="choice-card-icon">💇‍♀️</div>
+                  <div class="choice-card-title">Salon / Beauty Website</div>
+                  <p class="choice-card-desc">Service menu, bridal packages, and photo gallery.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Restaurant / Food Website">
+                  <div class="choice-card-icon">🍽️</div>
+                  <div class="choice-card-title">Restaurant / Food Website</div>
+                  <p class="choice-card-desc">Food menu, reservations, takeaway, and location map.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Booking / Appointment Website">
+                  <div class="choice-card-icon">📅</div>
+                  <div class="choice-card-title">Booking / Appointment</div>
+                  <p class="choice-card-desc">Allow customers to book dates, times, and appointments.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="E-commerce / Online Store">
+                  <div class="choice-card-icon">🛍️</div>
+                  <div class="choice-card-title">E-commerce / Store</div>
+                  <p class="choice-card-desc">Sell physical or digital products with cart & payment.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Portfolio Website">
+                  <div class="choice-card-icon">💼</div>
+                  <div class="choice-card-title">Portfolio Website</div>
+                  <p class="choice-card-desc">Display work samples, case studies, and creative projects.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Photography Website">
+                  <div class="choice-card-icon">📷</div>
+                  <div class="choice-card-title">Photography Website</div>
+                  <p class="choice-card-desc">Visual photo albums, event galleries, and package booking.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Landing Page">
+                  <div class="choice-card-icon">🚀</div>
+                  <div class="choice-card-title">Landing Page</div>
+                  <p class="choice-card-desc">Single-page focused on lead generation or specific offer.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Clinic / Healthcare Website">
+                  <div class="choice-card-icon">🩺</div>
+                  <div class="choice-card-title">Clinic / Healthcare</div>
+                  <p class="choice-card-desc">Doctors, treatments, timings, and patient consults.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Educational / Coaching Website">
+                  <div class="choice-card-icon">📚</div>
+                  <div class="choice-card-title">Educational / Coaching</div>
+                  <p class="choice-card-desc">Courses, batch timings, admissions, and faculty info.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Real Estate Website">
+                  <div class="choice-card-icon">🏠</div>
+                  <div class="choice-card-title">Real Estate Website</div>
+                  <p class="choice-card-desc">Property listings, floor plans, inquiries, and tours.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Hotel / Travel Website">
+                  <div class="choice-card-icon">🏨</div>
+                  <div class="choice-card-title">Hotel / Travel Website</div>
+                  <p class="choice-card-desc">Room views, packages, amenities, and tour bookings.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Agency / Corporate Website">
+                  <div class="choice-card-icon">🤝</div>
+                  <div class="choice-card-title">Agency / Corporate</div>
+                  <p class="choice-card-desc">Team overview, client testimonials, and enterprise brief.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Personal / Freelancer Website">
+                  <div class="choice-card-icon">👤</div>
+                  <div class="choice-card-title">Personal / Freelancer</div>
+                  <p class="choice-card-desc">Personal bio, skills, resume, and direct contact.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Blog / Content Website">
+                  <div class="choice-card-icon">✍️</div>
+                  <div class="choice-card-title">Blog / Content</div>
+                  <p class="choice-card-desc">Articles, news updates, guides, and newsletter.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Event Website">
+                  <div class="choice-card-icon">🎟️</div>
+                  <div class="choice-card-title">Event Website</div>
+                  <p class="choice-card-desc">Event schedule, speakers, ticket registration.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Community Website">
+                  <div class="choice-card-icon">🌐</div>
+                  <div class="choice-card-title">Community / Club</div>
+                  <p class="choice-card-desc">Member directory, notices, and club activities.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+              </div>
+
+              <!-- Other Website Type Custom Field -->
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="web-type-other" class="form-label">Other website type / idea (Optional)</label>
+                <input type="text" id="web-type-other" class="form-control" placeholder="Tell us if your website type isn't listed above" />
+              </div>
+            </div>
+
+            <!-- Step 3: What pages would you like? -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">3</div>
+                <div class="guided-step-title-wrap">
+                  <h3>What pages would you like on your website?</h3>
+                  <p>Choose any pages you need. You can also add unlimited custom pages.</p>
+                </div>
+              </div>
+
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin-bottom: 0.65rem;">Common Pages</h4>
+              <div class="choice-chips-grid" id="common-pages-chips">
+                <span class="choice-chip selected" data-val="Home"><span class="choice-chip-icon">🏠</span> Home <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="About Us"><span class="choice-chip-icon">ℹ️</span> About Us <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Services"><span class="choice-chip-icon">🛠️</span> Services <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Products"><span class="choice-chip-icon">🛍️</span> Products <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Pricing"><span class="choice-chip-icon">🏷️</span> Pricing <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Gallery"><span class="choice-chip-icon">🖼️</span> Gallery <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Portfolio"><span class="choice-chip-icon">💼</span> Portfolio <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Testimonials / Reviews"><span class="choice-chip-icon">⭐</span> Testimonials / Reviews <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Contact"><span class="choice-chip-icon">📞</span> Contact <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="FAQ"><span class="choice-chip-icon">❓</span> FAQ <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Blog"><span class="choice-chip-icon">📝</span> Blog <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="News / Updates"><span class="choice-chip-icon">📰</span> News / Updates <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Team"><span class="choice-chip-icon">👥</span> Team <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Careers"><span class="choice-chip-icon">💼</span> Careers <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Locations"><span class="choice-chip-icon">📍</span> Locations <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Offers / Promotions"><span class="choice-chip-icon">🎁</span> Offers / Promotions <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Booking"><span class="choice-chip-icon">📅</span> Booking <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Events"><span class="choice-chip-icon">🎟️</span> Events <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Menu"><span class="choice-chip-icon">📜</span> Menu <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Privacy Policy"><span class="choice-chip-icon">🔒</span> Privacy Policy <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Terms & Conditions"><span class="choice-chip-icon">📄</span> Terms & Conditions <span class="choice-chip-status">+</span></span>
+              </div>
+
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin: 1.5rem 0 0.65rem;">Advanced / Account Pages</h4>
+              <div class="choice-chips-grid" id="advanced-pages-chips">
+                <span class="choice-chip" data-val="User Login"><span class="choice-chip-icon">🔐</span> User Login <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="User Registration"><span class="choice-chip-icon">📝</span> User Registration <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Customer Dashboard"><span class="choice-chip-icon">📊</span> Customer Dashboard <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Admin Dashboard"><span class="choice-chip-icon">⚙️</span> Admin Dashboard <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Order Tracking"><span class="choice-chip-icon">🚚</span> Order Tracking <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Product Categories"><span class="choice-chip-icon">🗂️</span> Product Categories <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Shopping Cart"><span class="choice-chip-icon">🛒</span> Shopping Cart <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Checkout"><span class="choice-chip-icon">💳</span> Checkout <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Wishlist"><span class="choice-chip-icon">❤️</span> Wishlist <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Appointment Management"><span class="choice-chip-icon">🗓️</span> Appointment Management <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Membership"><span class="choice-chip-icon">⭐</span> Membership <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Subscription"><span class="choice-chip-icon">🔄</span> Subscription <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Downloads"><span class="choice-chip-icon">📥</span> Downloads <span class="choice-chip-status">+</span></span>
+              </div>
+
+              <!-- Custom Multi-Page Adder -->
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin: 1.5rem 0 0.65rem;">Custom / Other Pages</h4>
+              <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1rem;">
+                <div class="form-row" style="margin-bottom: 0.5rem;">
+                  <div class="form-group" style="margin:0;">
+                    <input type="text" id="custom-page-name-input" class="form-control" placeholder="Page Name (e.g. Bridal Packages, Course Syllabus)" />
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <input type="text" id="custom-page-desc-input" class="form-control" placeholder="Brief Description / What to show on this page" />
+                  </div>
+                </div>
+                <button type="button" id="btn-add-custom-page" class="btn btn-secondary btn-sm" style="margin-top: 0.4rem;">
+                  + Add Custom Page
+                </button>
+                <div id="custom-pages-list-container" class="custom-pages-list"></div>
+              </div>
+            </div>
+
+            <!-- Step 4: What should customers be able to do? -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">4</div>
+                <div class="guided-step-title-wrap">
+                  <h3>What should customers be able to do?</h3>
+                  <p>Select actions and features you want your visitors and customers to experience.</p>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div>
+                  <h4 style="font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.5rem;">📞 Communication & Contact</h4>
+                  <div class="choice-chips-grid" id="actions-comm-chips">
+                    <span class="choice-chip selected" data-val="WhatsApp the business"><span class="choice-chip-icon">💬</span> WhatsApp the business <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip selected" data-val="Call the business"><span class="choice-chip-icon">📞</span> Call the business <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip selected" data-val="Send an enquiry"><span class="choice-chip-icon">✉️</span> Send an enquiry <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip" data-val="Contact form"><span class="choice-chip-icon">📝</span> Contact form <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Email the business"><span class="choice-chip-icon">📧</span> Email the business <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Request a callback"><span class="choice-chip-icon">📲</span> Request a callback <span class="choice-chip-status">+</span></span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style="font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.5rem;">🛠️ Services & Inquiries</h4>
+                  <div class="choice-chips-grid" id="actions-services-chips">
+                    <span class="choice-chip selected" data-val="View services"><span class="choice-chip-icon">🔍</span> View services <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip" data-val="View service details"><span class="choice-chip-icon">📄</span> View service details <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="View pricing"><span class="choice-chip-icon">🏷️</span> View pricing <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Request a service"><span class="choice-chip-icon">🤝</span> Request a service <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Compare services"><span class="choice-chip-icon">⚖️</span> Compare services <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Request a quote"><span class="choice-chip-icon">💼</span> Request a quote <span class="choice-chip-status">+</span></span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style="font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.5rem;">📅 Appointments & Booking</h4>
+                  <div class="choice-chips-grid" id="actions-booking-chips">
+                    <span class="choice-chip" data-val="Request an appointment"><span class="choice-chip-icon">🗓️</span> Request appointment <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Book an appointment"><span class="choice-chip-icon">📅</span> Book an appointment <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Select date & time"><span class="choice-chip-icon">⏰</span> Select date & time <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Choose service"><span class="choice-chip-icon">✨</span> Choose service <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Receive booking confirmation"><span class="choice-chip-icon">✅</span> Booking confirmation <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Reschedule or cancel"><span class="choice-chip-icon">🔄</span> Reschedule or cancel <span class="choice-chip-status">+</span></span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style="font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.5rem;">🛍️ Products & Orders</h4>
+                  <div class="choice-chips-grid" id="actions-products-chips">
+                    <span class="choice-chip" data-val="Browse products"><span class="choice-chip-icon">🔍</span> Browse products <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Search & filter products"><span class="choice-chip-icon">⚡</span> Search & filter <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Add to cart"><span class="choice-chip-icon">🛒</span> Add to cart <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Wishlist items"><span class="choice-chip-icon">❤️</span> Wishlist <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Checkout & Online payment"><span class="choice-chip-icon">💳</span> Online payment <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Order confirmation & tracking"><span class="choice-chip-icon">📦</span> Order tracking <span class="choice-chip-status">+</span></span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style="font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.5rem;">📍 Location & Business Information</h4>
+                  <div class="choice-chips-grid" id="actions-info-chips">
+                    <span class="choice-chip selected" data-val="View location & directions"><span class="choice-chip-icon">🗺️</span> Maps directions <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip selected" data-val="View opening hours"><span class="choice-chip-icon">⏰</span> Opening hours <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip selected" data-val="View customer reviews"><span class="choice-chip-icon">⭐</span> Customer reviews <span class="choice-chip-status">✓</span></span>
+                    <span class="choice-chip" data-val="View social media"><span class="choice-chip-icon">📱</span> Social media <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="View team & staff"><span class="choice-chip-icon">👥</span> View team/staff <span class="choice-chip-status">+</span></span>
+                    <span class="choice-chip" data-val="Download files / Brochure"><span class="choice-chip-icon">📥</span> Download brochure <span class="choice-chip-status">+</span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="web-actions-other" class="form-label">Other customer actions / special requirements (Optional)</label>
+                <input type="text" id="web-actions-other" class="form-control" placeholder="e.g. Clients should be able to calculate estimated price" />
+              </div>
+            </div>
+
+            <!-- Step 5: Website Appearance / Design Preferences -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">5</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Website Appearance & Design Preferences</h3>
+                  <p>Pick the visual direction that represents your brand. No design jargon needed.</p>
+                </div>
+              </div>
+
+              <!-- Styles Grid -->
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin-bottom: 0.65rem;">What style do you prefer?</h4>
+              <div class="choice-cards-grid" id="design-styles-grid">
+                <div class="choice-card selected" data-val="Modern">
+                  <div class="choice-card-icon">✨</div>
+                  <div class="choice-card-title">Modern</div>
+                  <p class="choice-card-desc">Clean lines, smooth spacing, and contemporary layout.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Minimal">
+                  <div class="choice-card-icon">🤍</div>
+                  <div class="choice-card-title">Minimal</div>
+                  <p class="choice-card-desc">Simple, spacious, distraction-free, and content-first.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Luxury">
+                  <div class="choice-card-icon">👑</div>
+                  <div class="choice-card-title">Luxury</div>
+                  <p class="choice-card-desc">High-end aesthetics, elegant typography, gold/dark tones.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card selected" data-val="Professional">
+                  <div class="choice-card-icon">💼</div>
+                  <div class="choice-card-title">Professional</div>
+                  <p class="choice-card-desc">Trustworthy, structured, clear, and business-focused.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Elegant">
+                  <div class="choice-card-icon">🌸</div>
+                  <div class="choice-card-title">Elegant</div>
+                  <p class="choice-card-desc">Graceful curves, soft color tones, and premium feel.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Creative">
+                  <div class="choice-card-icon">🎨</div>
+                  <div class="choice-card-title">Creative</div>
+                  <p class="choice-card-desc">Unique layouts, vibrant visuals, and artistic touch.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Bold">
+                  <div class="choice-card-icon">⚡</div>
+                  <div class="choice-card-title">Bold</div>
+                  <p class="choice-card-desc">High contrast, strong headlines, and striking presence.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Warm & Friendly">
+                  <div class="choice-card-icon">☀️</div>
+                  <div class="choice-card-title">Warm & Friendly</div>
+                  <p class="choice-card-desc">Approachable, welcoming, and community-oriented.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Dark Mode">
+                  <div class="choice-card-icon">🌙</div>
+                  <div class="choice-card-title">Dark Theme</div>
+                  <p class="choice-card-desc">Sleek dark backgrounds with glowing highlights.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+                <div class="choice-card" data-val="Colorful">
+                  <div class="choice-card-icon">🌈</div>
+                  <div class="choice-card-title">Colorful</div>
+                  <p class="choice-card-desc">Lively, energetic, and engaging color palettes.</p>
+                  <span class="choice-card-check">✓</span>
+                </div>
+              </div>
+
+              <!-- Colors Grid -->
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin: 1.5rem 0 0.65rem;">Preferred Color Palette</h4>
+              <div class="color-swatches-grid" id="color-swatches-grid">
+                <div class="color-swatch-card selected" data-color="Blue" data-hex="#2563eb">
+                  <span class="color-dot" style="background:#2563eb;"></span>
+                  <span class="color-swatch-name">Royal Blue</span>
+                </div>
+                <div class="color-swatch-card" data-color="Gold" data-hex="#d97706">
+                  <span class="color-dot" style="background:#d97706;"></span>
+                  <span class="color-swatch-name">Gold / Amber</span>
+                </div>
+                <div class="color-swatch-card" data-color="Green" data-hex="#059669">
+                  <span class="color-dot" style="background:#059669;"></span>
+                  <span class="color-swatch-name">Emerald Green</span>
+                </div>
+                <div class="color-swatch-card" data-color="Purple" data-hex="#7c3aed">
+                  <span class="color-dot" style="background:#7c3aed;"></span>
+                  <span class="color-swatch-name">Royal Purple</span>
+                </div>
+                <div class="color-swatch-card" data-color="Pink" data-hex="#db2777">
+                  <span class="color-dot" style="background:#db2777;"></span>
+                  <span class="color-swatch-name">Rose / Pink</span>
+                </div>
+                <div class="color-swatch-card" data-color="Red" data-hex="#dc2626">
+                  <span class="color-dot" style="background:#dc2626;"></span>
+                  <span class="color-swatch-name">Crimson Red</span>
+                </div>
+                <div class="color-swatch-card" data-color="Orange" data-hex="#ea580c">
+                  <span class="color-dot" style="background:#ea580c;"></span>
+                  <span class="color-swatch-name">Warm Orange</span>
+                </div>
+                <div class="color-swatch-card" data-color="Black" data-hex="#0f172a">
+                  <span class="color-dot" style="background:#0f172a;"></span>
+                  <span class="color-swatch-name">Dark / Black</span>
+                </div>
+                <div class="color-swatch-card" data-color="Teal" data-hex="#0d9488">
+                  <span class="color-dot" style="background:#0d9488;"></span>
+                  <span class="color-swatch-name">Teal / Ocean</span>
+                </div>
+                <div class="color-swatch-card" data-color="Neutral" data-hex="#64748b">
+                  <span class="color-dot" style="background:#64748b;"></span>
+                  <span class="color-swatch-name">Neutral Grey</span>
+                </div>
+                <div class="color-swatch-card" data-color="No Preference" data-hex="#cbd5e1">
+                  <span class="color-dot" style="background:#cbd5e1;"></span>
+                  <span class="color-swatch-name">No Preference</span>
+                </div>
+              </div>
+
+              <!-- Custom Color Input -->
+              <div class="form-row" style="margin-top: 0.85rem; align-items: center;">
+                <div class="form-group" style="margin:0; flex: 1;">
+                  <label for="web-custom-color" class="form-label" style="font-size:0.85rem;">Custom Brand Hex Color (Optional)</label>
+                  <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="color" id="web-color-picker" value="#2563eb" style="width:40px; height:38px; padding:2px; border:1px solid var(--border-color); border-radius:6px; cursor:pointer;" />
+                    <input type="text" id="web-custom-color" class="form-control" placeholder="#2563eb or RGB" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Website Feeling -->
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin: 1.5rem 0 0.65rem;">Website Tone & Feeling</h4>
+              <div class="choice-chips-grid" id="website-feelings-chips">
+                <span class="choice-chip selected" data-val="Trustworthy"><span class="choice-chip-icon">🛡️</span> Trustworthy <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Friendly"><span class="choice-chip-icon">😊</span> Friendly <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Premium"><span class="choice-chip-icon">⭐</span> Premium <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Professional"><span class="choice-chip-icon">💼</span> Professional <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Youthful & Vibrant"><span class="choice-chip-icon">⚡</span> Youthful & Vibrant <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Luxury & Exclusive"><span class="choice-chip-icon">👑</span> Luxury & Exclusive <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Simple & Fast"><span class="choice-chip-icon">🚀</span> Simple & Fast <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Artistic"><span class="choice-chip-icon">🎨</span> Artistic <span class="choice-chip-status">+</span></span>
+              </div>
+            </div>
+
+            <!-- Step 6: Homepage Preferences -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">6</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Homepage Layout & Sections</h3>
+                  <p>Select what sections should appear on your main landing / homepage.</p>
+                </div>
+              </div>
+
+              <div class="choice-chips-grid" id="homepage-sections-chips">
+                <span class="choice-chip selected" data-val="Hero Banner with Call-to-Action"><span class="choice-chip-icon">🌟</span> Hero Banner & CTA <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Business Introduction"><span class="choice-chip-icon">📖</span> Business Introduction <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Services Overview"><span class="choice-chip-icon">🛠️</span> Services Overview <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Featured Products"><span class="choice-chip-icon">🛍️</span> Featured Products <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Photo Gallery"><span class="choice-chip-icon">🖼️</span> Photo Gallery <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Portfolio Showcase"><span class="choice-chip-icon">💼</span> Portfolio Showcase <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Customer Testimonials & Reviews"><span class="choice-chip-icon">⭐</span> Testimonials & Reviews <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Pricing Packages"><span class="choice-chip-icon">🏷️</span> Pricing Packages <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Special Offers & Discounts"><span class="choice-chip-icon">🎁</span> Special Offers <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Instagram Live Feed"><span class="choice-chip-icon">📷</span> Instagram Feed <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Floating WhatsApp Chat Button"><span class="choice-chip-icon">💬</span> WhatsApp Chat Button <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Contact Form"><span class="choice-chip-icon">📝</span> Contact Form <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Location & Interactive Map"><span class="choice-chip-icon">📍</span> Location & Google Map <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Opening Hours"><span class="choice-chip-icon">⏰</span> Opening Hours <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Frequently Asked Questions (FAQ)"><span class="choice-chip-icon">❓</span> FAQ Accordion <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Newsletter Signup"><span class="choice-chip-icon">📧</span> Newsletter Signup <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Social Media Links"><span class="choice-chip-icon">📱</span> Social Media Links <span class="choice-chip-status">+</span></span>
+              </div>
+            </div>
+
+            <!-- Step 7: Features and Functionality -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">7</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Features & Technical Integrations</h3>
+                  <p>Choose any specific integrations or tools you'd like on your website.</p>
+                </div>
+              </div>
+
+              <div class="choice-chips-grid" id="features-chips">
+                <span class="choice-chip selected" data-val="WhatsApp Integration"><span class="choice-chip-icon">💬</span> WhatsApp Integration <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Google Maps Location"><span class="choice-chip-icon">📍</span> Google Maps <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip selected" data-val="Google Reviews Embed"><span class="choice-chip-icon">⭐</span> Google Reviews <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Instagram Integration"><span class="choice-chip-icon">📷</span> Instagram Feed <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Contact Form with Email Alerts"><span class="choice-chip-icon">📧</span> Email Form Alerts <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Appointment / Booking System"><span class="choice-chip-icon">📅</span> Booking System <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Payment Gateway (UPI/Cards)"><span class="choice-chip-icon">💳</span> UPI/Card Payments <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Product Management & Catalog"><span class="choice-chip-icon">🛍️</span> Product Catalog <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Coupon & Discount Codes"><span class="choice-chip-icon">🎟️</span> Coupon Codes <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Customer Accounts & Login"><span class="choice-chip-icon">👤</span> Customer Accounts <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Admin Management Panel"><span class="choice-chip-icon">⚙️</span> Admin Panel <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Search & Filters"><span class="choice-chip-icon">🔍</span> Search & Filters <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Video Gallery / YouTube Embed"><span class="choice-chip-icon">🎬</span> Video Gallery <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="File Uploads from Customers"><span class="choice-chip-icon">📤</span> File Uploads <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Downloadable PDF / Menu"><span class="choice-chip-icon">📥</span> Downloadable Menu/PDF <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Basic SEO & Google Indexing"><span class="choice-chip-icon">🚀</span> SEO Setup <span class="choice-chip-status">✓</span></span>
+                <span class="choice-chip" data-val="Dark Mode Toggle"><span class="choice-chip-icon">🌙</span> Dark Mode Toggle <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Multi-Language Support"><span class="choice-chip-icon">🌐</span> Multi-Language <span class="choice-chip-status">+</span></span>
+              </div>
+
+              <!-- Conditional Section 8: E-Commerce Questions -->
+              <div id="conditional-ecommerce-box" class="conditional-banner" style="display: none;">
+                <div class="conditional-banner-title">
+                  <span>🛍️</span>
+                  <span>E-Commerce & Online Store Specifications</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #92400e; margin-bottom: 0.85rem;">You selected E-Commerce. Let us know your product requirements:</p>
+                
+                <h5 style="font-size: 0.86rem; color: #78350f; margin-bottom: 0.4rem;">What will you sell?</h5>
+                <div class="choice-chips-grid" id="ecommerce-sell-chips" style="margin-bottom: 0.75rem;">
+                  <span class="choice-chip selected" data-val="Physical Products">📦 Physical Products</span>
+                  <span class="choice-chip" data-val="Digital Products">💾 Digital Downloads</span>
+                  <span class="choice-chip" data-val="Services">🛠️ Services</span>
+                  <span class="choice-chip" data-val="Courses">🎓 Courses</span>
+                  <span class="choice-chip" data-val="Subscriptions">🔄 Subscriptions</span>
+                </div>
+
+                <h5 style="font-size: 0.86rem; color: #78350f; margin-bottom: 0.4rem;">Store Features:</h5>
+                <div class="choice-chips-grid" id="ecommerce-features-chips">
+                  <span class="choice-chip selected" data-val="Product Categories">🗂️ Categories</span>
+                  <span class="choice-chip selected" data-val="Product Search & Filter">🔍 Search & Filter</span>
+                  <span class="choice-chip" data-val="Size / Color Variants">🎨 Variants (Sizes/Colors)</span>
+                  <span class="choice-chip selected" data-val="Shopping Cart & Checkout">🛒 Cart & Checkout</span>
+                  <span class="choice-chip selected" data-val="Online Payment Gateway">💳 Online Payment Gateway</span>
+                  <span class="choice-chip" data-val="Cash on Delivery (COD)">💵 Cash on Delivery</span>
+                  <span class="choice-chip" data-val="Shipping & Delivery Charges">🚚 Shipping Calculator</span>
+                  <span class="choice-chip" data-val="Stock Inventory Management">📊 Stock Management</span>
+                  <span class="choice-chip" data-val="Order Tracking">📍 Order Tracking</span>
+                </div>
+              </div>
+
+              <!-- Conditional Section 9: Booking Questions -->
+              <div id="conditional-booking-box" class="conditional-banner" style="display: none;">
+                <div class="conditional-banner-title">
+                  <span>📅</span>
+                  <span>Appointment & Booking Specifications</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #92400e; margin-bottom: 0.85rem;">You selected Booking. Tell us how appointments should work:</p>
+                <div class="choice-chips-grid" id="booking-features-chips">
+                  <span class="choice-chip selected" data-val="Service Selection">✨ Service Selection</span>
+                  <span class="choice-chip selected" data-val="Date & Time Selection">⏰ Date/Time Slot Picker</span>
+                  <span class="choice-chip" data-val="Staff / Stylist Selection">👥 Staff/Doctor Selection</span>
+                  <span class="choice-chip selected" data-val="WhatsApp Booking Confirmation">💬 WhatsApp Confirmation</span>
+                  <span class="choice-chip" data-val="Email Booking Confirmation">📧 Email Confirmation</span>
+                  <span class="choice-chip" data-val="Online Booking Advance Payment">💳 Advance Deposit Payment</span>
+                  <span class="choice-chip" data-val="Cancellation & Reschedule">🔄 Cancellation/Reschedule</span>
+                  <span class="choice-chip" data-val="Availability Calendar">🗓️ Live Calendar</span>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="web-features-other" class="form-label">Other custom functionality / integrations (Optional)</label>
+                <input type="text" id="web-features-other" class="form-control" placeholder="Any specific tool or software you want integrated" />
+              </div>
+            </div>
+
+            <!-- Step 10: Content & Assets -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">8</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Content, Photos & Materials</h3>
+                  <p>Let us know what materials you have ready and if you need help creating content.</p>
+                </div>
+              </div>
+
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin-bottom: 0.65rem;">What materials do you already have?</h4>
+              <div class="choice-chips-grid" id="assets-available-chips">
+                <span class="choice-chip" data-val="Logo"><span class="choice-chip-icon">🎨</span> Brand Logo <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Business Photos"><span class="choice-chip-icon">📷</span> Business Photos <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Product / Service Photos"><span class="choice-chip-icon">🛍️</span> Product/Service Photos <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Videos"><span class="choice-chip-icon">🎬</span> Videos <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Written Text Content"><span class="choice-chip-icon">✍️</span> Written Content <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Pricing / Menu"><span class="choice-chip-icon">🏷️</span> Pricing / Menu <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Customer Reviews"><span class="choice-chip-icon">⭐</span> Customer Reviews <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Domain Name"><span class="choice-chip-icon">🌐</span> Domain Name <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip" data-val="Existing Website"><span class="choice-chip-icon">💻</span> Existing Website <span class="choice-chip-status">+</span></span>
+                <span class="choice-chip selected" data-val="Nothing yet - need help"><span class="choice-chip-icon">💡</span> Nothing yet — need guidance <span class="choice-chip-status">✓</span></span>
+              </div>
+
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin: 1.5rem 0 0.65rem;">Do you need help with text & photos?</h4>
+              <div class="choice-chips-grid" id="content-help-chips">
+                <span class="choice-chip" data-val="I have everything ready">✅ I have everything ready</span>
+                <span class="choice-chip" data-val="I need help writing content">✍️ I need help writing content</span>
+                <span class="choice-chip" data-val="I need help selecting stock photos">📷 I need help with photos</span>
+                <span class="choice-chip selected" data-val="I need help with both text and photos">✨ I need help with both</span>
+                <span class="choice-chip" data-val="Not sure yet">❓ Not sure yet</span>
+              </div>
+            </div>
+
+            <!-- Step 11: Budget and Timeline -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">9</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Approximate Budget & Target Timeline</h3>
+                  <p>This helps us recommend the most suitable technology stack and resources.</p>
+                </div>
+              </div>
+
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin-bottom: 0.65rem;">What is your approximate budget?</h4>
+              <div class="choice-chips-grid" id="budget-chips" style="margin-bottom: 0.75rem;">
+                <span class="choice-chip" data-val="Under ₹5,000">Under ₹5,000</span>
+                <span class="choice-chip selected" data-val="₹5,000 – ₹10,000">₹5,000 – ₹10,000</span>
+                <span class="choice-chip" data-val="₹10,000 – ₹20,000">₹10,000 – ₹20,000</span>
+                <span class="choice-chip" data-val="₹20,000 – ₹50,000">₹20,000 – ₹50,000</span>
+                <span class="choice-chip" data-val="₹50,000+">₹50,000+</span>
+                <span class="choice-chip" data-val="Not Sure">Flexible / Open for Quote</span>
+              </div>
+              <input type="text" id="web-custom-budget" class="form-control" placeholder="Or enter exact budget amount (e.g. ₹8,500)" style="max-width: 380px;" />
+
+              <h4 style="font-size: 0.95rem; color: var(--color-primary); margin: 1.5rem 0 0.65rem;">When would you like the website ready?</h4>
+              <div class="choice-chips-grid" id="deadline-chips" style="margin-bottom: 0.75rem;">
+                <span class="choice-chip" data-val="As soon as possible">⚡ As soon as possible</span>
+                <span class="choice-chip" data-val="Within 1 week">📅 Within 1 week</span>
+                <span class="choice-chip selected" data-val="1–2 weeks">🗓️ 1–2 weeks</span>
+                <span class="choice-chip" data-val="2–4 weeks">⏳ 2–4 weeks</span>
+                <span class="choice-chip" data-val="1–2 months">⏳ 1–2 months</span>
+                <span class="choice-chip" data-val="No fixed deadline">No rush / Flexible</span>
+              </div>
+              <input type="date" id="web-custom-deadline" class="form-control" style="max-width: 280px;" />
+            </div>
+
+            <!-- Step 12: Custom Requirements -->
+            <div class="guided-step-card">
+              <div class="guided-step-header">
+                <div class="guided-step-num">10</div>
+                <div class="guided-step-title-wrap">
+                  <h3>Anything else you'd like to share?</h3>
+                  <p>No technical knowledge needed. Explain your ideas in your own words.</p>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <textarea id="web-custom-requirements" class="form-control" style="min-height: 110px;" placeholder="Tell us anything you couldn't find in the options above. For example: references of websites you like, specific color combinations, or any unique feature for your customers."></textarea>
+              </div>
+            </div>
+
+            <!-- =========================================================================
+                 STEP 13: PROMINENT LIVE WEBSITE PREVIEW TRIGGER BANNER (DIRECTLY ABOVE SUBMIT)
+                 ========================================================================= -->
+            <div class="preview-trigger-banner">
+              <div class="preview-trigger-info">
+                <div class="preview-trigger-title">
+                  <span>👁️</span> Live Visual Website Preview
+                </div>
+                <p class="preview-trigger-desc">
+                  See how your planned website looks based on your selected business name, style, colors, pages, and features.
+                </p>
+              </div>
+              <div>
+                <button type="button" id="btn-open-preview" class="btn-live-preview">
+                  <span>👁️</span> Preview My Website
+                </button>
+              </div>
+            </div>
+
+            <!-- Privacy & Trust Notice -->
+            <div class="notice-box notice-info">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              <div>
+                <strong>Agency Coordination Guaranteed:</strong> Our team reviews your exact selections, verifies feasibility, and assigns a vetted specialist with dedicated project management.
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div style="margin-top: 0.5rem;">
+              <button type="submit" id="submit-guided-btn" class="btn btn-primary btn-lg btn-block" style="padding: 1rem; font-size: 1.15rem; font-weight: 750;">
+                Submit Website Project for Review &rarr;
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- =========================================================================
+             2. STANDARD CONCISE FORM (For Non-Website Categories)
+             ========================================================================= -->
+        <form id="post-work-form" class="card" style="display: none;">
           
-          <!-- Contact Section -->
           <h3 style="font-size: 1.15rem; margin-bottom: 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
             1. Your Contact Information
           </h3>
@@ -90,37 +894,24 @@
             </div>
           </div>
 
-          <!-- Project Details Section -->
           <h3 style="font-size: 1.15rem; margin: 1.75rem 0 1.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
             2. Project Details
           </h3>
 
           <div class="form-group">
             <label for="projectTitle" class="form-label form-label-required">Project Title</label>
-            <input type="text" id="projectTitle" class="form-control" placeholder="e.g., Update restaurant website menu and catering form" required />
+            <input type="text" id="projectTitle" class="form-control" placeholder="e.g., Clean up 500 product records in Excel" required />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="projectCategory" class="form-label form-label-required">Category</label>
-              <select id="projectCategory" class="form-control" required>
-                <option value="Website">Website Development</option>
-                <option value="Data Entry">Data Entry</option>
-                <option value="Design">Design & Graphics</option>
-                <option value="Documents">Documents & Formatting</option>
-                <option value="Digital Marketing">Digital Marketing & Tasks</option>
-                <option value="Other">Other Digital Work</option>
-              </select>
+              <label for="projectBudget" class="form-label">Expected Budget</label>
+              <input type="text" id="projectBudget" class="form-control" placeholder="e.g., ₹2,500 - ₹3,500" />
             </div>
             <div class="form-group">
-              <label for="projectBudget" class="form-label">Expected Budget</label>
-              <input type="text" id="projectBudget" class="form-control" placeholder="e.g., $250 - $350 or $300" />
+              <label for="projectDeadline" class="form-label">Preferred Deadline</label>
+              <input type="date" id="projectDeadline" class="form-control" />
             </div>
-          </div>
-
-          <div class="form-group">
-            <label for="projectDeadline" class="form-label">Preferred Deadline</label>
-            <input type="date" id="projectDeadline" class="form-control" />
           </div>
 
           <div class="form-group">
@@ -130,14 +921,13 @@
 
           <div class="form-group">
             <label for="projectRequirements" class="form-label">Additional Requirements / Deliverables</label>
-            <textarea id="projectRequirements" class="form-control" style="min-height: 80px;" placeholder="e.g., Mobile responsive, source files required, must be delivered in Google Sheets."></textarea>
+            <textarea id="projectRequirements" class="form-control" style="min-height: 80px;" placeholder="e.g., Must be delivered in Google Sheets, error-free formatting."></textarea>
           </div>
 
-          <!-- Privacy & Trust Notice -->
           <div class="notice-box notice-info" style="margin-top: 1.5rem;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
             <div>
-              <strong>Privacy Guaranteed:</strong> Your contact information is kept confidential and is never displayed publicly on project cards. FidoConnect coordinates all communications.
+              <strong>Privacy Guaranteed:</strong> Your contact information is kept confidential and FidoConnect coordinates all project matching.
             </div>
           </div>
 
@@ -150,7 +940,9 @@
         </form>
       </div>
 
-      <!-- Submission Confirmation Screen (Hidden Initially) -->
+      <!-- =========================================================================
+           3. SUBMISSION CONFIRMATION SCREEN
+           ========================================================================= -->
       <div id="submission-confirmation" style="display: none;">
         <div class="card text-center" style="padding: 3rem 1.5rem;">
           
@@ -160,13 +952,13 @@
             </svg>
           </div>
 
-          <h2 style="font-size: 1.85rem; margin-bottom: 0.75rem;">We've received your request.</h2>
-          <p class="text-muted" style="max-width: 500px; margin: 0 auto 2rem; font-size: 1.05rem;">
-            Your project has been submitted for review. Our team will check the requirements and contact you if we need any additional details.
+          <h2 style="font-size: 1.85rem; margin-bottom: 0.75rem;">We've received your project request!</h2>
+          <p class="text-muted" style="max-width: 520px; margin: 0 auto 2rem; font-size: 1.05rem;">
+            Your project has been submitted for review. Our agency coordination team is reviewing your requirements and matching the best specialist.
           </p>
 
           <!-- Summary Box -->
-          <div class="card" style="background-color: var(--bg-subtle); max-width: 520px; margin: 0 auto 2rem; text-align: left; padding: 1.25rem;">
+          <div class="card" style="background-color: var(--bg-subtle); max-width: 540px; margin: 0 auto 2rem; text-align: left; padding: 1.25rem;">
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem; margin-bottom: 0.6rem;">
               <span class="text-muted" style="font-size: 0.85rem;">Project ID:</span>
               <strong id="conf-project-id" style="font-family: var(--font-mono); color: var(--color-accent); font-size: 0.95rem;">-</strong>
@@ -186,8 +978,8 @@
           </div>
 
           <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-            <a href="account.html" class="btn btn-primary">View in Account</a>
-            <button type="button" class="btn btn-secondary" onclick="window.location.reload();">Submit Another Work</button>
+            <a href="account.html" class="btn btn-primary">View in My Account</a>
+            <button type="button" class="btn btn-secondary" onclick="window.location.reload();">Submit Another Project</button>
           </div>
 
         </div>
@@ -195,6 +987,79 @@
 
     </div>
   </main>
+
+  <!-- =========================================================================
+       4. INTERACTIVE LIVE WEBSITE PREVIEW MODAL
+       ========================================================================= -->
+  <div id="website-preview-modal" class="modal-overlay">
+    <div class="modal-card modal-website-preview">
+      
+      <!-- Top Modal Bar -->
+      <div class="preview-modal-topbar">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span style="font-size:1.1rem;">👁️</span>
+          <div>
+            <strong style="font-size:0.95rem; color:white;">Interactive Website Preview</strong>
+            <span style="font-size:0.78rem; color:#94a3b8; margin-left:6px;">(Visual Planning Simulation)</span>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <!-- Device Switcher -->
+          <div class="preview-device-switch">
+            <button type="button" id="prev-view-desktop" class="preview-device-btn active">
+              🖥️ Desktop
+            </button>
+            <button type="button" id="prev-view-mobile" class="preview-device-btn">
+              📱 Mobile
+            </button>
+          </div>
+          <button type="button" class="modal-close-btn" style="color:white; font-size:1.4rem; line-height:1; position:static;" onclick="closeModal('website-preview-modal')">&times;</button>
+        </div>
+      </div>
+
+      <!-- Preview Notice Banner -->
+      <div style="background:#fef3c7; color:#92400e; padding:6px 16px; font-size:0.8rem; font-weight:600; text-align:center; border-bottom:1px solid #fde68a;">
+        ⚠️ Website Preview — Your final design will be crafted with custom graphics & code after agency review.
+      </div>
+
+      <!-- Preview Body / Mock Simulator -->
+      <div class="preview-modal-body">
+        <div id="mock-browser-container" class="mock-browser-frame">
+          
+          <!-- Mock Browser Chrome -->
+          <div class="mock-browser-head">
+            <div class="mock-browser-dots">
+              <span class="mock-browser-dot" style="background:#ef4444;"></span>
+              <span class="mock-browser-dot" style="background:#f59e0b;"></span>
+              <span class="mock-browser-dot" style="background:#10b981;"></span>
+            </div>
+            <div class="mock-browser-address">
+              <span style="color:#10b981;">🔒</span>
+              <span id="mock-address-text">https://glamourbeauty.com</span>
+            </div>
+          </div>
+
+          <!-- Mock Website Dynamic Viewport -->
+          <div id="mock-site-content" class="mock-site-viewport">
+            <!-- Dynamically populated by JS based on user's live selections -->
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="background:white; padding:0.85rem 1.5rem; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <span style="font-size:0.82rem; color:var(--text-muted);">
+          Happy with this layout? Close and click <strong>Submit Work for Review</strong> below.
+        </span>
+        <button type="button" class="btn btn-primary btn-sm" onclick="closeModal('website-preview-modal')">
+          Done with Preview
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Site Footer -->
   <footer class="site-footer">

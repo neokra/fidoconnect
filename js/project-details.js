@@ -342,6 +342,148 @@ async function loadProjectDetails(projectId) {
     document.getElementById("proj-deadline").textContent = formatDate(currentProject.deadline);
     document.getElementById("proj-posted").textContent = formatDate(currentProject.createdAt);
 
+    // Format Structured Website Specifications (if Website Development)
+    const structuredWebsiteSpecs = document.getElementById("proj-structured-website-specs");
+    const descWrap = document.getElementById("proj-description-wrap");
+    const isWebsiteDev = currentProject.projectType === "Website Development" || (currentProject.category && currentProject.category.toLowerCase().includes("website")) || Boolean(currentProject.businessDetails) || Boolean(currentProject.websiteTypes);
+
+    if (structuredWebsiteSpecs) {
+      if (isWebsiteDev && (currentProject.businessDetails || currentProject.websiteTypes || currentProject.selectedPages)) {
+        const b = currentProject.businessDetails || {};
+        const d = currentProject.designPreferences || {};
+        const ecom = currentProject.ecommerceDetails || {};
+        const book = currentProject.bookingDetails || {};
+        const assets = currentProject.contentAssets || {};
+
+        structuredWebsiteSpecs.innerHTML = `
+          <div style="background:var(--bg-subtle, #f8fafc); border:1.5px solid var(--border-color, #cbd5e1); border-radius:var(--border-radius-lg, 12px); padding:1.5rem; display:flex; flex-direction:column; gap:1.25rem;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:0.75rem;">
+              <div>
+                <h3 style="font-size:1.15rem; font-weight:750; color:var(--color-primary); margin:0 0 2px;">🌐 Guided Website Project Specifications</h3>
+                <span class="text-muted" style="font-size:0.82rem;">Structured visual planning details provided by client</span>
+              </div>
+              <span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:700; padding:4px 10px;">Website Plan</span>
+            </div>
+
+            <!-- Business Overview -->
+            <div>
+              <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">🏢 Business & Brand Profile:</h4>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem; background:white; padding:0.85rem; border-radius:8px; border:1px solid #e2e8f0; font-size:0.88rem;">
+                <div><span class="text-muted">Brand:</span> <strong>${escapeHtml(b.name || currentProject.clientBusiness || currentProject.clientName)}</strong></div>
+                <div><span class="text-muted">Location:</span> <strong>${escapeHtml(b.location || 'Not specified')}</strong></div>
+                ${b.existingWebsite ? `<div><span class="text-muted">Existing Site:</span> <a href="${escapeHtml(b.existingWebsite)}" target="_blank" style="color:#2563eb; font-weight:600;">${escapeHtml(b.existingWebsite)}</a></div>` : ''}
+              </div>
+              ${b.description ? `<div style="margin-top:0.4rem; font-size:0.85rem; color:#475569; background:white; padding:0.6rem 0.85rem; border-radius:6px; border:1px solid #e2e8f0;"><em>"${escapeHtml(b.description)}"</em></div>` : ''}
+            </div>
+
+            <!-- Website Types & Pages -->
+            <div>
+              <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">📄 Website Types & Pages Wanted:</h4>
+              <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:0.6rem;">
+                ${(currentProject.websiteTypes || []).map(t => `<span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">🌐 ${escapeHtml(t)}</span>`).join("")}
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                ${(currentProject.selectedPages || []).map(p => `<span class="badge" style="background:white; color:#334155; border:1px solid #cbd5e1; font-weight:600;">📄 ${escapeHtml(p)}</span>`).join("")}
+                ${(currentProject.customPages || []).map(cp => `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700;">✨ Custom Page: ${escapeHtml(cp.name)}</span>`).join("")}
+              </div>
+            </div>
+
+            <!-- Design & Tone -->
+            <div>
+              <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">🎨 Visual Style & Color Palette:</h4>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                ${(d.styles || []).map(s => `<span class="badge" style="background:#ede9fe; color:#6d28d9; font-weight:600;">✨ ${escapeHtml(s)}</span>`).join("")}
+                ${(d.feelings || []).map(f => `<span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(f)}</span>`).join("")}
+                ${d.customColor ? `
+                  <span class="badge" style="background:white; border:1px solid #cbd5e1; display:inline-flex; align-items:center; gap:6px;">
+                    <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${d.customColor};"></span>
+                    <span>Primary Color: ${d.customColor}</span>
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Customer Actions -->
+            ${(currentProject.customerActions && currentProject.customerActions.length > 0) ? `
+              <div>
+                <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">👥 Customer Capabilities:</h4>
+                <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                  ${currentProject.customerActions.map(a => `<span class="badge" style="background:#ecfdf5; color:#065f46; font-weight:600;">✓ ${escapeHtml(a)}</span>`).join("")}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Homepage Layout -->
+            ${(currentProject.homepageSections && currentProject.homepageSections.length > 0) ? `
+              <div>
+                <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">🏠 Homepage Sections:</h4>
+                <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                  ${currentProject.homepageSections.map(sec => `<span class="badge" style="background:#f8fafc; color:#334155; border:1px solid #e2e8f0;">🔹 ${escapeHtml(sec)}</span>`).join("")}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Technical Features & Integrations -->
+            ${(currentProject.features && currentProject.features.length > 0) ? `
+              <div>
+                <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">⚙️ Integrations & Technical Features:</h4>
+                <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                  ${currentProject.features.map(f => `<span class="badge" style="background:#eff6ff; color:#1e40af; font-weight:600;">⚡ ${escapeHtml(f)}</span>`).join("")}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- E-Commerce Specifications -->
+            ${(ecom.features && ecom.features.length > 0) ? `
+              <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:0.85rem;">
+                <strong style="color:#b45309; font-size:0.92rem;">🛍️ E-Commerce Specifications:</strong>
+                <div style="margin-top:6px; font-size:0.85rem; color:#78350f; line-height:1.5;">
+                  <strong>Selling:</strong> ${(ecom.sellingTypes || []).join(", ") || 'Products'}<br>
+                  <strong>Store Features:</strong> ${(ecom.features || []).join(", ")}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Booking Specifications -->
+            ${(book.features && book.features.length > 0) ? `
+              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.85rem;">
+                <strong style="color:#15803d; font-size:0.92rem;">📅 Appointment & Booking Specifications:</strong>
+                <div style="margin-top:6px; font-size:0.85rem; color:#166534; line-height:1.5;">
+                  <strong>Booking Features:</strong> ${(book.features || []).join(", ")}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Content Materials -->
+            ${(assets.available && assets.available.length > 0) ? `
+              <div>
+                <h4 style="font-size:0.92rem; font-weight:700; color:#334155; margin-bottom:0.25rem;">📁 Available Content & Materials:</h4>
+                <div style="font-size:0.85rem; color:#475569;">
+                  Assets ready: <strong>${assets.available.join(", ")}</strong> | Assistance needed: <strong>${assets.helpNeeded || 'None'}</strong>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Custom Requirements -->
+            ${currentProject.customRequirements ? `
+              <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem;">
+                <strong style="color:#334155; font-size:0.92rem;">📝 Additional Client Notes:</strong>
+                <p style="margin:6px 0 0; font-size:0.85rem; color:#475569; line-height:1.6; white-space:pre-wrap;">${escapeHtml(currentProject.customRequirements)}</p>
+              </div>
+            ` : ''}
+
+          </div>
+        `;
+        structuredWebsiteSpecs.style.display = "block";
+        if (descWrap) descWrap.style.display = "none";
+      } else {
+        structuredWebsiteSpecs.innerHTML = "";
+        structuredWebsiteSpecs.style.display = "none";
+        if (descWrap) descWrap.style.display = "block";
+      }
+    }
+
     const customFieldsEl = document.getElementById("proj-custom-fields");
     if (customFieldsEl) {
       if (Array.isArray(currentProject.customFields) && currentProject.customFields.length > 0) {

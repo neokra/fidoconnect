@@ -414,10 +414,11 @@ export const FidoDB = {
     }
 
     const newProject = {
+      ...projectData,
       projectId: uniqueProjectId,
       title: projectData.title,
       category: projectData.category || "Other",
-      description: projectData.description,
+      description: projectData.description || "",
       requirements: projectData.requirements || "",
       budget: projectData.budget || "To be discussed",
       deadline: projectData.deadline || "Flexible",
@@ -426,12 +427,12 @@ export const FidoDB = {
       clientBusiness: projectData.clientBusiness || "Private Business",
       clientEmail: projectData.clientEmail || "",
       clientPhone: projectData.clientPhone || "",
-      requiredSkills: projectData.requiredSkills || [projectData.category],
-      status: "Submitted",
-      visibility: "admin_only",
-      assignedFreelancerId: null,
-      agencyNotes: "Received new client submission. Pending review.",
-      createdAt: new Date().toISOString(),
+      requiredSkills: projectData.requiredSkills || [projectData.category || "Other"],
+      status: projectData.status || "Submitted",
+      visibility: projectData.visibility || "admin_only",
+      assignedFreelancerId: projectData.assignedFreelancerId || null,
+      agencyNotes: projectData.agencyNotes || "Received new client submission. Pending review.",
+      createdAt: projectData.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 

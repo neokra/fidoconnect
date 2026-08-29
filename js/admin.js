@@ -427,6 +427,139 @@ window.openProjectActionModal = function(projId) {
   if (visSelect) visSelect.value = proj.visibility || (proj.status === "Published" ? "public" : "admin_only");
   if (notesInput) notesInput.value = proj.agencyNotes || "";
 
+  // Render Structured Website Specifications (if Website Development)
+  const isWebsiteProj = proj.projectType === "Website Development" || (proj.category && proj.category.toLowerCase().includes("website")) || Boolean(proj.businessDetails) || Boolean(proj.websiteTypes);
+  const mockupAction = document.getElementById("manage-proj-website-mockup-action");
+  const structuredContainer = document.getElementById("manage-proj-structured-details");
+
+  if (mockupAction) mockupAction.style.display = isWebsiteProj ? "block" : "none";
+
+  if (structuredContainer) {
+    if (isWebsiteProj && (proj.businessDetails || proj.websiteTypes || proj.selectedPages)) {
+      const b = proj.businessDetails || {};
+      const d = proj.designPreferences || {};
+      const ecom = proj.ecommerceDetails || {};
+      const book = proj.bookingDetails || {};
+      const assets = proj.contentAssets || {};
+
+      structuredContainer.innerHTML = `
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:1.25rem; margin-top:0.75rem; font-size:0.86rem; display:flex; flex-direction:column; gap:1rem;">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:0.5rem;">
+            <strong style="color:var(--color-primary); font-size:0.95rem;">🌐 Guided Website Project Specifications</strong>
+            <span class="badge" style="background:#eff6ff; color:#2563eb; font-weight:700;">Structured Plan</span>
+          </div>
+
+          <!-- Business Overview -->
+          <div>
+            <div style="font-weight:700; color:#334155; margin-bottom:0.35rem;">🏢 Business & Contact Details:</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:0.4rem; background:white; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0;">
+              <div><strong>Brand:</strong> ${escapeHtml(b.name || proj.clientBusiness || proj.clientName)}</div>
+              <div><strong>WhatsApp:</strong> <a href="https://wa.me/${(b.whatsapp || proj.clientPhone || '').replace(/[^0-9]/g, '')}" target="_blank" style="color:#2563eb;">${escapeHtml(b.whatsapp || proj.clientPhone || 'N/A')}</a></div>
+              <div><strong>Location:</strong> ${escapeHtml(b.location || 'N/A')}</div>
+              <div><strong>Email:</strong> ${escapeHtml(b.email || proj.clientEmail || 'N/A')}</div>
+              ${b.instagram ? `<div><strong>Instagram:</strong> ${escapeHtml(b.instagram)}</div>` : ''}
+              ${b.facebook ? `<div><strong>Facebook:</strong> ${escapeHtml(b.facebook)}</div>` : ''}
+              ${b.existingWebsite ? `<div><strong>Existing Site:</strong> <a href="${escapeHtml(b.existingWebsite)}" target="_blank" style="color:#2563eb;">${escapeHtml(b.existingWebsite)}</a></div>` : ''}
+            </div>
+            ${b.description ? `<div style="margin-top:0.4rem; font-size:0.82rem; color:#64748b;"><em>"${escapeHtml(b.description)}"</em></div>` : ''}
+          </div>
+
+          <!-- Website Types & Pages -->
+          <div>
+            <div style="font-weight:700; color:#334155; margin-bottom:0.35rem;">📄 Website Types & Requested Pages:</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:0.5rem;">
+              ${(proj.websiteTypes || []).map(t => `<span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:600;">${escapeHtml(t)}</span>`).join("")}
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+              ${(proj.selectedPages || []).map(p => `<span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;">📄 ${escapeHtml(p)}</span>`).join("")}
+              ${(proj.customPages || []).map(cp => `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">✨ Custom: ${escapeHtml(cp.name)}</span>`).join("")}
+            </div>
+          </div>
+
+          <!-- Design & Branding -->
+          <div>
+            <div style="font-weight:700; color:#334155; margin-bottom:0.35rem;">🎨 Design Direction & Colors:</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+              ${(d.styles || []).map(s => `<span class="badge" style="background:#ede9fe; color:#6d28d9;">✨ ${escapeHtml(s)}</span>`).join("")}
+              ${(d.feelings || []).map(f => `<span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(f)}</span>`).join("")}
+              ${d.customColor ? `
+                <span class="badge" style="background:white; border:1px solid #cbd5e1; display:inline-flex; align-items:center; gap:5px;">
+                  <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${d.customColor};"></span>
+                  <span>Primary: ${d.customColor}</span>
+                </span>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Customer Features & Homepage -->
+          ${(proj.customerActions && proj.customerActions.length > 0) ? `
+            <div>
+              <div style="font-weight:700; color:#334155; margin-bottom:0.35rem;">👥 Customer Actions:</div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                ${proj.customerActions.map(a => `<span class="badge" style="background:#ecfdf5; color:#065f46;">✓ ${escapeHtml(a)}</span>`).join("")}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Integrations & Special Features -->
+          ${(proj.features && proj.features.length > 0) ? `
+            <div>
+              <div style="font-weight:700; color:#334155; margin-bottom:0.35rem;">⚙️ Features & Integrations:</div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                ${proj.features.map(f => `<span class="badge" style="background:#eff6ff; color:#1e40af;">⚡ ${escapeHtml(f)}</span>`).join("")}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- E-Commerce Specs -->
+          ${(ecom.features && ecom.features.length > 0) ? `
+            <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:0.6rem;">
+              <strong style="color:#b45309;">🛍️ E-Commerce Specs:</strong>
+              <div style="margin-top:4px; font-size:0.82rem; color:#78350f;">
+                Selling: ${(ecom.sellingTypes || []).join(", ") || 'Products'}<br>
+                Features: ${(ecom.features || []).join(", ")}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Booking Specs -->
+          ${(book.features && book.features.length > 0) ? `
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:0.6rem;">
+              <strong style="color:#15803d;">📅 Booking Specs:</strong>
+              <div style="margin-top:4px; font-size:0.82rem; color:#166534;">
+                Features: ${(book.features || []).join(", ")}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Content Assets -->
+          ${(assets.available && assets.available.length > 0) ? `
+            <div>
+              <div style="font-weight:700; color:#334155; margin-bottom:0.25rem;">📁 Available Materials:</div>
+              <div style="font-size:0.82rem; color:#475569;">
+                Materials ready: ${assets.available.join(", ")} | Content Help: <strong>${assets.helpNeeded || 'Not specified'}</strong>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Custom Requirements -->
+          ${proj.customRequirements ? `
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem;">
+              <strong style="color:#334155;">📝 Additional Notes from Client:</strong>
+              <p style="margin:4px 0 0; font-size:0.82rem; color:#475569; white-space:pre-wrap;">${escapeHtml(proj.customRequirements)}</p>
+            </div>
+          ` : ''}
+
+        </div>
+      `;
+      structuredContainer.style.display = "block";
+    } else {
+      structuredContainer.innerHTML = "";
+      structuredContainer.style.display = "none";
+    }
+  }
+
   // Populate existing custom fields
   if (fieldsContainer) {
     fieldsContainer.innerHTML = "";
@@ -438,6 +571,91 @@ window.openProjectActionModal = function(projId) {
   }
 
   openModal("modal-project-manage");
+};
+
+window.viewAdminWebsiteMockup = function() {
+  if (!currentManagingProject) return;
+  const proj = currentManagingProject;
+  const b = proj.businessDetails || {};
+  const businessName = b.name || proj.clientBusiness || proj.clientName || "Client Brand";
+  const businessDesc = b.description || "Providing high-quality services and trusted solutions tailored for your needs.";
+  const location = b.location || "City, State";
+  const whatsapp = b.whatsapp || proj.clientPhone || "+91 79023 01205";
+  const colorHex = (proj.designPreferences && proj.designPreferences.customColor) || (proj.previewConfiguration && proj.previewConfiguration.primaryColor) || "#2563eb";
+  const pages = proj.selectedPages || ["Home", "About Us", "Services", "Contact"];
+  const navPages = ["Home", ...pages.filter(p => p !== "Home").slice(0, 5)];
+
+  const titleEl = document.getElementById("admin-mockup-title");
+  const addressEl = document.getElementById("admin-mock-address");
+  const contentEl = document.getElementById("admin-mock-site-content");
+
+  if (titleEl) titleEl.textContent = `Mockup Preview: ${businessName}`;
+  if (addressEl) addressEl.textContent = `https://${businessName.toLowerCase().replace(/[^a-z0-9]/g, "") || "mybrand"}.com`;
+
+  if (contentEl) {
+    contentEl.innerHTML = `
+      <div style="font-family: var(--font-sans); background:#ffffff; color:#0f172a; min-height: 480px; display:flex; flex-direction:column;">
+        <header class="mock-nav" style="border-bottom: 1px solid #f1f5f9;">
+          <div class="mock-brand-title" style="color: ${colorHex};">
+            <span>✨</span>
+            <span>${escapeHtml(businessName)}</span>
+          </div>
+          <div class="mock-nav-links" style="color:#64748b;">
+            ${navPages.map((p, idx) => `
+              <span style="${idx === 0 ? `color:${colorHex}; font-weight:700; border-bottom:2px solid ${colorHex}; padding-bottom:2px;` : ''}">${escapeHtml(p)}</span>
+            `).join("")}
+          </div>
+          <div>
+            <a href="https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}" target="_blank" style="background:${colorHex}; color:white; padding:6px 14px; border-radius:6px; font-size:0.8rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+              <span>💬</span> WhatsApp
+            </a>
+          </div>
+        </header>
+
+        <section class="mock-hero-section" style="background: linear-gradient(180deg, rgba(37, 99, 235, 0.08) 0%, rgba(255, 255, 255, 0) 100%);">
+          <span style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:3px 10px; border-radius:20px; background:rgba(37, 99, 235, 0.12); color:${colorHex};">
+            ${(proj.websiteTypes && proj.websiteTypes[0]) || 'Verified Business'}
+          </span>
+          <h1 class="mock-hero-title">Welcome to ${escapeHtml(businessName)}</h1>
+          <p class="mock-hero-subtitle" style="color:#64748b;">${escapeHtml(businessDesc)}</p>
+          <div class="mock-hero-cta-group">
+            <button type="button" style="background:${colorHex}; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:700; font-size:0.92rem;">
+              Get in Touch &rarr;
+            </button>
+          </div>
+        </section>
+
+        <section class="mock-section">
+          <h2 class="mock-section-title">Our Featured Services</h2>
+          <div class="mock-grid-3">
+            <div class="mock-card">
+              <div style="font-size:1.8rem; margin-bottom:0.5rem;">✨</div>
+              <h3 style="font-size:1rem; font-weight:700; margin:0 0 0.25rem;">Standard Service</h3>
+              <p style="font-size:0.82rem; color:#64748b; margin:0 0 0.75rem;">Premium customized service for clients.</p>
+              <strong style="color:${colorHex}; font-size:0.95rem;">Starting at ₹999</strong>
+            </div>
+            <div class="mock-card">
+              <div style="font-size:1.8rem; margin-bottom:0.5rem;">⭐</div>
+              <h3 style="font-size:1rem; font-weight:700; margin:0 0 0.25rem;">Complete Package</h3>
+              <p style="font-size:0.82rem; color:#64748b; margin:0 0 0.75rem;">Full end-to-end service offering.</p>
+              <strong style="color:${colorHex}; font-size:0.95rem;">Starting at ₹2,499</strong>
+            </div>
+          </div>
+        </section>
+
+        <footer class="mock-footer">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <strong>${escapeHtml(businessName)}</strong>
+              <div style="color:#94a3b8; font-size:0.76rem;">Location: ${escapeHtml(location)} | WhatsApp: ${escapeHtml(whatsapp)}</div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    `;
+  }
+
+  openModal("modal-admin-mockup-preview");
 };
 
 window.addProjectCustomFieldRow = function(heading = "", value = "") {

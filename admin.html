@@ -905,7 +905,17 @@
             <div><strong>Client:</strong> <span id="manage-proj-client">Client Business</span></div>
             <div><strong>Deadline:</strong> <span id="manage-proj-deadline">Flexible</span></div>
           </div>
+
+          <!-- Action for Guided Website Planner Mockup -->
+          <div id="manage-proj-website-mockup-action" style="display:none; margin-top:0.85rem; padding-top:0.75rem; border-top:1px dashed var(--border-color);">
+            <button type="button" class="btn btn-secondary btn-sm" style="background:#eff6ff; color:#2563eb; border-color:#93c5fd; font-weight:700;" onclick="viewAdminWebsiteMockup()">
+              👁️ View Client Planned Website Mockup
+            </button>
+          </div>
         </div>
+
+        <!-- Formatted Structured Website Specifications (Rendered if Website Development) -->
+        <div id="manage-proj-structured-details" style="display:none; margin-bottom:1.25rem;"></div>
 
         <!-- Custom Fields Section -->
         <div style="margin-bottom: 1.25rem;">
@@ -981,6 +991,38 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Admin Website Mockup Preview -->
+  <div id="modal-admin-mockup-preview" class="modal-overlay">
+    <div class="modal-card modal-website-preview" style="max-width:960px;">
+      <div class="preview-modal-topbar">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span>👁️</span>
+          <strong style="color:white;" id="admin-mockup-title">Client Planned Website Mockup</strong>
+        </div>
+        <button type="button" class="modal-close-btn" style="color:white; font-size:1.4rem; position:static;" onclick="closeModal('modal-admin-mockup-preview')">&times;</button>
+      </div>
+      <div class="preview-modal-body">
+        <div id="admin-mock-browser" class="mock-browser-frame">
+          <div class="mock-browser-head">
+            <div class="mock-browser-dots">
+              <span class="mock-browser-dot" style="background:#ef4444;"></span>
+              <span class="mock-browser-dot" style="background:#f59e0b;"></span>
+              <span class="mock-browser-dot" style="background:#10b981;"></span>
+            </div>
+            <div class="mock-browser-address">
+              <span>🔒</span>
+              <span id="admin-mock-address">https://mybrand.com</span>
+            </div>
+          </div>
+          <div id="admin-mock-site-content" class="mock-site-viewport"></div>
+        </div>
+      </div>
+      <div style="background:white; padding:0.75rem 1.25rem; border-top:1px solid var(--border-color); text-align:right;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-admin-mockup-preview')">Close Preview</button>
       </div>
     </div>
   </div>
